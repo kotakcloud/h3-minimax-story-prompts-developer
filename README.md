@@ -35,7 +35,7 @@ The app binds to `0.0.0.0:48217`, so another machine on the same Wi-Fi can open:
 http://<this-computer-lan-ip>:48217
 ```
 
-On this Mac the LAN address is printed as **Network** when you start the server. If the other machine cannot connect, allow incoming connections for Node in macOS Firewall.
+On this Mac the LAN address is printed as **Network** when you start the server. Open that URL on the other machine. Do not start a second copy of the app there, or you will see an empty story list. If the other machine cannot connect, allow incoming connections for Node in macOS Firewall.
 
 Default model: `deepseek/deepseek-v4-flash-0731`.
 

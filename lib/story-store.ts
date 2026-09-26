@@ -1,7 +1,7 @@
 import { mkdir, readdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import type { Story, StorySummary } from "./types";
+import type { Story, StoryStep, StorySummary } from "./types";
 
 const storiesDir = path.join(process.cwd(), "data", "stories");
 

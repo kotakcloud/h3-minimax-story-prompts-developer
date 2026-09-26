@@ -61,7 +61,8 @@ export default function Home() {
           <p className="text-xs uppercase tracking-[0.2em] text-accent">MiniMax H3</p>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight">Stories</h1>
           <p className="mt-2 max-w-xl text-sm text-muted">
-            Each story is saved on this machine. Open one, or open several in new tabs.
+            Stories are stored on the computer running this server. Open this same
+            address from any device on the Wi-Fi to see the same list.
           </p>
         </div>
         <button
