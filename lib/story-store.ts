@@ -14,6 +14,8 @@ function emptyStory(id: string, now: string): Story {
     characters: [],
     frames: [],
     segments: [],
+    promptRevisions: [],
+    activeRevisionId: "",
     createdAt: now,
     updatedAt: now,
   };
@@ -44,6 +46,10 @@ function asStory(value: unknown, fallbackId: string): Story {
     characters: Array.isArray(raw.characters) ? (raw.characters as Story["characters"]) : [],
     frames: Array.isArray(raw.frames) ? (raw.frames as Story["frames"]) : [],
     segments: Array.isArray(raw.segments) ? (raw.segments as Story["segments"]) : [],
+    promptRevisions: Array.isArray(raw.promptRevisions)
+      ? (raw.promptRevisions as Story["promptRevisions"])
+      : [],
+    activeRevisionId: typeof raw.activeRevisionId === "string" ? raw.activeRevisionId : "",
     createdAt: typeof raw.createdAt === "string" ? raw.createdAt : now,
     updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : now,
   };

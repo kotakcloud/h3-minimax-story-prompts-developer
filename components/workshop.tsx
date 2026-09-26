@@ -6,8 +6,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLoggedFetch } from "@/components/debug-log";
 import { IconButton, Icons } from "@/components/icons";
 import { buildExportPayload, buildMarkdownExport, downloadJson, downloadMarkdown } from "@/lib/export";
-import type { Character, Frame, PromptSegment, Story, StoryStep, StorySummary } from "@/lib/types";
-import { STORY_STEPS, storyPath } from "@/lib/types";
+import type { Character, Frame, PromptSegment, PromptRevision, Story, StoryStep, StorySummary } from "@/lib/types";
+import { STORY_STEPS, storyPath, storyRevisions } from "@/lib/types";
 
 type Busy = "breakdown" | "prompts" | null;
 
@@ -164,9 +164,22 @@ export function Workshop({
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Prompt generation failed.");
+      const segments = (data.segments || []) as PromptSegment[];
+      const prior = story.promptRevisions.length
+        ? story.promptRevisions
+        : story.segments.length
+          ? [{ id: "1", createdAt: story.updatedAt, segments: story.segments }]
+          : [];
+      const revision: PromptRevision = {
+        id: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+        segments,
+      };
       const next: Story = {
         ...story,
-        segments: data.segments || [],
+        segments,
+        promptRevisions: [...prior, revision],
+        activeRevisionId: revision.id,
         step: "prompts",
       };
       skipSave.current = true;
@@ -265,6 +278,10 @@ export function Workshop({
       </main>
     );
   }
+
+  const revisions = storyRevisions(story);
+  const activeRevisionId =
+    story.activeRevisionId || revisions[revisions.length - 1]?.id || "";
 
   return (
     <div className="min-h-screen md:grid md:grid-cols-[240px_1fr]">
@@ -489,7 +506,33 @@ export function Workshop({
         {step === "prompts" && (
           <section>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-sm font-medium uppercase tracking-wider text-muted">H3 prompts</h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-sm font-medium uppercase tracking-wider text-muted">H3 prompts</h2>
+                {revisions.map((revision, index) => {
+                  const active = revision.id === activeRevisionId;
+                  return (
+                    <button
+                      key={revision.id}
+                      type="button"
+                      title={`Prompt set ${index + 1}`}
+                      aria-label={`Prompt set ${index + 1}`}
+                      onClick={() =>
+                        patchStory({
+                          activeRevisionId: revision.id,
+                          segments: revision.segments,
+                        })
+                      }
+                      className={`inline-flex h-8 min-w-8 items-center justify-center rounded-full px-2 text-xs ${
+                        active
+                          ? "bg-foreground text-background"
+                          : "border border-line text-muted"
+                      }`}
+                    >
+                      {index + 1}
+                    </button>
+                  );
+                })}
+              </div>
               <IconButton
                 label={busy === "prompts" ? "Writing H3 prompts" : "Regenerate prompts"}
                 onClick={runPrompts}
