@@ -105,7 +105,7 @@ export default function Home() {
                 <IconLink
                   href={storyPath(story.id, story.step)}
                   label="Open"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-background"
+                  className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-foreground text-background"
                 >
                   {Icons.open}
                 </IconLink>

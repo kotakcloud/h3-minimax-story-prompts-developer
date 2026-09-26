@@ -35,6 +35,7 @@ input {
 
 button {
   font: inherit;
+  cursor: pointer;
 }
 
 button:disabled {

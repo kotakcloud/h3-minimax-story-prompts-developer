@@ -88,7 +88,7 @@ export const Icons = {
 };
 
 const iconButtonClass =
-  "inline-flex h-9 w-9 items-center justify-center rounded-full border border-line text-muted transition-colors hover:border-accent hover:text-foreground disabled:opacity-50";
+  "inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-line text-muted transition-colors hover:border-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50";
 
 export function IconButton({
   label,
