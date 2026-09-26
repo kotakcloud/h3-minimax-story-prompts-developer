@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useLoggedFetch } from "@/components/debug-log";
 import type { StorySummary } from "@/lib/types";
 import { storyPath } from "@/lib/types";
 
@@ -14,12 +15,13 @@ function stepLabel(step: StorySummary["step"]) {
 
 export default function Home() {
   const router = useRouter();
+  const request = useLoggedFetch();
   const [stories, setStories] = useState<StorySummary[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function refresh() {
-    const response = await fetch("/api/stories");
+    const response = await request("/api/stories");
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Could not load stories.");
     setStories(data.stories || []);
@@ -33,7 +35,7 @@ export default function Home() {
     setBusy(true);
     setError("");
     try {
-      const response = await fetch("/api/stories", { method: "POST" });
+      const response = await request("/api/stories", { method: "POST" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not create a story.");
       router.push(storyPath(data.story.id, "gist"));
@@ -45,7 +47,7 @@ export default function Home() {
 
   async function removeStory(id: string) {
     if (!window.confirm("Delete this story from this machine?")) return;
-    const response = await fetch(`/api/stories/${id}`, { method: "DELETE" });
+    const response = await request(`/api/stories/${id}`, { method: "DELETE" });
     const data = await response.json();
     if (!response.ok) {
       setError(data.error || "Could not delete story.");

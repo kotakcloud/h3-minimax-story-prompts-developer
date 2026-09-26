@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useLoggedFetch } from "@/components/debug-log";
 import { buildExportPayload, downloadJson } from "@/lib/export";
 import type { Character, Frame, PromptSegment, Story, StoryStep, StorySummary } from "@/lib/types";
 import { STORY_STEPS, storyPath } from "@/lib/types";
@@ -27,6 +28,7 @@ export function Workshop({
   step: StoryStep;
 }) {
   const router = useRouter();
+  const request = useLoggedFetch();
   const [story, setStory] = useState<Story | null>(null);
   const [stories, setStories] = useState<StorySummary[]>([]);
   const [busy, setBusy] = useState<Busy>(null);
@@ -38,7 +40,7 @@ export function Workshop({
   storyRef.current = story;
 
   async function persist(next: Story) {
-    const response = await fetch(`/api/stories/${next.id}`, {
+    const response = await request(`/api/stories/${next.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(next),
@@ -52,8 +54,8 @@ export function Workshop({
     let cancelled = false;
     async function load() {
       const [storyRes, listRes] = await Promise.all([
-        fetch(`/api/stories/${storyId}`),
-        fetch("/api/stories"),
+        request(`/api/stories/${storyId}`),
+        request("/api/stories"),
       ]);
       const storyData = await storyRes.json();
       const listData = await listRes.json();
@@ -73,7 +75,7 @@ export function Workshop({
     return () => {
       cancelled = true;
     };
-  }, [storyId, step]);
+  }, [storyId, step, request]);
 
   useEffect(() => {
     if (!story) return;
@@ -119,7 +121,7 @@ export function Workshop({
     setBusy("breakdown");
     setError("");
     try {
-      const response = await fetch("/api/breakdown", {
+      const response = await request("/api/breakdown", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ gist: story.gist }),
@@ -149,7 +151,7 @@ export function Workshop({
     setBusy("prompts");
     setError("");
     try {
-      const response = await fetch("/api/prompts", {
+      const response = await request("/api/prompts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
