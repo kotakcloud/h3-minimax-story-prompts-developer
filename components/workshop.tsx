@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLoggedFetch } from "@/components/debug-log";
+import { IconButton, Icons } from "@/components/icons";
 import { buildExportPayload, downloadJson } from "@/lib/export";
 import type { Character, Frame, PromptSegment, Story, StoryStep, StorySummary } from "@/lib/types";
 import { STORY_STEPS, storyPath } from "@/lib/types";
@@ -276,14 +277,13 @@ export function Workshop({
                     {item.title}
                     <span className="ml-1 text-xs text-muted">{stepLabel(item.step)}</span>
                   </Link>
-                  <a
-                    href={storyPath(item.id, item.step)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs text-muted"
+                  <IconButton
+                    label="Open in new tab"
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-full text-muted hover:text-foreground"
+                    onClick={() => window.open(storyPath(item.id, item.step), "_blank", "noopener,noreferrer")}
                   >
-                    New tab
-                  </a>
+                    {Icons.external}
+                  </IconButton>
                 </li>
               ))}
             </ul>
@@ -302,14 +302,14 @@ export function Workshop({
             />
             <p className="mt-2 text-xs text-muted">{saveState}</p>
           </div>
-          <button
-            type="button"
+          <IconButton
+            label="Export"
             onClick={exportFile}
             disabled={story.segments.length === 0}
-            className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-accent text-accent-ink disabled:opacity-50"
           >
-            Export
-          </button>
+            {Icons.download}
+          </IconButton>
         </header>
 
         <nav className="mb-6 flex flex-wrap gap-2">
@@ -368,10 +368,10 @@ export function Workshop({
                   {story.frames.length} frames · {totalSeconds}s total · durations must be 4–15s
                 </p>
               </div>
-              <div className="flex gap-3">
-                <button type="button" onClick={addFrame} className="text-sm text-accent">
-                  Add frame
-                </button>
+              <div className="flex items-center gap-3">
+                <IconButton label="Add frame" onClick={addFrame}>
+                  {Icons.plus}
+                </IconButton>
                 <button
                   type="button"
                   onClick={runPrompts}
@@ -443,15 +443,15 @@ export function Workshop({
                           className="w-16 rounded-md border border-line bg-background px-2 py-1 text-foreground"
                         />
                       </label>
-                      <button type="button" onClick={() => moveFrame(index, -1)} className="text-xs text-muted">
-                        Up
-                      </button>
-                      <button type="button" onClick={() => moveFrame(index, 1)} className="text-xs text-muted">
-                        Down
-                      </button>
-                      <button type="button" onClick={() => removeFrame(frame.id)} className="text-xs text-muted">
-                        Remove
-                      </button>
+                      <IconButton label="Move up" onClick={() => moveFrame(index, -1)}>
+                        {Icons.up}
+                      </IconButton>
+                      <IconButton label="Move down" onClick={() => moveFrame(index, 1)}>
+                        {Icons.down}
+                      </IconButton>
+                      <IconButton label="Remove frame" onClick={() => removeFrame(frame.id)}>
+                        {Icons.trash}
+                      </IconButton>
                     </div>
                     <textarea
                       value={frame.summary}
@@ -470,14 +470,13 @@ export function Workshop({
           <section>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-sm font-medium uppercase tracking-wider text-muted">H3 prompts</h2>
-              <button
-                type="button"
+              <IconButton
+                label={busy === "prompts" ? "Writing H3 prompts" : "Regenerate prompts"}
                 onClick={runPrompts}
                 disabled={busy !== null || story.frames.length === 0}
-                className="rounded-full border border-line px-4 py-2 text-sm"
               >
-                {busy === "prompts" ? "Writing H3 prompts…" : "Regenerate prompts"}
-              </button>
+                {Icons.refresh}
+              </IconButton>
             </div>
             {story.segments.length === 0 ? (
               <p className="text-sm text-muted">
@@ -496,13 +495,12 @@ export function Workshop({
                           </p>
                           <p className="text-xs text-muted">{segment.duration}s</p>
                         </div>
-                        <button
-                          type="button"
+                        <IconButton
+                          label={copiedId === segment.id ? "Copied" : "Copy prompt"}
                           onClick={() => copyPrompt(segment)}
-                          className="rounded-full border border-line px-3 py-1 text-xs"
                         >
-                          {copiedId === segment.id ? "Copied" : "Copy"}
-                        </button>
+                          {copiedId === segment.id ? Icons.check : Icons.copy}
+                        </IconButton>
                       </div>
                       <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-xs leading-5 text-muted">
                         {segment.prompt}

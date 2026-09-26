@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useLoggedFetch } from "@/components/debug-log";
+import { IconButton, IconLink, Icons } from "@/components/icons";
 import type { StorySummary } from "@/lib/types";
 import { storyPath } from "@/lib/types";
 
@@ -67,14 +68,14 @@ export default function Home() {
             address from any device on the Wi-Fi to see the same list.
           </p>
         </div>
-        <button
-          type="button"
+        <IconButton
+          label={busy ? "Creating story" : "New story"}
           onClick={createStory}
           disabled={busy}
-          className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-accent text-accent-ink"
         >
-          {busy ? "Creating…" : "New story"}
-        </button>
+          {Icons.plus}
+        </IconButton>
       </header>
 
       {error && (
@@ -100,24 +101,20 @@ export default function Home() {
                   {story.id} · {stepLabel(story.step)} · {story.frameCount} frames · {story.segmentCount} prompts
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2 text-sm">
-                <Link
+              <div className="flex flex-wrap gap-2">
+                <IconLink
                   href={storyPath(story.id, story.step)}
-                  className="rounded-full bg-foreground px-3 py-1 text-background"
+                  label="Open"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-background"
                 >
-                  Open
-                </Link>
-                <a
-                  href={storyPath(story.id, story.step)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-full border border-line px-3 py-1"
-                >
-                  New tab
-                </a>
-                <button type="button" onClick={() => removeStory(story.id)} className="px-2 text-muted">
-                  Delete
-                </button>
+                  {Icons.open}
+                </IconLink>
+                <IconLink href={storyPath(story.id, story.step)} label="Open in new tab" target="_blank">
+                  {Icons.external}
+                </IconLink>
+                <IconButton label="Delete" onClick={() => removeStory(story.id)}>
+                  {Icons.trash}
+                </IconButton>
               </div>
             </li>
           ))}

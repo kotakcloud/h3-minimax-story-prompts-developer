@@ -8,6 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { Icons } from "@/components/icons";
 
 export type DebugStatus = "waiting" | "ok" | "error";
 
@@ -161,8 +162,14 @@ export function DebugLogFooter() {
         <div className="border-t border-line">
           <div className="flex items-center justify-between px-4 py-2">
             <p className="text-xs text-muted">API calls from this browser tab.</p>
-            <button type="button" onClick={clear} className="text-xs text-muted">
-              Clear
+            <button
+              type="button"
+              onClick={clear}
+              title="Clear logs"
+              aria-label="Clear logs"
+              className="inline-flex h-7 w-7 items-center justify-center text-muted hover:text-foreground"
+            >
+              {Icons.trash}
             </button>
           </div>
           <ol className="max-h-56 overflow-y-auto px-4 pb-3 font-mono text-xs leading-5">
