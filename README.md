@@ -22,9 +22,12 @@ Open one story, or open several in new tabs. The home page lists all of them.
 ```bash
 cp .env.example .env.local
 # add your OpenRouter key
-npm install
-npm run dev
+./start.sh
 ```
+
+On Windows: `.\start.ps1`
+
+Both scripts free port `48217` if it is already in use, then start the app.
 
 The app binds to `0.0.0.0:48217`, so another machine on the same Wi-Fi can open:
 
