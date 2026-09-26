@@ -51,6 +51,13 @@ export const Icons = {
       <path d="M5 20h14" />
     </Svg>
   ),
+  markdown: (
+    <Svg>
+      <path d="M5 6h14v12H5z" />
+      <path d="m7 15 3-6 3 6" />
+      <path d="M16 9v6l2-2" />
+    </Svg>
+  ),
   copy: (
     <Svg>
       <rect x="8" y="8" width="11" height="11" rx="2" />

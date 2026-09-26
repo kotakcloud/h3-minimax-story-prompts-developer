@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLoggedFetch } from "@/components/debug-log";
 import { IconButton, Icons } from "@/components/icons";
-import { buildExportPayload, downloadJson } from "@/lib/export";
+import { buildExportPayload, buildMarkdownExport, downloadJson, downloadMarkdown } from "@/lib/export";
 import type { Character, Frame, PromptSegment, Story, StoryStep, StorySummary } from "@/lib/types";
 import { STORY_STEPS, storyPath } from "@/lib/types";
 
@@ -236,11 +236,21 @@ export function Workshop({
     }
   }
 
-  function exportFile() {
+  function exportSlug() {
+    return (story?.title || "story-prompts").toLowerCase().replace(/[^a-z0-9]+/g, "-") || "story-prompts";
+  }
+
+  function exportJson() {
     if (!story) return;
-    const payload = buildExportPayload(story.title || "Untitled story", story.segments);
-    const slug = (story.title || "story-prompts").toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    downloadJson(`${slug || "story-prompts"}.json`, payload);
+    downloadJson(`${exportSlug()}.json`, buildExportPayload(story.title || "Untitled story", story.segments));
+  }
+
+  function exportMarkdown() {
+    if (!story) return;
+    downloadMarkdown(
+      `${exportSlug()}.md`,
+      buildMarkdownExport(story.title || "Untitled story", story.segments, story.frames),
+    );
   }
 
   const totalSeconds = useMemo(
@@ -302,14 +312,24 @@ export function Workshop({
             />
             <p className="mt-2 text-xs text-muted">{saveState}</p>
           </div>
-          <IconButton
-            label="Export"
-            onClick={exportFile}
-            disabled={story.segments.length === 0}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-accent text-accent-ink disabled:opacity-50"
-          >
-            {Icons.download}
-          </IconButton>
+          <div className="flex gap-2">
+            <IconButton
+              label="Export JSON"
+              onClick={exportJson}
+              disabled={story.segments.length === 0}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-accent text-accent-ink disabled:opacity-50"
+            >
+              {Icons.download}
+            </IconButton>
+            <IconButton
+              label="Export Markdown"
+              onClick={exportMarkdown}
+              disabled={story.segments.length === 0}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-line text-foreground disabled:opacity-50"
+            >
+              {Icons.markdown}
+            </IconButton>
+          </div>
         </header>
 
         <nav className="mb-6 flex flex-wrap gap-2">
