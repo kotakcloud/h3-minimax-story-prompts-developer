@@ -51,7 +51,7 @@ export async function chatCompletion(
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
-      "HTTP-Referer": "http://localhost:3000",
+      "HTTP-Referer": "http://localhost:48217",
       "X-Title": "H3 Story Prompt Workshop",
     },
     body: JSON.stringify({

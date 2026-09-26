@@ -37,6 +37,9 @@ yarn-error.log*
 # contains a live API key — keep local only
 openrouter api.md
 
+# local story files
+/data/stories/*.json
+
 # vercel
 .vercel
 
