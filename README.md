@@ -19,15 +19,23 @@ Open one story, or open several in new tabs. The home page lists all of them.
 
 ## Setup
 
-```bash
-cp .env.example .env.local
-# add your OpenRouter key
-./start.sh
+Install Node.js and npm, then from PowerShell run:
+
+```powershell
+Copy-Item .env.example .env.local
 ```
 
-On Windows: `.\start.ps1`
+Add your OpenRouter key to `.env.local` to enable story breakdown and prompt generation. Then start the app:
 
-Both scripts free port `48217` if it is already in use, then start the app.
+```powershell
+.\start.ps1
+```
+
+The launcher installs dependencies when needed and frees port `48217` if it is already in use. Open the local app at:
+
+```text
+http://localhost:48217
+```
 
 The app binds to `0.0.0.0:48217`, so another machine on the same Wi-Fi can open:
 
@@ -35,7 +43,7 @@ The app binds to `0.0.0.0:48217`, so another machine on the same Wi-Fi can open:
 http://<this-computer-lan-ip>:48217
 ```
 
-On this Mac the LAN address is printed as **Network** when you start the server. Open that URL on the other machine. Do not start a second copy of the app there, or you will see an empty story list. If the other machine cannot connect, allow incoming connections for Node in macOS Firewall.
+On Windows, find the PC's LAN address with `ipconfig`. Open that URL on the other machine. Do not start a second copy of the app there, or you will see an empty story list. If the other machine cannot connect, allow Node.js through Windows Defender Firewall on private networks.
 
 Default model: `deepseek/deepseek-v4-flash-0731`.
 
