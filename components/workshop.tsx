@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLoggedFetch } from "@/components/debug-log";
 import { IconButton, Icons } from "@/components/icons";
+import { UpdateCommentDialog } from "@/components/update-comment-dialog";
 import { buildExportPayload, buildMarkdownExport, downloadJson, downloadMarkdown } from "@/lib/export";
 import type { Character, Frame, PromptSegment, PromptRevision, Story, StoryStep, StorySummary } from "@/lib/types";
 import { STORY_STEPS, storyPath, storyRevisions } from "@/lib/types";
 
-type Busy = "breakdown" | "prompts" | null;
+type Busy = "breakdown" | "prompts" | "update" | null;
 
 function newFrameId(frames: Frame[]): string {
   return `f${Math.max(0, ...frames.map((frame) => Number(frame.id.replace(/\D/g, "")) || 0)) + 1}`;
@@ -35,6 +36,7 @@ export function Workshop({
   const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState("");
   const [copiedId, setCopiedId] = useState("");
+  const [updateOpen, setUpdateOpen] = useState(false);
   const [saveState, setSaveState] = useState("Saved");
   const skipSave = useRef(true);
   const storyRef = useRef<Story | null>(null);
@@ -165,28 +167,79 @@ export function Workshop({
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Prompt generation failed.");
       const segments = (data.segments || []) as PromptSegment[];
-      const prior = story.promptRevisions.length
-        ? story.promptRevisions
-        : story.segments.length
-          ? [{ id: "1", createdAt: story.updatedAt, segments: story.segments }]
-          : [];
-      const revision: PromptRevision = {
-        id: crypto.randomUUID(),
-        createdAt: new Date().toISOString(),
-        segments,
-      };
-      const next: Story = {
+      await saveRevision(segments);
+      router.push(storyPath(storyId, "prompts"));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Prompt generation failed.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function saveRevision(segments: PromptSegment[]) {
+    if (!story) return;
+    const prior = story.promptRevisions.length
+      ? story.promptRevisions
+      : story.segments.length
+        ? [{ id: "1", createdAt: story.updatedAt, segments: story.segments }]
+        : [];
+    const revision: PromptRevision = {
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      segments,
+    };
+    skipSave.current = true;
+    setStory(
+      await persist({
         ...story,
         segments,
         promptRevisions: [...prior, revision],
         activeRevisionId: revision.id,
         step: "prompts",
-      };
-      skipSave.current = true;
-      setStory(await persist(next));
-      router.push(storyPath(storyId, "prompts"));
+      }),
+    );
+  }
+
+  async function runUpdate(comment: string, ids: string[]) {
+    if (!story) return;
+    setBusy("update");
+    setError("");
+    try {
+      const targets = story.segments
+        .map((segment, index) => {
+          const frame = story.frames.find((item) => item.id === segment.id);
+          return {
+            id: segment.id,
+            number: index + 1,
+            duration: segment.duration,
+            prompt: segment.prompt,
+            title: frame?.title || `Prompt ${index + 1}`,
+            summary: frame?.summary || "",
+          };
+        })
+        .filter((target) => ids.includes(target.id));
+      const response = await request("/api/prompts/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          gist: story.gist,
+          title: story.title,
+          comment,
+          characters: story.characters,
+          frames: story.frames,
+          targets,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Prompt update failed.");
+      const updated = new Map(
+        ((data.segments || []) as PromptSegment[]).map((segment) => [segment.id, segment]),
+      );
+      const segments = story.segments.map((segment) => updated.get(segment.id) || segment);
+      await saveRevision(segments);
+      setUpdateOpen(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Prompt generation failed.");
+      setError(err instanceof Error ? err.message : "Prompt update failed.");
     } finally {
       setBusy(null);
     }
@@ -533,13 +586,23 @@ export function Workshop({
                   );
                 })}
               </div>
-              <IconButton
-                label={busy === "prompts" ? "Writing H3 prompts" : "Regenerate prompts"}
-                onClick={runPrompts}
-                disabled={busy !== null || story.frames.length === 0}
-              >
-                {Icons.refresh}
-              </IconButton>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setUpdateOpen(true)}
+                  disabled={busy !== null || story.segments.length === 0}
+                  className="rounded-full border border-line px-4 py-2 text-sm"
+                >
+                  Update with comment
+                </button>
+                <IconButton
+                  label={busy === "prompts" ? "Writing H3 prompts" : "Regenerate prompts"}
+                  onClick={runPrompts}
+                  disabled={busy !== null || story.frames.length === 0}
+                >
+                  {Icons.refresh}
+                </IconButton>
+              </div>
             </div>
             {story.segments.length === 0 ? (
               <p className="text-sm text-muted">
@@ -576,6 +639,20 @@ export function Workshop({
           </section>
         )}
       </main>
+      <UpdateCommentDialog
+        open={updateOpen}
+        segments={story.segments}
+        options={story.segments.map((segment, index) => ({
+          id: segment.id,
+          number: index + 1,
+          title: story.frames.find((frame) => frame.id === segment.id)?.title || `Prompt ${index + 1}`,
+        }))}
+        busy={busy === "update"}
+        onClose={() => {
+          if (busy !== "update") setUpdateOpen(false);
+        }}
+        onApply={runUpdate}
+      />
     </div>
   );
 }
