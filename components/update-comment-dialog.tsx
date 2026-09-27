@@ -122,7 +122,7 @@ export function UpdateCommentDialog({
   const showingDiffs = previews.length > 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6 pb-16">
       <button
         type="button"
         className="absolute inset-0 cursor-pointer"

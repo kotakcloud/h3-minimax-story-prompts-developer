@@ -145,7 +145,7 @@ export function DebugLogFooter() {
   }, [waiting]);
 
   return (
-    <footer className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-card/95 backdrop-blur">
+    <footer className="fixed inset-x-0 bottom-0 z-[70] border-t border-line bg-card/95 backdrop-blur">
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
