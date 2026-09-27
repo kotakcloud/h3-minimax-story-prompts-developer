@@ -72,7 +72,9 @@ export function UpdateCommentDialog({
     setAccepted([]);
     setPreviews([]);
     setProposed([]);
-  }, [open, segments]);
+    // Reset only when the dialog opens, not when the story updates behind it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;

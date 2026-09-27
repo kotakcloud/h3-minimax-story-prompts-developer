@@ -176,25 +176,32 @@ export function Workshop({
     }
   }
 
-  async function saveRevision(segments: PromptSegment[]) {
+  async function saveRevision(segments: PromptSegment[], activate = true) {
     if (!story) return;
     const prior = story.promptRevisions.length
       ? story.promptRevisions
       : story.segments.length
-        ? [{ id: "1", createdAt: story.updatedAt, segments: story.segments }]
+        ? [
+            {
+              id: story.activeRevisionId || "1",
+              createdAt: story.updatedAt,
+              segments: story.segments,
+            },
+          ]
         : [];
     const revision: PromptRevision = {
       id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
       segments,
     };
+    const currentId = story.activeRevisionId || prior[0]?.id || revision.id;
     skipSave.current = true;
     setStory(
       await persist({
         ...story,
-        segments,
+        segments: activate ? segments : story.segments,
         promptRevisions: [...prior, revision],
-        activeRevisionId: revision.id,
+        activeRevisionId: activate ? revision.id : currentId,
         step: "prompts",
       }),
     );
@@ -243,13 +250,13 @@ export function Workshop({
 
   async function applyUpdate(updated: PromptSegment[]) {
     if (!story) return;
+    setUpdateOpen(false);
     setBusy("update");
     setError("");
     try {
       const byId = new Map(updated.map((segment) => [segment.id, segment]));
       const segments = story.segments.map((segment) => byId.get(segment.id) || segment);
-      await saveRevision(segments);
-      setUpdateOpen(false);
+      await saveRevision(segments, false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Prompt update failed.");
     } finally {
