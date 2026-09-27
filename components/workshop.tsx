@@ -40,17 +40,41 @@ export function Workshop({
   const [saveState, setSaveState] = useState("Saved");
   const skipSave = useRef(true);
   const storyRef = useRef<Story | null>(null);
-  storyRef.current = story;
+  const persistTail = useRef(Promise.resolve());
 
-  async function persist(next: Story) {
-    const response = await request(`/api/stories/${next.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(next),
+  useEffect(() => {
+    storyRef.current = story;
+  }, [story]);
+
+  function persist(next: Story) {
+    storyRef.current = next;
+    const task = persistTail.current.then(async () => {
+      const payload = storyRef.current;
+      if (!payload) throw new Error("Story is not loaded.");
+      const response = await request(`/api/stories/${payload.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Save failed.");
+      const saved = data.story as Story;
+      if (
+        storyRef.current &&
+        storyRef.current.promptRevisions.length > saved.promptRevisions.length
+      ) {
+        return storyRef.current;
+      }
+      if (storyRef.current === payload || storyRef.current === next) {
+        storyRef.current = saved;
+      }
+      return storyRef.current || saved;
     });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "Save failed.");
-    return data.story as Story;
+    persistTail.current = task.then(
+      () => undefined,
+      () => undefined,
+    );
+    return task;
   }
 
   useEffect(() => {
@@ -89,7 +113,9 @@ export function Workshop({
     setSaveState("Saving…");
     const timer = window.setTimeout(async () => {
       try {
-        const saved = await persist(story);
+        const latest = storyRef.current;
+        if (!latest) return;
+        const saved = await persist(latest);
         skipSave.current = true;
         setStory(saved);
         setSaveState("Saved");
@@ -177,15 +203,16 @@ export function Workshop({
   }
 
   async function saveRevision(segments: PromptSegment[], activate = true) {
-    if (!story) return;
-    const prior = story.promptRevisions.length
-      ? story.promptRevisions
-      : story.segments.length
+    const current = storyRef.current;
+    if (!current) return;
+    const prior = current.promptRevisions.length
+      ? current.promptRevisions
+      : current.segments.length
         ? [
             {
-              id: story.activeRevisionId || "1",
-              createdAt: story.updatedAt,
-              segments: story.segments,
+              id: current.activeRevisionId || "1",
+              createdAt: current.updatedAt,
+              segments: current.segments,
             },
           ]
         : [];
@@ -194,17 +221,19 @@ export function Workshop({
       createdAt: new Date().toISOString(),
       segments,
     };
-    const currentId = story.activeRevisionId || prior[0]?.id || revision.id;
+    const next: Story = {
+      ...current,
+      segments: activate ? segments : current.segments,
+      promptRevisions: [...prior, revision],
+      activeRevisionId: activate ? revision.id : current.activeRevisionId || prior[0]?.id || revision.id,
+      step: "prompts",
+    };
     skipSave.current = true;
-    setStory(
-      await persist({
-        ...story,
-        segments: activate ? segments : story.segments,
-        promptRevisions: [...prior, revision],
-        activeRevisionId: activate ? revision.id : currentId,
-        step: "prompts",
-      }),
-    );
+    storyRef.current = next;
+    setStory(next);
+    const saved = await persist(next);
+    skipSave.current = true;
+    setStory(saved);
   }
 
   async function previewUpdate(comment: string, ids: string[]) {
@@ -249,14 +278,15 @@ export function Workshop({
   }
 
   async function applyUpdate(updated: PromptSegment[]) {
-    if (!story) return;
+    const current = storyRef.current;
+    if (!current) return;
     setUpdateOpen(false);
     setBusy("update");
     setError("");
     try {
       const byId = new Map(updated.map((segment) => [segment.id, segment]));
-      const segments = story.segments.map((segment) => byId.get(segment.id) || segment);
-      await saveRevision(segments, false);
+      const segments = current.segments.map((segment) => byId.get(segment.id) || segment);
+      await saveRevision(segments, true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Prompt update failed.");
     } finally {
