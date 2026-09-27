@@ -200,8 +200,8 @@ export function Workshop({
     );
   }
 
-  async function runUpdate(comment: string, ids: string[]) {
-    if (!story) return;
+  async function previewUpdate(comment: string, ids: string[]) {
+    if (!story) throw new Error("Story is not loaded.");
     setBusy("update");
     setError("");
     try {
@@ -232,10 +232,22 @@ export function Workshop({
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Prompt update failed.");
-      const updated = new Map(
-        ((data.segments || []) as PromptSegment[]).map((segment) => [segment.id, segment]),
-      );
-      const segments = story.segments.map((segment) => updated.get(segment.id) || segment);
+      return (data.segments || []) as PromptSegment[];
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Prompt update failed.");
+      throw err;
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function applyUpdate(updated: PromptSegment[]) {
+    if (!story) return;
+    setBusy("update");
+    setError("");
+    try {
+      const byId = new Map(updated.map((segment) => [segment.id, segment]));
+      const segments = story.segments.map((segment) => byId.get(segment.id) || segment);
       await saveRevision(segments);
       setUpdateOpen(false);
     } catch (err) {
@@ -651,7 +663,8 @@ export function Workshop({
         onClose={() => {
           if (busy !== "update") setUpdateOpen(false);
         }}
-        onApply={runUpdate}
+        onPreview={previewUpdate}
+        onApply={applyUpdate}
       />
     </div>
   );
