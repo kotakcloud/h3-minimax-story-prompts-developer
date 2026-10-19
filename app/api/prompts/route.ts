@@ -1,10 +1,63 @@
 import { NextResponse } from "next/server";
 import { chatJson } from "@/lib/openrouter";
 import { clampDuration } from "@/lib/parse";
-import { readPrompt } from "@/lib/prompts";
-import type { BreakdownResult, PromptSegment } from "@/lib/types";
+import { analysisBlock, onScreenTextFix, onScreenTextMentions, readPrompt, readPromptWithFormats } from "@/lib/prompts";
+import type { BreakdownResult, PromptSegment, StoryLocation } from "@/lib/types";
 
 export const maxDuration = 300;
+
+// OpenRouter occasionally stalls on one request for minutes. If a frame has not
+// answered by then, send the same request again and keep whichever finishes first.
+const BACKUP_AFTER_MS = 75_000;
+
+// Continuation segments carry 0.92 s of the previous segment at their start.
+function continuationEnd(duration: number): string {
+  const total = duration + 0.92;
+  const seconds = Math.floor(total);
+  const millis = Math.round((total - seconds) * 1000);
+  return `00:${String(seconds).padStart(2, "0")}.${String(millis).padStart(3, "0")}`;
+}
+
+function withBackupRequest<T>(run: () => Promise<T>, backupAfterMs: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    let settled = false;
+    let running = 0;
+    let backupSent = false;
+
+    const sendBackup = (reason: string) => {
+      if (settled || backupSent) return;
+      backupSent = true;
+      clearTimeout(timer);
+      console.log(`[prompts] frame ${label}: ${reason}; sending a backup request`);
+      launch();
+    };
+
+    const launch = () => {
+      running += 1;
+      run().then(
+        (value) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          resolve(value);
+        },
+        (error) => {
+          running -= 1;
+          if (settled) return;
+          if (!backupSent) {
+            sendBackup(`request failed (${error instanceof Error ? error.message : error})`);
+          } else if (running === 0) {
+            settled = true;
+            reject(error);
+          }
+        },
+      );
+    };
+
+    const timer = setTimeout(() => sendBackup(`no answer after ${backupAfterMs / 1000}s`), backupAfterMs);
+    launch();
+  });
+}
 
 function asString(value: unknown, fallback = ""): string {
   return typeof value === "string" ? value.trim() : fallback;
@@ -52,6 +105,10 @@ export async function POST(request: Request) {
       title?: string;
       characters?: BreakdownResult["characters"];
       frames?: BreakdownResult["frames"];
+      reference?: boolean;
+      location?: StoryLocation;
+      layout?: string;
+      analysis?: unknown;
     };
 
     const frames = Array.isArray(body.frames) ? body.frames : [];
@@ -70,44 +127,69 @@ export async function POST(request: Request) {
       })),
     };
 
-    const system = await readPrompt("prompts/h3-t2va-system.md");
-    const user = [
-      "Write one T2VA H3 prompt per frame. Keep character identity locked across segments.",
-      "",
-      `STORY TITLE: ${breakdown.title}`,
-      "",
-      `ORIGINAL GIST:\n${body.gist?.trim() || "(not provided)"}`,
-      "",
-      `CHARACTER LOCK:\n${JSON.stringify(breakdown.characters, null, 2)}`,
-      "",
-      `FRAMES:\n${JSON.stringify(breakdown.frames, null, 2)}`,
-    ].join("\n");
-
-    try {
-      const data = await chatJson(system, user, { maxTokens: 24000 });
-      return NextResponse.json({ segments: normalize(data, breakdown) });
-    } catch (batchError) {
-      const segments: PromptSegment[] = [];
-      for (const frame of breakdown.frames) {
-        const singleUser = [
-          "Write exactly one T2VA H3 prompt for this single frame. Keep character identity locked.",
+    // One call per frame, all in parallel: a single call for the whole story regularly
+    // ran past several minutes, while per-frame calls finish in well under that.
+    const reference = body.reference === true;
+    const system = reference
+      ? await readPromptWithFormats("prompts/h3-ref2va-system.md")
+      : await readPrompt("prompts/h3-t2va-system.md");
+    const analysis = analysisBlock(body.analysis);
+    const perFrame = await Promise.all(
+      breakdown.frames.map(async (frame, index) => {
+        const lines = reference
+          ? [
+              `Write exactly one Ref2VA H3 prompt for segment ${index + 1} of ${breakdown.frames.length} (id "${frame.id}", ${frame.duration} s).`,
+              index === 0
+                ? `This is SEGMENT 1: it starts from <Picture 1>; timestamps run 00:00.000 to 00:${String(frame.duration).padStart(2, "0")}.000.`
+                : `This is a CONTINUATION segment: open with the previous shot's final moment; content timestamps run 00:00.920 to ${continuationEnd(frame.duration)}.`,
+              "Keep character identity locked and stay continuous with the neighbouring segments.",
+              "",
+              `STORY TITLE: ${breakdown.title}`,
+              "",
+              `ORIGINAL GIST:\n${body.gist?.trim() || "(not provided)"}`,
+              "",
+              `CHARACTER LOCK (S1 = <Subject 1>, S2 = <Subject 2>, …):\n${JSON.stringify(breakdown.characters, null, 2)}`,
+              "",
+              `LOCATION (shown in <Picture 1>):\n${JSON.stringify(body.location || {}, null, 2)}`,
+              "",
+              `<Picture 1> LAYOUT: ${body.layout?.trim() || "(not provided)"}`,
+            ]
+          : [
+              `Write exactly one T2VA H3 prompt for frame ${index + 1} of ${breakdown.frames.length} (id "${frame.id}"). Keep character identity locked and stay continuous with the neighbouring frames.`,
+              "",
+              `STORY TITLE: ${breakdown.title}`,
+              "",
+              `ORIGINAL GIST:\n${body.gist?.trim() || "(not provided)"}`,
+              "",
+              `CHARACTER LOCK:\n${JSON.stringify(breakdown.characters, null, 2)}`,
+            ];
+        const user = [
+          ...lines,
+          ...(analysis ? ["", `STORY ANALYSIS:\n${analysis}`] : []),
           "",
-          `STORY TITLE: ${breakdown.title}`,
+          `ALL FRAMES (context only):\n${JSON.stringify(breakdown.frames, null, 2)}`,
           "",
-          `ORIGINAL GIST:\n${body.gist?.trim() || "(not provided)"}`,
-          "",
-          `CHARACTER LOCK:\n${JSON.stringify(breakdown.characters, null, 2)}`,
-          "",
-          `FRAMES:\n${JSON.stringify([frame], null, 2)}`,
+          `FRAMES (write this one only):\n${JSON.stringify([frame], null, 2)}`,
         ].join("\n");
-        const data = await chatJson(system, singleUser, { maxTokens: 4000 });
-        segments.push(...normalize(data, { ...breakdown, frames: [frame] }));
-      }
-      if (segments.length === 0) {
-        throw batchError;
-      }
-      return NextResponse.json({ segments });
-    }
+        const generate = async (request: string) => {
+          const data = await withBackupRequest(
+            () => chatJson(system, request, { maxTokens: 6000, timeoutMs: 180_000 }),
+            BACKUP_AFTER_MS,
+            frame.id,
+          );
+          return normalize(data, { ...breakdown, frames: [frame] });
+        };
+        const segments = await generate(user);
+        // One retry when the prompt still asks H3 to draw text (thought bubbles, captions…).
+        const hits = segments.flatMap((segment) => onScreenTextMentions(segment.prompt));
+        if (hits.length === 0) return segments;
+        console.log(`[prompts] frame ${frame.id}: on-screen text (${hits.join(", ")}); rewriting`);
+        return generate(`${user}
+
+${onScreenTextFix(hits)}`);
+      }),
+    );
+    return NextResponse.json({ segments: perFrame.flat() });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Prompt generation failed.";
     return NextResponse.json({ error: message }, { status: 500 });

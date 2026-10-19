@@ -2,6 +2,7 @@ import { mkdir, readdir, readFile, rename, unlink, writeFile } from "node:fs/pro
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import type { Story, StoryStep, StorySummary } from "./types";
+import { DEFAULT_IMAGE_SETTINGS, DEFAULT_VIDEO_SETTINGS, isStoryStep } from "./types";
 
 const storiesDir = path.join(process.cwd(), "data", "stories");
 
@@ -11,7 +12,18 @@ function emptyStory(id: string, now: string): Story {
     title: "Untitled story",
     step: "gist",
     gist: "",
+    analysis: null,
+    useOriginalGist: false,
     characters: [],
+    location: { name: "", description: "", generated: false },
+    imagePrompt: "",
+    imageNegative: "",
+    imageLayout: "",
+    imageSettings: { ...DEFAULT_IMAGE_SETTINGS },
+    referenceImages: [],
+    selectedImageId: "",
+    videoSettings: { ...DEFAULT_VIDEO_SETTINGS },
+    videos: [],
     frames: [],
     segments: [],
     promptRevisions: [],
@@ -41,9 +53,31 @@ function asStory(value: unknown, fallbackId: string): Story {
     ...raw,
     id: typeof raw.id === "string" ? raw.id : fallbackId,
     title: typeof raw.title === "string" && raw.title.trim() ? raw.title : base.title,
-    step: raw.step === "frames" || raw.step === "prompts" || raw.step === "gist" ? raw.step : "gist",
+    step: typeof raw.step === "string" && isStoryStep(raw.step) ? raw.step : "gist",
     gist: typeof raw.gist === "string" ? raw.gist : "",
+    analysis: raw.analysis && typeof raw.analysis === "object" ? (raw.analysis as Story["analysis"]) : null,
+    useOriginalGist: raw.useOriginalGist === true,
     characters: Array.isArray(raw.characters) ? (raw.characters as Story["characters"]) : [],
+    location:
+      raw.location && typeof raw.location === "object"
+        ? { ...base.location, ...(raw.location as Story["location"]) }
+        : base.location,
+    imagePrompt: typeof raw.imagePrompt === "string" ? raw.imagePrompt : "",
+    imageNegative: typeof raw.imageNegative === "string" ? raw.imageNegative : "",
+    imageLayout: typeof raw.imageLayout === "string" ? raw.imageLayout : "",
+    imageSettings:
+      raw.imageSettings && typeof raw.imageSettings === "object"
+        ? { ...base.imageSettings, ...(raw.imageSettings as Story["imageSettings"]) }
+        : base.imageSettings,
+    referenceImages: Array.isArray(raw.referenceImages)
+      ? (raw.referenceImages as Story["referenceImages"])
+      : [],
+    selectedImageId: typeof raw.selectedImageId === "string" ? raw.selectedImageId : "",
+    videoSettings:
+      raw.videoSettings && typeof raw.videoSettings === "object"
+        ? { ...base.videoSettings, ...(raw.videoSettings as Story["videoSettings"]) }
+        : base.videoSettings,
+    videos: Array.isArray(raw.videos) ? (raw.videos as Story["videos"]) : [],
     frames: Array.isArray(raw.frames) ? (raw.frames as Story["frames"]) : [],
     segments: Array.isArray(raw.segments) ? (raw.segments as Story["segments"]) : [],
     promptRevisions: Array.isArray(raw.promptRevisions)

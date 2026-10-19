@@ -35,38 +35,51 @@ function readMessageText(choice: OpenRouterChoice | undefined): string {
   return "";
 }
 
-export async function chatCompletion(
-  messages: ChatMessage[],
-  options?: { maxTokens?: number },
-): Promise<string> {
+export type ChatOptions = { maxTokens?: number; timeoutMs?: number };
+
+const DEFAULT_TIMEOUT_MS = Number(process.env.OPENROUTER_TIMEOUT_MS) || 180_000;
+
+export async function chatCompletion(messages: ChatMessage[], options?: ChatOptions): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     throw new Error("OPENROUTER_API_KEY is missing. Add it to .env.local.");
   }
 
   const model = process.env.OPENROUTER_MODEL || DEFAULT_MODEL;
+  const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const started = Date.now();
 
-  const response = await fetch(OPENROUTER_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "http://localhost:48217",
-      "X-Title": "H3 Story Prompt Workshop",
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.4,
-      max_tokens: options?.maxTokens ?? 8000,
-      reasoning: { effort: "low" },
-      messages,
-    }),
-  });
-
-  const body = (await response.json()) as {
-    error?: { message?: string };
-    choices?: OpenRouterChoice[];
-  };
+  let response: Response;
+  let body: { error?: { message?: string }; choices?: OpenRouterChoice[] };
+  try {
+    response = await fetch(OPENROUTER_URL, {
+      method: "POST",
+      signal: AbortSignal.timeout(timeoutMs),
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "http://localhost:48217",
+        "X-Title": "H3 Story Prompt Workshop",
+      },
+      body: JSON.stringify({
+        model,
+        temperature: 0.4,
+        max_tokens: options?.maxTokens ?? 8000,
+        reasoning: { effort: "low" },
+        messages,
+      }),
+    });
+    body = (await response.json()) as typeof body;
+  } catch (error) {
+    if (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")) {
+      console.log(`[openrouter] ${model} timed out after ${Math.round(timeoutMs / 1000)}s`);
+      throw new Error(`OpenRouter (${model}) did not answer within ${Math.round(timeoutMs / 1000)}s.`);
+    }
+    throw error;
+  }
+  console.log(
+    `[openrouter] ${model} ${response.status} in ${((Date.now() - started) / 1000).toFixed(1)}s (max_tokens ${options?.maxTokens ?? 8000})`,
+  );
 
   if (!response.ok) {
     throw new Error(body.error?.message || `OpenRouter request failed (${response.status}).`);
@@ -83,11 +96,7 @@ export async function chatCompletion(
   return content;
 }
 
-export async function chatJson(
-  system: string,
-  user: string,
-  options?: { maxTokens?: number },
-): Promise<unknown> {
+export async function chatJson(system: string, user: string, options?: ChatOptions): Promise<unknown> {
   const first = await chatCompletion(
     [
       { role: "system", content: system },

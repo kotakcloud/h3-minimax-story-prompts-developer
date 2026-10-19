@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { chatJson } from "@/lib/openrouter";
 import { clampDuration } from "@/lib/parse";
-import { readPrompt } from "@/lib/prompts";
+import { analysisBlock, onScreenTextFix, onScreenTextMentions, readPrompt } from "@/lib/prompts";
 import type { Character, Frame, PromptSegment } from "@/lib/types";
 
 export const maxDuration = 300;
@@ -56,6 +56,8 @@ export async function POST(request: Request) {
       characters?: Character[];
       frames?: Frame[];
       targets?: Target[];
+      reference?: boolean;
+      analysis?: unknown;
     };
 
     const comment = body.comment?.trim();
@@ -67,7 +69,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Select at least one prompt number." }, { status: 400 });
     }
 
-    const system = await readPrompt("prompts/h3-t2va-update.md");
+    const system = await readPrompt(
+      body.reference === true ? "prompts/h3-ref2va-update.md" : "prompts/h3-t2va-update.md",
+    );
     const user = [
       "Apply this update to every listed target prompt in one pass.",
       "",
@@ -80,14 +84,23 @@ export async function POST(request: Request) {
       `ORIGINAL GIST:\n${body.gist?.trim() || "(not provided)"}`,
       "",
       `CHARACTER LOCK:\n${JSON.stringify(body.characters || [], null, 2)}`,
+      ...(analysisBlock(body.analysis) ? ["", `STORY ANALYSIS:\n${analysisBlock(body.analysis)}`] : []),
       "",
       `FRAMES:\n${JSON.stringify(body.frames || [], null, 2)}`,
       "",
       `TARGET PROMPTS:\n${JSON.stringify(targets, null, 2)}`,
     ].join("\n");
 
-    const data = await chatJson(system, user, { maxTokens: 16000 });
-    return NextResponse.json({ segments: normalize(data, targets) });
+    let segments = normalize(await chatJson(system, user, { maxTokens: 16000 }), targets);
+    // One retry when an updated prompt still asks H3 to draw text (thought bubbles, captions…).
+    const hits = segments.flatMap((segment) => onScreenTextMentions(segment.prompt));
+    if (hits.length > 0) {
+      console.log(`[prompts/update] on-screen text (${hits.join(", ")}); rewriting`);
+      segments = normalize(await chatJson(system, `${user}
+
+${onScreenTextFix(hits)}`, { maxTokens: 16000 }), targets);
+    }
+    return NextResponse.json({ segments });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Prompt update failed.";
     return NextResponse.json({ error: message }, { status: 500 });

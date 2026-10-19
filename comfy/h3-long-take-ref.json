@@ -1,0 +1,540 @@
+{
+  "1": {
+    "inputs": {
+      "vae_name": "minimax-h3\\minimax_h3_audio_vae_fp32.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "2": {
+    "inputs": {
+      "vae_name": "minimax-h3\\minimax_h3_video_vae_fp16.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "10": {
+    "inputs": {
+      "clip_name": "qwen\\qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "type": "minimax",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "11": {
+    "inputs": {
+      "unet_name": "minimax-h3\\minimax_h3_fl2va_pruned_w4a8_mixed.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "15": {
+    "inputs": {
+      "project_name": [
+        "52",
+        0
+      ],
+      "project_save": "override",
+      "segment_start_number": 1,
+      "segment_count": -1,
+      "seed": 907327329980779,
+      "sampling_plan": "custom",
+      "sampling_mode": "single",
+      "1st_pass_only": false,
+      "disable_2nd_noise": false,
+      "upscale_by": 1.5,
+      "upscale_model": "None",
+      "enabled_tiling": "false",
+      "tracks_info": [
+        "29",
+        0
+      ],
+      "model_loader": [
+        "16",
+        0
+      ],
+      "sampler": [
+        "20",
+        0
+      ],
+      "sampler_2nd": [
+        "24",
+        0
+      ],
+      "sigmas": [
+        "22",
+        0
+      ],
+      "sigmas_2nd": [
+        "33",
+        0
+      ]
+    },
+    "class_type": "easy multitrackProject",
+    "_meta": {
+      "title": "MultiTrack Project"
+    }
+  },
+  "16": {
+    "inputs": {
+      "model": [
+        "54",
+        0
+      ],
+      "clip": [
+        "10",
+        0
+      ],
+      "vae": [
+        "2",
+        0
+      ],
+      "audio_vae": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "easy modelLoaderPack",
+    "_meta": {
+      "title": "Model Loader Pack"
+    }
+  },
+  "17": {
+    "inputs": {
+      "project_data": "{\"project_name\":\"ntanref_final\",\"width\":960,\"height\":960,\"frame_rate\":24,\"clips\":[{\"id\":\"segment-0\",\"index\":0,\"file_path\":\"easy_media/projects/ntanref_final/video_0_1.mp4\",\"file_name\":\"video_0_1.mp4\",\"media_revision\":\"1790536381038610900\",\"source_start_frame\":0,\"source_end_frame\":192,\"source_frame_count\":192,\"updated_at\":1790536387.6163821,\"continuity_mode\":\"shot\",\"audio_locked\":false,\"enabled\":true,\"video_files\":[{\"file_path\":\"easy_media/projects/ntanref_final/video_0_1.mp4\",\"file_name\":\"video_0_1.mp4\",\"media_revision\":\"1790536381038610900\",\"source_frame_count\":192,\"continuity_mode\":\"shot\"}]},{\"id\":\"segment-1\",\"index\":1,\"file_path\":\"easy_media/projects/ntanref_final/video_1_1.mp4\",\"file_name\":\"video_1_1.mp4\",\"media_revision\":\"1790536840562029800\",\"source_start_frame\":0,\"source_end_frame\":141,\"source_frame_count\":141,\"updated_at\":1790536853.5630422,\"continuity_mode\":\"context_swap\",\"audio_locked\":false,\"enabled\":true,\"video_files\":[{\"file_path\":\"easy_media/projects/ntanref_final/video_1_1.mp4\",\"file_name\":\"video_1_1.mp4\",\"media_revision\":\"1790536840562029800\",\"source_frame_count\":141,\"continuity_mode\":\"context_swap\"}]},{\"id\":\"segment-2\",\"index\":2,\"file_path\":\"easy_media/projects/ntanref_final/video_2_1.mp4\",\"file_name\":\"video_2_1.mp4\",\"media_revision\":\"1790537302890349000\",\"source_start_frame\":0,\"source_end_frame\":141,\"source_frame_count\":141,\"updated_at\":1790537315.9284768,\"continuity_mode\":\"context_swap\",\"audio_locked\":false,\"enabled\":true,\"video_files\":[{\"file_path\":\"easy_media/projects/ntanref_final/video_2_1.mp4\",\"file_name\":\"video_2_1.mp4\",\"media_revision\":\"1790537302890349000\",\"source_frame_count\":141,\"continuity_mode\":\"context_swap\"}]},{\"id\":\"segment-3\",\"index\":3,\"file_path\":\"easy_media/projects/ntanref_final/video_3_1.mp4\",\"file_name\":\"video_3_1.mp4\",\"media_revision\":\"1790537713990690600\",\"source_start_frame\":0,\"source_end_frame\":124,\"source_frame_count\":124,\"updated_at\":1790537727.00327,\"continuity_mode\":\"context_swap\",\"audio_locked\":false,\"enabled\":true,\"video_files\":[{\"file_path\":\"easy_media/projects/ntanref_final/video_3_1.mp4\",\"file_name\":\"video_3_1.mp4\",\"media_revision\":\"1790537713990690600\",\"source_frame_count\":124,\"continuity_mode\":\"context_swap\"}]}],\"auto_combine\":true,\"updated_at\":1790537727.00327}",
+      "project_name": [
+        "15",
+        0
+      ]
+    },
+    "class_type": "easy multitrackProjectVideoCombine",
+    "_meta": {
+      "title": "MultiTrack Project Video Combine"
+    }
+  },
+  "20": {
+    "inputs": {
+      "sampler_name": "euler"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "22": {
+    "inputs": {
+      "scheduler": "beta",
+      "steps": [
+        "46",
+        0
+      ],
+      "denoise": 1,
+      "model": [
+        "54",
+        0
+      ]
+    },
+    "class_type": "BasicScheduler",
+    "_meta": {
+      "title": "★ Steps — set them here (beta scheduler)"
+    }
+  },
+  "24": {
+    "inputs": {
+      "sampler_name": "sa_solver"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "25": {
+    "inputs": {
+      "input_mode": "video",
+      "output_mode": "save",
+      "output_mode.save_metadata": "ComfyUI",
+      "filename_prefix": [
+        "17",
+        1
+      ],
+      "input_mode.video": [
+        "60",
+        0
+      ]
+    },
+    "class_type": "easy saveVideo",
+    "_meta": {
+      "title": "Save Video"
+    }
+  },
+  "29": {
+    "inputs": {
+      "resolution": "width x height (custom)",
+      "resolution.width": [
+        "37",
+        0
+      ],
+      "resolution.height": [
+        "37",
+        1
+      ],
+      "resolution.resize_method": "stretch",
+      "format": "MiniMax",
+      "track_data": "{\"muted\":false,\"volume_db\":0,\"task_markers\":[],\"task_overview\":false,\"tracks\":[{\"id\":\"c64f6cef-34eb-4602-820a-defc4ced0f45\",\"name\":\"Task 0\",\"type\":\"task\",\"task_mode\":\"default\",\"color\":\"var(--multitrack-task-bg)\",\"muted\":false,\"solo\":false,\"volume_db\":0,\"locked\":false,\"segments\":[{\"id\":\"aa103177-5d6f-414c-882f-20d453ac26c8\",\"start_frame\":0,\"end_frame\":192,\"color\":\"var(--multitrack-task-bg)\",\"content\":{\"media_type\":\"none\",\"task_mode\":\"ref\",\"continuity_mode\":\"shot\",\"ref_image_size\":\"match\",\"images\":[{\"id\":\"db29c5f0-d488-45ba-90b9-d75d2c312e41\",\"source_type\":\"input\",\"file_path\":\"ntan_couple_start.png\",\"file_name\":\"ntan_couple_start.png\",\"shared_reference\":true}],\"muted\":false,\"volume_db\":0,\"user_prompt\":\"integrated_multimodal_description: [Shot 1] Live-action cinematic style. A bright living room bathed in warm morning light streaming through a large window, golden sunbeams casting soft shadows across a wooden floor. A cream-colored couch sits against the wall with a small wooden coffee table holding two mugs. A young woman in her early 20s with long brown hair and warm skin, wearing a cream knit sweater and jeans, sits on the couch, while a young man in his early 20s with short dark hair and light stubble, wearing a gray hoodie and dark sweatpants, sits on a wooden chair across from her. The camera pushes in at slow speed toward the woman, the morning light wrapping her in a cozy golden glow. [Shot 2] At 00:03.000, the shot cuts to a closer framing of the young woman with long brown hair and warm skin, wearing a cream knit sweater and jeans, her brown eyes sincere and warm as she looks directly at her boyfriend across the room. She holds a coffee mug in both hands, steam rising gently. The camera pushes in with small amplitude at slow speed toward her face as she speaks with a sincere, gentle voice (S1) and says: <d>[English] I'll always help you when you're going through tough times.</d>\\r\\n\\r\\noverall_soundscape: Soft morning ambience fills the room with the faint hum of a refrigerator from the kitchen and distant birdsong outside the window. The gentle clink of the coffee mug against her fingers accompanies her words, and the soft rustle of fabric is heard as she shifts slightly on the couch.\\r\\n\\r\\nnon_diegetic_music: A warm, gentle acoustic guitar melody plays at a slow tempo with soft fingerpicked notes, building subtly in warmth and intimacy as her sincere words land.\\r\\n\\n\"}},{\"id\":\"0265b15c-5f37-4c5c-a1ea-e0a4467addf3\",\"start_frame\":192,\"end_frame\":336,\"color\":\"var(--multitrack-task-bg)\",\"content\":{\"media_type\":\"none\",\"task_mode\":\"edit\",\"continuity_mode\":\"context_swap\",\"ref_image_size\":\"match\",\"images\":[{\"id\":\"880f62f3-263d-4c4b-a167-06053a648c71\",\"source_type\":\"input\",\"file_path\":\"ntan_couple_start.png\",\"file_name\":\"ntan_couple_start.png\",\"shared_reference\":true,\"shared_reference_copy\":true}],\"muted\":false,\"volume_db\":0,\"user_prompt\":\"integrated_multimodal_description: [Shot 1] Live-action cinematic style. In the same bright living room, the young man in his early 20s with short dark hair and light stubble, wearing a gray hoodie and dark sweatpants, leans back in a wooden chair with a wide playful grin spreading across his face. He raises both hands in a relaxed, dismissive gesture, palms open, as a light chuckle escapes him. The camera pans right with small amplitude to follow his relaxed hand gesture, the morning light still warm across the room. [Shot 2] At 00:01.500, the shot cuts to a closer framing of the young man with short dark hair and light stubble, wearing a gray hoodie and dark sweatpants, his eyes crinkling with amusement, the playful grin still wide. The camera pushes in with small amplitude at slow speed toward him. At 00:01.800 he says with a playful, chuckling voice (S2): <d>[English] Ha ha! But I'm not going through anything.</d> He finishes the whole line clearly by 00:04.800, then stays silent with a carefree grin until the end.\\n\\noverall_soundscape: The room's soft morning ambience continues, with the faint hum and distant birdsong. His line is the only speech in this segment and ends by 00:04.800. The soft sound of his hands slapping gently against his thighs as he relaxes back into the chair.\\n\\nnon_diegetic_music: The warm acoustic guitar continues at a light, playful tempo, with a bouncy fingerpicking pattern that matches his carefree mood.\"}},{\"id\":\"b2f5bfac-0671-4c62-8a35-b3b45a177def\",\"start_frame\":336,\"end_frame\":480,\"color\":\"var(--multitrack-task-bg)\",\"content\":{\"media_type\":\"none\",\"task_mode\":\"edit\",\"continuity_mode\":\"context_swap\",\"ref_image_size\":\"match\",\"images\":[{\"id\":\"9ea7364c-6fae-456b-89d5-04dd1856a21c\",\"source_type\":\"input\",\"file_path\":\"ntan_couple_start.png\",\"file_name\":\"ntan_couple_start.png\",\"shared_reference\":true,\"shared_reference_copy\":true}],\"muted\":false,\"volume_db\":0,\"user_prompt\":\"integrated_multimodal_description: [Shot 1] Live-action cinematic style. In the same bright living room, the young woman with long brown hair and warm skin, wearing a cream knit sweater and jeans, tilts her head slightly as a sly smile curls across her lips. She still holds her coffee mug, her eyes glinting with quiet amusement. The camera holds a medium shot of her, the morning light catching the side of her face. [Shot 2] At 00:02.000, the shot cuts to a closer framing of the young woman with long brown hair and warm skin, wearing a cream knit sweater and jeans, her sly smile widening as a soft laugh escapes her. The camera pushes in with small amplitude at slow speed toward her face as she speaks with a sly, amused voice (S1) and says: <d>[English] Ha ha… I'm not talking about now.</d>\\r\\n\\r\\noverall_soundscape: The room's soft morning ambience persists, with the faint hum and distant birdsong. A soft, breathy laugh escapes her, and the gentle clink of the coffee mug against her fingers is heard as she adjusts her grip.\\r\\n\\r\\nnon_diegetic_music: The acoustic guitar shifts to a slightly mysterious, teasing melody, with a slower tempo and a subtle minor-key inflection that hints at hidden meaning.\\r\\n\\n\"}},{\"id\":\"8da9e265-b02d-4bdf-9957-67ccef7e404d\",\"start_frame\":480,\"end_frame\":624,\"color\":\"var(--multitrack-task-bg)\",\"content\":{\"media_type\":\"none\",\"task_mode\":\"edit\",\"continuity_mode\":\"context_swap\",\"ref_image_size\":\"match\",\"images\":[{\"id\":\"1f88c4a6-a1e8-4006-adcf-2057273a89f2\",\"source_type\":\"input\",\"file_path\":\"ntan_couple_start.png\",\"file_name\":\"ntan_couple_start.png\",\"shared_reference\":true,\"shared_reference_copy\":true}],\"muted\":false,\"volume_db\":0,\"user_prompt\":\"integrated_multimodal_description: [Shot 1] Live-action cinematic style. In the same bright living room, the young man in his early 20s with short dark hair and light stubble, wearing a gray hoodie and dark sweatpants, sits on a wooden chair. The camera holds a medium shot of him, the morning light still warm across the room. [Shot 2] At 00:01.000, the shot cuts to a close-up of the same young man's face: the same short dark hair, bare-headed with no hat or cap, the same light stubble and the same gray hoodie as in the previous shots. At 00:01.100 the realization hits him: his smile drops completely, his jaw falls slightly open, his eyebrows shoot up and his eyes go wide with shock, and he freezes. His face shows clear, obvious shock and dread, not happiness; he is not smiling. At 00:01.800, still wide-eyed and shocked, he forces out one weak, breathy, nervous laugh and says quietly with a strained, worried voice (S2): <d>[English] Ha ha… oh no.</d> He finishes the whole line by 00:03.500. From 00:03.500 to the end he stays completely silent and frozen in shock: wide eyes, raised eyebrows, mouth slightly open, he swallows hard and slowly leans back. The camera pushes in slowly with small amplitude toward his shocked face.\\n\\noverall_soundscape: The room's soft morning ambience continues, with the faint hum and distant birdsong. His weak nervous laugh and line are the only speech in this segment and end by 00:03.500; after that only a soft nervous exhale, the creak of the wooden chair and room ambience.\\n\\nnon_diegetic_music: The acoustic guitar takes on a comedic, slightly ominous tone, with a descending melodic line and a slower, hesitant tempo that underscores his dawning realization.\"}}]},{\"id\":\"d15f065c-25c4-4922-8570-01dde0d3caf0\",\"name\":\"Video 0\",\"type\":\"video\",\"color\":\"var(--primary)\",\"muted\":false,\"solo\":false,\"volume_db\":0,\"locked\":false,\"segments\":[],\"audio_locked\":false}],\"total_length\":624,\"frame_rate\":24}"
+    },
+    "class_type": "easy multiTrackEditor",
+    "_meta": {
+      "title": "MultiTrack Editor"
+    }
+  },
+  "33": {
+    "inputs": {
+      "sigmas": "0.50, 0.30, 0.14, 0.06, 0.0"
+    },
+    "class_type": "ManualSigmas",
+    "_meta": {
+      "title": "Pass 2 sigmas (only used if sampling_mode = dual — ignore)"
+    }
+  },
+  "37": {
+    "inputs": {
+      "image": [
+        "55",
+        0
+      ]
+    },
+    "class_type": "GetImageSize+",
+    "_meta": {
+      "title": "🔧 Get Image Size"
+    }
+  },
+  "40": {
+    "inputs": {
+      "sage_attention": "auto",
+      "allow_compile": false,
+      "model": [
+        "11",
+        0
+      ]
+    },
+    "class_type": "PathchSageAttentionKJ",
+    "_meta": {
+      "title": "Patch Sage Attention KJ"
+    }
+  },
+  "41": {
+    "inputs": {
+      "sparsity_ratio": 0.9,
+      "block_size": "64",
+      "min_seq_len": 12228,
+      "dense_last_steps": 1,
+      "protect_audio": true,
+      "enabled": true,
+      "dense_steps": "0,1,2,3",
+      "dense_backend": "sage:auto",
+      "disable_fp16_accum": true,
+      "stabilize_motion": false,
+      "reference_protection": "Off",
+      "tail_correction": false,
+      "use_int8_qk": true,
+      "engine": "comfy_kitchen",
+      "model": [
+        "40",
+        0
+      ]
+    },
+    "class_type": "H3SLAAttention",
+    "_meta": {
+      "title": "H3 SLA Attention"
+    }
+  },
+  "42": {
+    "inputs": {
+      "enabled": true,
+      "blend_weight": 0.5,
+      "degree": 1,
+      "ridge_lambda": 0.1,
+      "window_size": 2,
+      "flex_window": 0.75,
+      "warmup_steps": 2,
+      "tail_actual_steps": 2,
+      "max_history": 8,
+      "debug": false,
+      "history_storage": "system_ram",
+      "bootstrap_first_forecast": false,
+      "anchor_residual_feedback": false,
+      "selective_rollback_correction": false,
+      "offline_smoothing_replay": false,
+      "audio_blend_weight": 0,
+      "offline_archive_storage": "system_ram",
+      "model_aware_mode": "full",
+      "model_aware_risk_threshold": 0.65,
+      "model_aware_trust_shrinkage": false,
+      "model_aware_replay_generic_correction": false,
+      "generic_correction_mode": "coordinate_rls",
+      "generic_correction_limiter": "hard_clip",
+      "generic_correction_limit": 0.4,
+      "generic_correction_attenuation": "no_attenuation",
+      "sa_pece_forecast_policy": "balanced",
+      "model": [
+        "41",
+        0
+      ]
+    },
+    "class_type": "SpectrumApplyMiniMaxH3",
+    "_meta": {
+      "title": "Spectrum Apply MiniMax H3"
+    }
+  },
+  "43": {
+    "inputs": {
+      "value": true
+    },
+    "class_type": "PrimitiveBoolean",
+    "_meta": {
+      "title": "★ DEV MODE  (true = fast draft · false = FINAL HQ)"
+    }
+  },
+  "44": {
+    "inputs": {
+      "value": 10
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "Dev steps"
+    }
+  },
+  "45": {
+    "inputs": {
+      "value": 16
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "Final steps"
+    }
+  },
+  "46": {
+    "inputs": {
+      "switch": [
+        "43",
+        0
+      ],
+      "on_false": [
+        "45",
+        0
+      ],
+      "on_true": [
+        "44",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "→ steps"
+    }
+  },
+  "47": {
+    "inputs": {
+      "value": 0.47
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "Dev megapixels"
+    }
+  },
+  "48": {
+    "inputs": {
+      "value": 0.8
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "Final megapixels"
+    }
+  },
+  "49": {
+    "inputs": {
+      "switch": [
+        "43",
+        0
+      ],
+      "on_false": [
+        "48",
+        0
+      ],
+      "on_true": [
+        "47",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "→ megapixels"
+    }
+  },
+  "50": {
+    "inputs": {
+      "value": "ntanref_v8b_dev"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Dev project name"
+    }
+  },
+  "51": {
+    "inputs": {
+      "value": "ntanref_v8b_final"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Final project name"
+    }
+  },
+  "52": {
+    "inputs": {
+      "switch": [
+        "43",
+        0
+      ],
+      "on_false": [
+        "51",
+        0
+      ],
+      "on_true": [
+        "50",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "→ project name"
+    }
+  },
+  "54": {
+    "inputs": {
+      "decode": "latent2rgb (fast)",
+      "preview_target": "node",
+      "max_resolution": 512,
+      "preview_frames": 24,
+      "preview_fps": 24,
+      "webp_quality": 80,
+      "every_n_steps": 1,
+      "max_preview_overhead": 10,
+      "suppress_default_preview": true,
+      "playback": "true speed",
+      "minimax_preview_ui": "",
+      "model": [
+        "42",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3PreviewOverrideCS",
+    "_meta": {
+      "title": "Live preview (latent2rgb, ~free)"
+    }
+  },
+  "55": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "megapixels": [
+        "49",
+        0
+      ],
+      "resolution_steps": 32,
+      "image": [
+        "57",
+        0
+      ]
+    },
+    "class_type": "ImageScaleToTotalPixels",
+    "_meta": {
+      "title": "Scale to megapixels (/32)"
+    }
+  },
+  "56": {
+    "inputs": {
+      "ResolutionState": "{\"mode\":\"preset\",\"ratio\":\"1:1\",\"w\":1024,\"h\":1024,\"custom_w\":1024,\"custom_h\":1024,\"custom_ratio_w\":4,\"custom_ratio_h\":3,\"snap\":16}"
+    },
+    "class_type": "PixaromaResolution",
+    "_meta": {
+      "title": "Resolution Pixaroma"
+    }
+  },
+  "57": {
+    "inputs": {
+      "width": [
+        "56",
+        0
+      ],
+      "height": [
+        "56",
+        1
+      ],
+      "batch_size": 1,
+      "color": 0
+    },
+    "class_type": "EmptyImage",
+    "_meta": {
+      "title": "Empty Image"
+    }
+  },
+  "58": {
+    "inputs": {
+      "video": [
+        "17",
+        0
+      ]
+    },
+    "class_type": "GetVideoComponents",
+    "_meta": {
+      "title": "Get Video Components"
+    }
+  },
+  "59": {
+    "inputs": {
+      "resize_type": "scale by multiplier",
+      "resize_type.scale": 1.075,
+      "quality": "ULTRA",
+      "images": [
+        "58",
+        0
+      ]
+    },
+    "class_type": "RTXVideoSuperResolution",
+    "_meta": {
+      "title": "RTX VSR x1.075 (~928 px)"
+    }
+  },
+  "60": {
+    "inputs": {
+      "fps": [
+        "58",
+        2
+      ],
+      "bit_depth": "auto",
+      "color_space": "sRGB",
+      "codec": "none",
+      "images": [
+        "59",
+        0
+      ],
+      "audio": [
+        "58",
+        1
+      ]
+    },
+    "class_type": "CreateVideo",
+    "_meta": {
+      "title": "Create Video"
+    }
+  }
+}

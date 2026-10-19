@@ -1,0 +1,294 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { randomUUID } from "node:crypto";
+
+export const COMFYUI_URL = (process.env.COMFYUI_URL || "http://127.0.0.1:8188").replace(/\/+$/, "");
+
+// Node ids in comfy/z-image-turbo-t2i.json (ComfyUI API format).
+const NODE = {
+  save: "9",
+  positive: "67",
+  sampler: "70",
+  negative: "71",
+  resolution: "72",
+} as const;
+
+const DEFAULT_NEGATIVE = "low quality, bad anatomy, extra digits, missing digits, extra limbs, missing limbs";
+const POLL_MS = 1500;
+const TIMEOUT_MS = 280_000;
+
+export type ComfyImage = { filename: string; subfolder: string; type: string };
+
+type ApiNode = { inputs: Record<string, unknown>; class_type: string };
+
+async function loadTemplate(): Promise<Record<string, ApiNode>> {
+  const text = await readFile(path.join(process.cwd(), "comfy", "z-image-turbo-t2i.json"), "utf8");
+  return JSON.parse(text) as Record<string, ApiNode>;
+}
+
+async function comfyJson(url: string, init?: RequestInit): Promise<unknown> {
+  let response: Response;
+  try {
+    response = await fetch(url, init);
+  } catch {
+    throw new Error(`ComfyUI is not reachable at ${COMFYUI_URL}. Start ComfyUI or set COMFYUI_URL.`);
+  }
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const detail = JSON.stringify(body).slice(0, 400);
+    throw new Error(`ComfyUI request failed (${response.status}): ${detail}`);
+  }
+  return body;
+}
+
+export async function generateReferenceImage(options: {
+  prompt: string;
+  negative: string;
+  aspectRatio: string;
+  megapixels: number;
+  seed: number;
+  filenamePrefix: string;
+}): Promise<ComfyImage[]> {
+  const workflow = await loadTemplate();
+  workflow[NODE.positive].inputs.text = options.prompt;
+  workflow[NODE.negative].inputs.text = options.negative || DEFAULT_NEGATIVE;
+  workflow[NODE.sampler].inputs.seed = options.seed;
+  workflow[NODE.resolution].inputs.aspect_ratio = options.aspectRatio;
+  workflow[NODE.resolution].inputs.megapixels = options.megapixels;
+  workflow[NODE.save].inputs.filename_prefix = options.filenamePrefix;
+
+  const promptId = await queueWorkflow(workflow);
+
+  const deadline = Date.now() + TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, POLL_MS));
+    const entry = await historyEntry(promptId);
+    if (!entry) continue;
+    if (entry.status?.status_str === "error") {
+      throw new Error(`ComfyUI failed: ${executionError(entry)}`);
+    }
+    if (entry.status?.completed) {
+      const images = entry.outputs?.[NODE.save]?.images || [];
+      if (images.length === 0) {
+        throw new Error("ComfyUI finished but saved no image.");
+      }
+      return images;
+    }
+  }
+  throw new Error("ComfyUI took too long. The image may still appear in ComfyUI's queue.");
+}
+
+type HistoryEntry = {
+  status?: { status_str?: string; completed?: boolean; messages?: [string, Record<string, unknown>][] };
+  outputs?: Record<string, { images?: ComfyImage[] }>;
+};
+
+async function queueWorkflow(workflow: Record<string, ApiNode>): Promise<string> {
+  const queued = (await comfyJson(`${COMFYUI_URL}/prompt`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt: workflow, client_id: randomUUID() }),
+  })) as { prompt_id?: string; node_errors?: Record<string, unknown> };
+
+  if (queued.node_errors && Object.keys(queued.node_errors).length > 0) {
+    throw new Error(`ComfyUI rejected the workflow: ${JSON.stringify(queued.node_errors).slice(0, 400)}`);
+  }
+  if (!queued.prompt_id) {
+    throw new Error("ComfyUI did not return a prompt id.");
+  }
+  return queued.prompt_id;
+}
+
+async function historyEntry(promptId: string): Promise<HistoryEntry | undefined> {
+  const history = (await comfyJson(`${COMFYUI_URL}/history/${promptId}`)) as Record<string, HistoryEntry>;
+  return history[promptId];
+}
+
+function executionError(entry: HistoryEntry): string {
+  const failure = entry.status?.messages?.find(([kind]) => kind === "execution_error")?.[1];
+  return String(failure?.exception_message || "unknown error").trim();
+}
+
+// ---------------------------------------------------------------------------
+// H3 long take (comfy/h3-long-take-ref.json, ComfyUI API format)
+// ---------------------------------------------------------------------------
+
+const LONG_TAKE = {
+  project: "15",
+  combine: "17",
+  save: "25",
+  editor: "29",
+  devMode: "43",
+  devProject: "50",
+  finalProject: "51",
+  resolutionPreset: "56",
+  baseImage: "57",
+} as const;
+
+const FPS = 24;
+
+async function referenceImageSize(image: ComfyImage): Promise<{ width: number; height: number }> {
+  const response = await fetch(comfyViewUrl(image));
+  if (!response.ok) {
+    throw new Error(`Could not read the reference image from ComfyUI (${response.status}).`);
+  }
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  const png = [0x89, 0x50, 0x4e, 0x47];
+  if (bytes.length < 24 || png.some((value, index) => bytes[index] !== value)) {
+    throw new Error("The reference image is not a PNG.");
+  }
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  return { width: view.getUint32(16), height: view.getUint32(20) };
+}
+
+export async function queueLongTake(options: {
+  segments: { duration: number; prompt: string }[];
+  image: ComfyImage;
+  devMode: boolean;
+  seed: number;
+  projectBase: string;
+}): Promise<{ promptId: string; project: string }> {
+  const text = await readFile(path.join(process.cwd(), "comfy", "h3-long-take-ref.json"), "utf8");
+  const workflow = JSON.parse(text) as Record<string, ApiNode>;
+
+  // Base canvas takes the reference image's aspect ratio; the workflow then scales it
+  // to the dev/final megapixels.
+  const size = await referenceImageSize(options.image);
+  delete workflow[LONG_TAKE.resolutionPreset];
+  workflow[LONG_TAKE.baseImage].inputs.width = size.width;
+  workflow[LONG_TAKE.baseImage].inputs.height = size.height;
+
+  const devProject = `${options.projectBase}_dev`;
+  const finalProject = `${options.projectBase}_final`;
+  workflow[LONG_TAKE.devMode].inputs.value = options.devMode;
+  workflow[LONG_TAKE.devProject].inputs.value = devProject;
+  workflow[LONG_TAKE.finalProject].inputs.value = finalProject;
+  workflow[LONG_TAKE.project].inputs.seed = options.seed;
+  workflow[LONG_TAKE.project].inputs.segment_start_number = 1;
+  workflow[LONG_TAKE.project].inputs.segment_count = -1;
+  const project = options.devMode ? devProject : finalProject;
+  workflow[LONG_TAKE.combine].inputs.project_data = JSON.stringify({ project_name: project, auto_combine: true });
+
+  const imagePath = [...options.image.subfolder.split(/[\\/]+/).filter(Boolean), options.image.filename].join("/");
+  const trackData = JSON.parse(String(workflow[LONG_TAKE.editor].inputs.track_data)) as {
+    tracks: { type: string; segments: unknown[] }[];
+    total_length: number;
+    frame_rate: number;
+  };
+  let start = 0;
+  const segments = options.segments.map((segment, index) => {
+    const frames = Math.round(segment.duration * FPS);
+    const entry = {
+      id: randomUUID(),
+      start_frame: start,
+      end_frame: start + frames,
+      color: "var(--multitrack-task-bg)",
+      content: {
+        media_type: "none",
+        task_mode: index === 0 ? "ref" : "edit",
+        continuity_mode: index === 0 ? "shot" : "context_swap",
+        ref_image_size: "match",
+        images: [
+          {
+            id: randomUUID(),
+            source_type: options.image.type === "input" ? "input" : "output",
+            file_path: imagePath,
+            file_name: options.image.filename,
+            shared_reference: true,
+            ...(index > 0 ? { shared_reference_copy: true } : {}),
+          },
+        ],
+        muted: false,
+        volume_db: 0,
+        user_prompt: segment.prompt,
+      },
+    };
+    start += frames;
+    return entry;
+  });
+  const task = trackData.tracks.find((track) => track.type === "task");
+  if (!task) {
+    throw new Error("The long-take template has no task track.");
+  }
+  task.segments = segments;
+  trackData.total_length = start;
+  trackData.frame_rate = FPS;
+  workflow[LONG_TAKE.editor].inputs.track_data = JSON.stringify(trackData);
+
+  const promptId = await queueWorkflow(workflow);
+  return { promptId, project };
+}
+
+export type LongTakeStatus = {
+  status: "queued" | "running" | "done" | "error";
+  queuePosition: number;
+  segmentsDone: number;
+  video: ComfyImage | null;
+  error: string;
+};
+
+export async function longTakeStatus(
+  promptId: string,
+  project: string,
+  segmentCount: number,
+  startedAt: number,
+): Promise<LongTakeStatus> {
+  const entry = await historyEntry(promptId);
+  if (entry?.status?.status_str === "error") {
+    return { status: "error", queuePosition: 0, segmentsDone: 0, video: null, error: executionError(entry) };
+  }
+  if (entry?.status?.completed) {
+    const video = entry.outputs?.[LONG_TAKE.save]?.images?.[0] || null;
+    return {
+      status: video ? "done" : "error",
+      queuePosition: 0,
+      segmentsDone: segmentCount,
+      video,
+      error: video ? "" : "ComfyUI finished but saved no video.",
+    };
+  }
+
+  const queue = (await comfyJson(`${COMFYUI_URL}/queue`)) as {
+    queue_running?: [number, string][];
+    queue_pending?: [number, string][];
+  };
+  const running = (queue.queue_running || []).some((item) => item[1] === promptId);
+  const pendingIndex = (queue.queue_pending || [])
+    .slice()
+    .sort((a, b) => a[0] - b[0])
+    .findIndex((item) => item[1] === promptId);
+  if (!running && pendingIndex === -1) {
+    return {
+      status: "error",
+      queuePosition: 0,
+      segmentsDone: 0,
+      video: null,
+      error: "The job is no longer in ComfyUI's queue (cancelled or ComfyUI restarted).",
+    };
+  }
+  if (!running) {
+    return { status: "queued", queuePosition: pendingIndex + 1, segmentsDone: 0, video: null, error: "" };
+  }
+
+  // Segment files appear in the project folder one by one while the job runs.
+  let segmentsDone = 0;
+  for (let index = 0; index < segmentCount; index += 1) {
+    const response = await fetch(
+      comfyViewUrl({ filename: `video_${index}_1.mp4`, subfolder: `easy_media/projects/${project}`, type: "output" }),
+      { method: "HEAD" },
+    ).catch(() => null);
+    const modified = Date.parse(response?.headers.get("Last-Modified") || "");
+    if (!response?.ok || !(modified >= startedAt - 2000)) break;
+    segmentsDone += 1;
+  }
+  return { status: "running", queuePosition: 0, segmentsDone, video: null, error: "" };
+}
+
+export function comfyViewUrl(image: ComfyImage): string {
+  const query = new URLSearchParams({
+    filename: image.filename,
+    subfolder: image.subfolder,
+    type: image.type,
+  });
+  return `${COMFYUI_URL}/view?${query}`;
+}

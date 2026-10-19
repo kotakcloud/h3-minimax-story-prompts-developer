@@ -10,7 +10,10 @@ import { storyPath } from "@/lib/types";
 
 function stepLabel(step: StorySummary["step"]) {
   if (step === "gist") return "Gist";
+  if (step === "cast") return "Cast";
+  if (step === "image") return "Image";
   if (step === "frames") return "Frames";
+  if (step === "video") return "Video";
   return "Prompts";
 }
 

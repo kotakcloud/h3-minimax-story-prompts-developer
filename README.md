@@ -6,6 +6,8 @@ Stories are saved as JSON files under `data/stories/` on this machine. Each stor
 
 ```text
 /stories/<id>/gist
+/stories/<id>/cast
+/stories/<id>/image
 /stories/<id>/frames
 /stories/<id>/prompts
 ```
@@ -13,9 +15,14 @@ Stories are saved as JSON files under `data/stories/` on this machine. Each stor
 Open one story, or open several in new tabs. The home page lists all of them.
 
 1. Create a story and paste a gist.
-2. **Progress: frames** breaks it into editable clips (4–15s each).
-3. **Progress: H3 prompts** writes one paste-ready prompt per frame.
-4. **Export** downloads `{ duration, prompt }` JSON for the other device.
+2. **Progress: cast & location** extracts the characters and the main location (invented if the gist has none). Both are editable.
+3. **Progress: reference image prompt** writes a Z-Image Turbo prompt for one still that shows every character in the location.
+4. **Generate image** runs `comfy/z-image-turbo-t2i.json` in ComfyUI. Keep generating with new seeds and select the best one; it becomes the H3 reference image (`ComfyUI/output/h3-story/<id>/`).
+5. **Progress: frames** breaks the story into editable clips (4–15s each), keeping the cast and location locked.
+6. **Progress: H3 prompts** writes one paste-ready prompt per frame.
+7. **Export** downloads `{ duration, prompt }` JSON for the other device.
+
+Image generation needs ComfyUI running with the Z-Image Turbo models from the template. Set `COMFYUI_URL` in `.env.local` if ComfyUI is not at `http://127.0.0.1:8188`.
 
 ## Setup
 
