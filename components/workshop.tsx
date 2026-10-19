@@ -21,7 +21,7 @@ import type {
   StorySummary,
   VideoRun,
 } from "@/lib/types";
-import { IMAGE_ASPECT_RATIOS, STORY_STEPS, effectiveGist, stepLabel, storyPath, storyRevisions } from "@/lib/types";
+import { IMAGE_ASPECT_RATIOS, STORY_STEPS, STORY_V2_MAX_SEGMENT_SECONDS, effectiveGist, stepLabel, storyPath, storyRevisions } from "@/lib/types";
 
 type Busy = "analyze" | "cast" | "imagePrompt" | "image" | "breakdown" | "prompts" | "update" | "video" | null;
 
@@ -366,16 +366,30 @@ export function Workshop({
           image: { filename: image.filename, subfolder: image.subfolder, type: image.type },
           devMode: settings.devMode,
           seed: settings.seed,
+          engine: settings.engine,
+          aspectRatio: image.aspectRatio,
+          megapixels: settings.v2Megapixels,
+          steps: settings.v2Steps,
+          devMegapixels: settings.v2DevMegapixels,
+          devSteps: settings.v2DevSteps,
         }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not start the video.");
+      const v2 = settings.engine === "story-v2";
       const run: VideoRun = {
         id: crypto.randomUUID(),
         promptId: data.promptId,
         project: data.project,
         devMode: settings.devMode,
         seed: settings.seed,
+        engine: settings.engine,
+        ...(v2
+          ? {
+              megapixels: settings.devMode ? settings.v2DevMegapixels : settings.v2Megapixels,
+              steps: settings.devMode ? settings.v2DevSteps : settings.v2Steps,
+            }
+          : {}),
         segmentCount: current.segments.length,
         revisionId: current.activeRevisionId,
         status: "queued",
@@ -1439,13 +1453,20 @@ export function Workshop({
               );
               const running = story.videos.some((run) => run.status === "queued" || run.status === "running");
               const totalVideoSeconds = story.segments.reduce((sum, segment) => sum + segment.duration, 0);
+              const settings = story.videoSettings;
+              const v2 = settings.engine === "story-v2";
+              const v2Mp = settings.devMode ? settings.v2DevMegapixels : settings.v2Megapixels;
+              const v2Steps = settings.devMode ? settings.v2DevSteps : settings.v2Steps;
+              const longSegments = story.segments.filter((segment) => segment.duration > STORY_V2_MAX_SEGMENT_SECONDS);
+              // Measured in the Pipeline: ~44 s of compute per output second at 0.3 MP / 10 steps; scaled by MP x steps.
+              const v2Minutes = Math.max(1, Math.round((totalVideoSeconds * 44 * (v2Mp / 0.3) * (v2Steps / 10)) / 60));
               return (
                 <>
                   <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
                     <div>
                       <h2 className="text-sm font-medium uppercase tracking-wider text-muted">Video</h2>
                       <p className="mt-1 text-xs text-muted">
-                        Runs the H3 long-take workflow in ComfyUI with the current prompt set ({story.segments.length}{" "}
+                        Runs the {v2 ? "H3 Story V2" : "H3 long-take"} workflow in ComfyUI with the current prompt set ({story.segments.length}{" "}
                         segments · {totalVideoSeconds}s) and the selected reference image.
                       </p>
                     </div>
@@ -1471,6 +1492,26 @@ export function Workshop({
                       </div>
 
                       <div className="flex flex-wrap items-end gap-4 text-xs text-muted">
+                        <label className="flex flex-col gap-1">
+                          Workflow
+                          <select
+                            value={settings.engine}
+                            onChange={(event) => updateVideoSettings({ engine: event.target.value as typeof settings.engine })}
+                            className="rounded-md border border-line bg-background px-2 py-1 text-sm text-foreground"
+                          >
+                            <option value="long-take">Long take (fl2va, single pass + VSR)</option>
+                            <option value="story-v2">Story V2 (ref2va, dual pass)</option>
+                          </select>
+                        </label>
+                      </div>
+                      {v2 && longSegments.length > 0 && (
+                        <p className="text-xs text-amber-300">
+                          Story V2 is proven with segments of {STORY_V2_MAX_SEGMENT_SECONDS}s or less;{" "}
+                          {longSegments.map((segment) => `${segment.id} (${segment.duration}s)`).join(", ")} may drift.
+                        </p>
+                      )}
+
+                      <div className="flex flex-wrap items-end gap-4 text-xs text-muted">
                         <label className="flex items-center gap-2 text-sm text-foreground">
                           <input
                             type="checkbox"
@@ -1479,11 +1520,48 @@ export function Workshop({
                           />
                           DEV MODE
                           <span className="text-xs text-muted">
-                            {story.videoSettings.devMode
-                              ? "fast draft · 0.47 MP · 10 steps"
-                              : "final · 0.8 MP · 16 steps · RTX VSR"}
+                            {v2
+                              ? `${settings.devMode ? "draft" : "full"} · ${v2Mp} MP · ${v2Steps} steps · x1.25 refine`
+                              : settings.devMode
+                                ? "fast draft · 0.47 MP · 10 steps"
+                                : "final · 0.8 MP · 16 steps · RTX VSR"}
                           </span>
                         </label>
+                        {v2 && (
+                          <>
+                            <label className="flex flex-col gap-1">
+                              {settings.devMode ? "DEV" : "FULL"} megapixels
+                              <input
+                                type="number"
+                                min={0.1}
+                                max={2}
+                                step={0.1}
+                                value={v2Mp}
+                                onChange={(event) => {
+                                  const next = Math.round(Number(event.target.value) * 10) / 10;
+                                  if (!Number.isFinite(next) || next <= 0) return;
+                                  updateVideoSettings(settings.devMode ? { v2DevMegapixels: next } : { v2Megapixels: next });
+                                }}
+                                className="w-20 rounded-md border border-line bg-background px-2 py-1 text-foreground"
+                              />
+                            </label>
+                            <label className="flex flex-col gap-1">
+                              {settings.devMode ? "DEV" : "FULL"} steps
+                              <input
+                                type="number"
+                                min={4}
+                                max={60}
+                                value={v2Steps}
+                                onChange={(event) => {
+                                  const next = Math.round(Number(event.target.value));
+                                  if (!Number.isFinite(next) || next < 1) return;
+                                  updateVideoSettings(settings.devMode ? { v2DevSteps: next } : { v2Steps: next });
+                                }}
+                                className="w-16 rounded-md border border-line bg-background px-2 py-1 text-foreground"
+                              />
+                            </label>
+                          </>
+                        )}
                         <label className="flex flex-col gap-1">
                           Seed
                           <input
@@ -1516,7 +1594,11 @@ export function Workshop({
                           {busy === "video" ? "Sending to ComfyUI…" : running ? "Video in progress…" : "Generate video"}
                         </button>
                         <p className="text-xs text-muted">
-                          {story.videoSettings.devMode ? "A draft takes about 11–14 min." : "A final takes about 29 min."}
+                          {v2
+                            ? `About ${v2Minutes} min at these settings. A different MP or step count gives a different take.`
+                            : story.videoSettings.devMode
+                              ? "A draft takes about 11–14 min."
+                              : "A final takes about 29 min."}
                         </p>
                       </div>
                     </div>
@@ -1534,7 +1616,12 @@ export function Workshop({
                               <li key={run.id} className="rounded-2xl border border-line bg-card p-4">
                                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
                                   <span>
-                                    {run.devMode ? "Draft" : "Final"} · seed {run.seed} ·{" "}
+                                    {run.engine === "story-v2"
+                                      ? `Story V2 ${run.devMode ? "DEV" : "FULL"} · ${run.megapixels} MP · ${run.steps} steps`
+                                      : run.devMode
+                                        ? "Draft"
+                                        : "Final"}{" "}
+                                    · seed {run.seed} ·{" "}
                                     {new Date(run.createdAt).toLocaleString()}
                                   </span>
                                   <span

@@ -1,0 +1,435 @@
+{
+  "1": {
+    "inputs": {
+      "vae_name": "minimax-h3\\minimax_h3_audio_vae_fp32.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "2": {
+    "inputs": {
+      "vae_name": "minimax-h3\\minimax_h3_video_vae_fp16.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "10": {
+    "inputs": {
+      "clip_name": "qwen\\qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "type": "minimax",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "11": {
+    "inputs": {
+      "unet_name": "minimax-h3\\minimax_h3_ref2va_pruned_w4a8_mixed.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "15": {
+    "inputs": {
+      "project_name": [
+        "46",
+        0
+      ],
+      "project_save": "override",
+      "segment_start_number": 1,
+      "segment_count": -1,
+      "seed": 343609390634740,
+      "sampling_plan": "light",
+      "sampling_mode": "dual",
+      "1st_pass_only": false,
+      "disable_2nd_noise": false,
+      "upscale_by": 1.25,
+      "upscale_model": "minimax-h3\\minimax_h3_latent_upscaler_3d_conv_v1_fp16.safetensors",
+      "enabled_tiling": "false",
+      "tracks_info": [
+        "29",
+        0
+      ],
+      "model_loader": [
+        "16",
+        0
+      ],
+      "model_loader_2nd": [
+        "52",
+        0
+      ],
+      "sampler": [
+        "20",
+        0
+      ],
+      "sigmas": [
+        "22",
+        0
+      ]
+    },
+    "class_type": "easy multitrackProject",
+    "_meta": {
+      "title": "MultiTrack Project"
+    }
+  },
+  "16": {
+    "inputs": {
+      "model": [
+        "21",
+        0
+      ],
+      "clip": [
+        "10",
+        0
+      ],
+      "vae": [
+        "2",
+        0
+      ],
+      "audio_vae": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "easy modelLoaderPack",
+    "_meta": {
+      "title": "Model Loader Pack"
+    }
+  },
+  "17": {
+    "inputs": {
+      "project_data": "{\"project_name\":\"longtake_real_hybrid_05spec\",\"width\":672,\"height\":1216,\"frame_rate\":24,\"clips\":[{\"id\":\"segment-0\",\"index\":0,\"file_path\":\"easy_media/projects/longtake_real_hybrid_05spec/video_0_1.mp4\",\"file_name\":\"video_0_1.mp4\",\"media_revision\":\"1792227750147570200\",\"source_start_frame\":0,\"source_end_frame\":124,\"source_frame_count\":124,\"updated_at\":1792227756.4189374,\"continuity_mode\":\"shot\",\"audio_locked\":false,\"enabled\":true,\"video_files\":[{\"file_path\":\"easy_media/projects/longtake_real_hybrid_05spec/video_0_1.mp4\",\"file_name\":\"video_0_1.mp4\",\"media_revision\":\"1792227750147570200\",\"source_frame_count\":124,\"continuity_mode\":\"shot\"}]},{\"id\":\"segment-1\",\"index\":1,\"file_path\":\"easy_media/projects/longtake_real_hybrid_05spec/video_1_1.mp4\",\"file_name\":\"video_1_1.mp4\",\"media_revision\":\"1792228202405282500\",\"source_start_frame\":0,\"source_end_frame\":124,\"source_frame_count\":124,\"updated_at\":1792228258.3989704,\"continuity_mode\":\"context_swap\",\"audio_locked\":false,\"enabled\":true,\"video_files\":[{\"file_path\":\"easy_media/projects/longtake_real_hybrid_05spec/video_1_1.mp4\",\"file_name\":\"video_1_1.mp4\",\"media_revision\":\"1792228202405282500\",\"source_frame_count\":124,\"continuity_mode\":\"context_swap\"}]},{\"id\":\"segment-2\",\"index\":2,\"file_path\":\"easy_media/projects/longtake_real_hybrid_05spec/video_2_1.mp4\",\"file_name\":\"video_2_1.mp4\",\"media_revision\":\"1792228594427831700\",\"source_start_frame\":0,\"source_end_frame\":90,\"source_frame_count\":90,\"updated_at\":1792228642.4307795,\"continuity_mode\":\"context_swap\",\"audio_locked\":false,\"enabled\":true,\"video_files\":[{\"file_path\":\"easy_media/projects/longtake_real_hybrid_05spec/video_2_1.mp4\",\"file_name\":\"video_2_1.mp4\",\"media_revision\":\"1792228594427831700\",\"source_frame_count\":90,\"continuity_mode\":\"context_swap\"}]},{\"id\":\"segment-3\",\"index\":3,\"file_path\":\"easy_media/projects/longtake_real_hybrid_05spec/video_3_1.mp4\",\"file_name\":\"video_3_1.mp4\",\"media_revision\":\"1792229144765278800\",\"source_start_frame\":0,\"source_end_frame\":141,\"source_frame_count\":141,\"updated_at\":1792229204.6880677,\"continuity_mode\":\"context_swap\",\"audio_locked\":false,\"enabled\":true,\"video_files\":[{\"file_path\":\"easy_media/projects/longtake_real_hybrid_05spec/video_3_1.mp4\",\"file_name\":\"video_3_1.mp4\",\"media_revision\":\"1792229144765278800\",\"source_frame_count\":141,\"continuity_mode\":\"context_swap\"}]},{\"id\":\"segment-4\",\"index\":4,\"file_path\":\"easy_media/projects/longtake_real_hybrid_05spec/video_4_1.mp4\",\"file_name\":\"video_4_1.mp4\",\"media_revision\":\"1792229708960221900\",\"source_start_frame\":0,\"source_end_frame\":141,\"source_frame_count\":141,\"updated_at\":1792229768.7570138,\"continuity_mode\":\"context_swap\",\"audio_locked\":false,\"enabled\":true,\"video_files\":[{\"file_path\":\"easy_media/projects/longtake_real_hybrid_05spec/video_4_1.mp4\",\"file_name\":\"video_4_1.mp4\",\"media_revision\":\"1792229708960221900\",\"source_frame_count\":141,\"continuity_mode\":\"context_swap\"}]},{\"id\":\"segment-5\",\"index\":5,\"file_path\":\"easy_media/projects/longtake_real_hybrid_05spec/video_5_1.mp4\",\"file_name\":\"video_5_1.mp4\",\"media_revision\":\"1792230659943607100\",\"source_start_frame\":0,\"source_end_frame\":243,\"source_frame_count\":243,\"updated_at\":1792230743.7620018,\"continuity_mode\":\"context_swap\",\"audio_locked\":false,\"enabled\":true,\"video_files\":[{\"file_path\":\"easy_media/projects/longtake_real_hybrid_05spec/video_5_1.mp4\",\"file_name\":\"video_5_1.mp4\",\"media_revision\":\"1792230659943607100\",\"source_frame_count\":243,\"continuity_mode\":\"context_swap\"}]}],\"auto_combine\":true,\"updated_at\":1792230743.7620018}",
+      "project_name": [
+        "15",
+        0
+      ]
+    },
+    "class_type": "easy multitrackProjectVideoCombine",
+    "_meta": {
+      "title": "MultiTrack Project Video Combine"
+    }
+  },
+  "20": {
+    "inputs": {
+      "sampler_name": "euler"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "21": {
+    "inputs": {
+      "max_resolution": 1024,
+      "jpeg_quality": 80,
+      "suppress_default_preview": true,
+      "preview_frames": 48,
+      "preview_fps": 24,
+      "tiny_vae": "taeh3.safetensors",
+      "model": [
+        "51",
+        0
+      ]
+    },
+    "class_type": "ModelPreviewOverrideKJ",
+    "_meta": {
+      "title": "Model Preview Override"
+    }
+  },
+  "22": {
+    "inputs": {
+      "scheduler": "beta",
+      "steps": [
+        "50",
+        0
+      ],
+      "denoise": 1,
+      "model": [
+        "21",
+        0
+      ]
+    },
+    "class_type": "BasicScheduler",
+    "_meta": {
+      "title": "★ Steps — BASE20: 20 steps (beta)"
+    }
+  },
+  "24": {
+    "inputs": {
+      "sampler_name": "sa_solver"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "sampler_2nd (unused: pass 2 from \"light\" preset)"
+    }
+  },
+  "25": {
+    "inputs": {
+      "input_mode": "video",
+      "output_mode": "save",
+      "output_mode.save_metadata": "ComfyUI",
+      "filename_prefix": [
+        "17",
+        1
+      ],
+      "input_mode.video": [
+        "17",
+        0
+      ]
+    },
+    "class_type": "easy saveVideo",
+    "_meta": {
+      "title": "Save Video"
+    }
+  },
+  "29": {
+    "inputs": {
+      "resolution": "width x height (megapixels)",
+      "resolution.aspect_ratio": "9:16 (Portrait Widescreen)",
+      "resolution.megapixels": [
+        "43",
+        0
+      ],
+      "format": "MiniMax",
+      "track_data": "{\"muted\":false,\"volume_db\":0,\"task_markers\":[],\"task_overview\":false,\"tracks\":[{\"id\":\"c64f6cef-34eb-4602-820a-defc4ced0f45\",\"name\":\"Task 0\",\"type\":\"task\",\"task_mode\":\"default\",\"color\":\"var(--multitrack-task-bg)\",\"muted\":false,\"solo\":false,\"volume_db\":0,\"locked\":false,\"segments\":[{\"id\":\"0af27e18-8db0-43bd-a143-faa2c207cc5c\",\"start_frame\":0,\"end_frame\":120,\"color\":\"var(--multitrack-task-bg)\",\"content\":{\"media_type\":\"none\",\"task_mode\":\"ref\",\"continuity_mode\":\"shot\",\"ref_image_size\":\"match\",\"images\":[{\"id\":\"d93cb92d-fe4e-48d8-bdfd-3561a12b2387\",\"source_type\":\"input\",\"file_path\":\"Krea2_turbo_00005_.png\",\"file_name\":\"Krea2_turbo_00005_.png\",\"shared_reference\":true}],\"muted\":false,\"volume_db\":0,\"user_prompt\":\"subject_definitions:\\r\\n<Subject 1> is the wood pigeon in <Picture 1>, with grey-buff plumage, a rosy-pink breast and an iridescent green patch on its neck.\\r\\n<Subject 2> is the grey tabby cat in <Picture 1>, with black mackerel stripes, a white chest and white paws.\\r\\n<Picture 1> is the appearance anchor for both animals and for the garden: sunlit lawn, rough central tree trunk, wooden fence and blurred pink flowering bushes.\\r\\n\\r\\nsummary:\\r\\n[reference generation] In the garden of <Picture 1>, <Subject 1> forages calmly across the sunlit lawn toward the tree trunk.\\r\\n\\r\\nretention_analysis:\\r\\n<Subject 1> (appears in [Shot 1]): fully_preserved - plumage colors, pink breast, green neck patch and body size are retained.\\r\\n<Subject 2> (not visible in this shot, hidden behind the tree): fully_preserved - tabby stripes, white chest, white paws and face are retained.\\r\\n<Picture 1> (visual reference anchor): fully_preserved - defines the garden, the tree position, the light and the look of both animals.\\r\\n\\r\\ndetailed_description:\\r\\nThe target video is realistic wildlife documentary footage filmed in a real suburban back garden: natural late-afternoon daylight, true-to-life colors and contrast, real animal anatomy and natural animal behavior, steady ground-level telephoto lens with slight handheld drift, natural motion blur, fine film grain, no stylization.\\r\\n[Shot 1] A ground-level telephoto shot follows <Subject 1>, the wood pigeon, as it walks across the grass with the normal forward head-bobbing gait of a real pigeon. It stops, pecks at the ground twice, takes a few more steps and pecks again. The camera pans slowly right with the bird, and the rough tree trunk from <Picture 1> gradually enters the right side of the frame. The cat is not visible.\\r\\n\\r\\noverall_soundscape:\\r\\nQuiet garden ambience, light breeze, distant birdsong, soft pecks on the grass.\\r\\n\\r\\nnon_diegetic_music:\\r\\nN/A\"}},{\"id\":\"2032f128-1011-44b4-b6c5-e26f66635add\",\"start_frame\":120,\"end_frame\":240,\"color\":\"var(--multitrack-task-bg)\",\"content\":{\"media_type\":\"none\",\"task_mode\":\"ref\",\"continuity_mode\":\"context_swap\",\"ref_image_size\":\"match\",\"images\":[{\"id\":\"4de90544-8edb-4d90-b683-ebe0140a664f\",\"source_type\":\"input\",\"file_path\":\"Krea2_turbo_00005_.png\",\"file_name\":\"Krea2_turbo_00005_.png\",\"shared_reference\":true,\"shared_reference_copy\":true}],\"muted\":false,\"volume_db\":0,\"user_prompt\":\"subject_definitions:\\r\\n<Subject 1> is the wood pigeon in <Picture 1>, with grey-buff plumage, a rosy-pink breast and an iridescent green patch on its neck.\\r\\n<Subject 2> is the grey tabby cat in <Picture 1>, with black mackerel stripes, a white chest and white paws.\\r\\n<Picture 1> is the appearance anchor for both animals and for the garden: sunlit lawn, rough central tree trunk, wooden fence and blurred pink flowering bushes.\\r\\n\\r\\nsummary:\\r\\n[reference generation] Near the tree trunk of <Picture 1>, <Subject 2> slowly appears from behind the trunk and begins stalking <Subject 1>, who notices and freezes.\\r\\n\\r\\nretention_analysis:\\r\\n<Subject 1> (appears in [Shot 1]): fully_preserved - plumage colors, pink breast, green neck patch and body size are retained.\\r\\n<Subject 2> (appears in [Shot 1]): fully_preserved - tabby stripes, white chest, white paws and face are retained.\\r\\n<Picture 1> (visual reference anchor): fully_preserved - defines the garden, the tree position, the light and the look of both animals.\\r\\n\\r\\ndetailed_description:\\r\\nThe target video is realistic wildlife documentary footage filmed in a real suburban back garden: natural late-afternoon daylight, true-to-life colors and contrast, real animal anatomy and natural animal behavior, steady ground-level telephoto lens with slight handheld drift, natural motion blur, fine film grain, no stylization.\\r\\n[Shot 1] The same ground-level telephoto view continues. <Subject 1>, the wood pigeon, keeps pecking at the grass to the left of the tree trunk. <Subject 2>, the grey tabby cat, slowly steps out from behind the right side of the trunk with its body low, ears forward and eyes fixed on the bird, placing each paw carefully and pausing between steps; the tip of its tail twitches. The pigeon lifts its head, stretches its neck upright and stands completely still, watching the cat.\\r\\n\\r\\noverall_soundscape:\\r\\nQuiet garden ambience, light breeze in the leaves, faint rustle of grass under the cat's paws.\\r\\n\\r\\nnon_diegetic_music:\\r\\nN/A\"}},{\"id\":\"42fd279a-78da-4093-92c8-22381c3d4d5e\",\"start_frame\":240,\"end_frame\":336,\"color\":\"var(--multitrack-task-bg)\",\"content\":{\"media_type\":\"none\",\"task_mode\":\"ref\",\"continuity_mode\":\"context_swap\",\"ref_image_size\":\"match\",\"images\":[{\"id\":\"978ec1b9-b7a9-4479-acf7-af8c5ffa2823\",\"source_type\":\"input\",\"file_path\":\"Krea2_turbo_00005_.png\",\"file_name\":\"Krea2_turbo_00005_.png\",\"shared_reference\":true,\"shared_reference_copy\":true}],\"muted\":false,\"volume_db\":0,\"user_prompt\":\"subject_definitions:\\r\\n<Subject 1> is the wood pigeon in <Picture 1>, with grey-buff plumage, a rosy-pink breast and an iridescent green patch on its neck.\\r\\n<Subject 2> is the grey tabby cat in <Picture 1>, with black mackerel stripes, a white chest and white paws.\\r\\n<Picture 1> is the appearance anchor for both animals and for the garden: sunlit lawn, rough central tree trunk, wooden fence and blurred pink flowering bushes.\\r\\n\\r\\nsummary:\\r\\n[reference generation] <Subject 2> creeps closer and lunges, but <Subject 1> takes off and flies away out of frame.\\r\\n\\r\\nretention_analysis:\\r\\n<Subject 1> (appears in [Shot 1] The same ground-level telephoto view continues. <Subject 2>, the tabby cat, takes two more slow, low steps toward the bird. <Subject 1>, the wood pigeon, spots the cat, crouches slightly and takes off. The takeoff is filmed in smooth slow motion with a high-frame-rate wildlife camera and a fast shutter: both wings open wide and sweep down in big, clearly visible strokes, the long flight feathers spread like fingers, every feather stays sharp and well defined, and the bird rises steadily up and out of the top-left of the frame. The cat makes a short, late lunge forward and stops on the grass where the bird had been.\\r\\n\\r\\noverall_soundscape:\\r\\nSudden loud clapping of pigeon wings taking off, a short rustle of the cat's lunge, then quiet garden ambience.\\r\\n\\r\\nnon_diegetic_music:\\r\\nN/A\"}},{\"id\":\"41d5492a-4a5b-40c8-a9e6-be6178e135ae\",\"start_frame\":336,\"end_frame\":480,\"color\":\"var(--multitrack-task-bg)\",\"content\":{\"media_type\":\"none\",\"task_mode\":\"ref\",\"continuity_mode\":\"context_swap\",\"ref_image_size\":\"match\",\"images\":[{\"id\":\"a6c023f3-a440-4459-b42f-6d0fe27d13e5\",\"source_type\":\"input\",\"file_path\":\"Krea2_turbo_00005_.png\",\"file_name\":\"Krea2_turbo_00005_.png\",\"shared_reference\":true,\"shared_reference_copy\":true}],\"muted\":false,\"volume_db\":0,\"user_prompt\":\"subject_definitions:\\r\\n<Subject 1> is the wood pigeon in <Picture 1>, with grey-buff plumage, a rosy-pink breast and an iridescent green patch on its neck.\\r\\n<Subject 2> is the grey tabby cat in <Picture 1>, with black mackerel stripes, a white chest and white paws.\\r\\n<Picture 1> is the appearance anchor for both animals and for the garden: sunlit lawn, rough central tree trunk, wooden fence and blurred pink flowering bushes.\\r\\n\\r\\nsummary:\\r\\n[reference generation] Alone by the tree in <Picture 1>, <Subject 2> looks up where the bird flew, then sits down and grooms itself.\\r\\n\\r\\nretention_analysis:\\r\\n<Subject 1>: not visible - the pigeon has flown away and does not return.\\r\\n<Subject 2> (appears in [Shot 1]): fully_preserved - tabby stripes, white chest, white paws and face are retained.\\r\\n<Picture 1> (visual reference anchor): fully_preserved - defines the garden, the tree position, the light and the look of both animals.\\r\\n\\r\\ndetailed_description:\\r\\nThe target video is realistic wildlife documentary footage filmed in a real suburban back garden: natural late-afternoon daylight, true-to-life colors and contrast, real animal anatomy and natural animal behavior, steady ground-level telephoto lens with slight handheld drift, natural motion blur, fine film grain, no stylization.\\r\\n[Shot 1] The same ground-level telephoto view continues on the lawn beside the tree trunk. <Subject 2>, the tabby cat, stands still and looks up toward the sky where the pigeon flew, its ears turning. After a moment it loses interest, sits down on the grass, licks its front paw a few times and wipes it over its face, then looks off to the side calmly. The pigeon does not return. The camera holds steady with a slight handheld drift.\\r\\n\\r\\noverall_soundscape:\\r\\nQuiet garden ambience, light breeze, distant birdsong, faint licking sounds.\\r\\n\\r\\nnon_diegetic_music:\\r\\nN/A\"}},{\"id\":\"498ffd26-b891-4b65-b8d7-e696e77a59ca\",\"start_frame\":480,\"end_frame\":624,\"color\":\"var(--multitrack-task-bg)\",\"content\":{\"media_type\":\"none\",\"task_mode\":\"ref\",\"continuity_mode\":\"context_swap\",\"ref_image_size\":\"match\",\"images\":[{\"id\":\"ee30e625-0f5d-4356-a984-29672a9a1e27\",\"source_type\":\"input\",\"file_path\":\"Krea2_turbo_00005_.png\",\"file_name\":\"Krea2_turbo_00005_.png\",\"shared_reference\":true,\"shared_reference_copy\":true}],\"muted\":false,\"volume_db\":0,\"user_prompt\":\"subject_definitions:\\r\\n<Subject 1> is the wood pigeon in <Picture 1>, with grey-buff plumage, a rosy-pink breast and an iridescent green patch on its neck.\\r\\n<Subject 2> is the grey tabby cat in <Picture 1>, with black mackerel stripes, a white chest and white paws.\\r\\n<Picture 1> is the appearance anchor for both animals and for the garden: sunlit lawn, rough central tree trunk, wooden fence and blurred pink flowering bushes.\\r\\n\\r\\nsummary:\\r\\n[reference generation] <Subject 1> flies back and lands near the tree in <Picture 1>, and <Subject 2> starts a playful game of hide and seek around the trunk.\\r\\n\\r\\nretention_analysis:\\r\\n<Subject 1> (appears in [Shot 1]): fully_preserved - plumage colors, pink breast, green neck patch and body size are retained.\\r\\n<Subject 2> (appears in [Shot 1]): fully_preserved - tabby stripes, white chest, white paws and face are retained.\\r\\n<Picture 1> (visual reference anchor): fully_preserved - defines the garden, the tree position, the light and the look of both animals.\\r\\n\\r\\ndetailed_description:\\r\\nThe target video is realistic wildlife documentary footage filmed in a real suburban back garden: natural late-afternoon daylight, true-to-life colors and contrast, real animal anatomy and natural animal behavior, steady ground-level telephoto lens with slight handheld drift, natural motion blur, fine film grain, no stylization.\\r\\n[Shot 1] The same ground-level telephoto view continues beside the tree trunk. <Subject 1>, the wood pigeon, glides back down and lands on the grass on the left side of the trunk; the landing is filmed in smooth slow motion with a high-frame-rate wildlife camera and a fast shutter: wings spread wide and steady, flight feathers sharp and clearly defined, feet reaching down to touch the grass, then it folds its wings neatly. <Subject 2>, the tabby cat, stops grooming, its ears turn toward the bird and it slips behind the trunk. A moment later the cat slowly peeks its head out around the left edge of the trunk, with playful, curious body language like a house cat at play rather than hunting. The pigeon calmly walks around to the right side of the trunk, keeping the tree between them.\\r\\n\\r\\noverall_soundscape:\\r\\nQuiet garden ambience, a few soft wingbeats as the pigeon lands, light rustle of grass.\\r\\n\\r\\nnon_diegetic_music:\\r\\nN/A\"}},{\"id\":\"e9c1198d-9c33-44eb-bd3b-9c9f0a276bc3\",\"start_frame\":624,\"end_frame\":864,\"color\":\"var(--multitrack-task-bg)\",\"content\":{\"media_type\":\"none\",\"task_mode\":\"ref\",\"continuity_mode\":\"context_swap\",\"ref_image_size\":\"match\",\"images\":[{\"id\":\"ee44e916-f7bf-4c80-97f3-21a6cecda5f4\",\"source_type\":\"input\",\"file_path\":\"Krea2_turbo_00005_.png\",\"file_name\":\"Krea2_turbo_00005_.png\",\"shared_reference\":true,\"shared_reference_copy\":true}],\"muted\":false,\"volume_db\":0,\"user_prompt\":\"subject_definitions:\\r\\n<Subject 1> is the wood pigeon in <Picture 1>, with grey-buff plumage, a rosy-pink breast and an iridescent green patch on its neck.\\r\\n<Subject 2> is the grey tabby cat in <Picture 1>, with black mackerel stripes, a white chest and white paws.\\r\\n<Picture 1> is the appearance anchor for both animals and for the garden: sunlit lawn, rough central tree trunk, wooden fence and blurred pink flowering bushes.\\r\\n\\r\\nsummary:\\r\\n[reference generation] <Subject 2> and <Subject 1> keep playing hide and seek around the tree trunk in <Picture 1>, peeking at each other from opposite sides.\\r\\n\\r\\nretention_analysis:\\r\\n<Subject 1> (appears in [Shot 1]): fully_preserved - plumage colors, pink breast, green neck patch and body size are retained.\\r\\n<Subject 2> (appears in [Shot 1]): fully_preserved - tabby stripes, white chest, white paws and face are retained.\\r\\n<Picture 1> (visual reference anchor): fully_preserved - defines the garden, the tree position, the light and the look of both animals.\\r\\n\\r\\ndetailed_description:\\r\\nThe target video is realistic wildlife documentary footage filmed in a real suburban back garden: natural late-afternoon daylight, true-to-life colors and contrast, real animal anatomy and natural animal behavior, steady ground-level telephoto lens with slight handheld drift, natural motion blur, fine film grain, no stylization.\\r\\n[Shot 1] The same ground-level telephoto view continues. <Subject 2>, the tabby cat, pulls its head back behind the trunk, then creeps around and peeks out from the right side; <Subject 1>, the wood pigeon, steps back around to the left side, so the tree always stays between them. For a moment both peek out from opposite sides of the trunk at the same time, the cat's head on the right and the pigeon's head on the left, then the cat does a small playful pounce around the trunk and the pigeon hops and flutters a short distance across the lawn and lands again, looking back at the cat. The cat sits down by the trunk watching the bird, tail swishing.\\r\\n\\r\\noverall_soundscape:\\r\\nQuiet garden ambience, soft rustle of grass under paws, a brief flutter of wings, distant birdsong.\\r\\n\\r\\nnon_diegetic_music:\\r\\nN/A\"}}]},{\"id\":\"d15f065c-25c4-4922-8570-01dde0d3caf0\",\"name\":\"Video 0\",\"type\":\"video\",\"color\":\"var(--primary)\",\"muted\":false,\"solo\":false,\"volume_db\":0,\"locked\":false,\"segments\":[],\"audio_locked\":false}],\"total_length\":864,\"frame_rate\":24}"
+    },
+    "class_type": "easy multiTrackEditor",
+    "_meta": {
+      "title": "MultiTrack Editor"
+    }
+  },
+  "36": {
+    "inputs": {
+      "sage_attention": "auto",
+      "allow_compile": false,
+      "model": [
+        "11",
+        0
+      ]
+    },
+    "class_type": "PathchSageAttentionKJ",
+    "_meta": {
+      "title": "Patch Sage Attention KJ"
+    }
+  },
+  "39": {
+    "inputs": {
+      "sparsity_ratio": 0.78,
+      "block_size": "64",
+      "min_seq_len": 12288,
+      "dense_last_steps": 1,
+      "protect_audio": true,
+      "enabled": true,
+      "dense_steps": "0,1,2,3",
+      "dense_backend": "sage:auto",
+      "disable_fp16_accum": true,
+      "stabilize_motion": false,
+      "reference_protection": "Heavy Enforcement",
+      "tail_correction": false,
+      "use_int8_qk": false,
+      "engine": "comfy_kitchen",
+      "model": [
+        "36",
+        0
+      ]
+    },
+    "class_type": "H3SLAAttention",
+    "_meta": {
+      "title": "H3 SLA (speed, Heavy ref protection)"
+    }
+  },
+  "40": {
+    "inputs": {
+      "value": false
+    },
+    "class_type": "PrimitiveBoolean",
+    "_meta": {
+      "title": "DEV MODE (ON = lower MP preview, own _dev folder)"
+    }
+  },
+  "41": {
+    "inputs": {
+      "value": 0.5
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "FINAL megapixels (pass 1)"
+    }
+  },
+  "42": {
+    "inputs": {
+      "value": 0.2
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "DEV megapixels (pass 1)"
+    }
+  },
+  "43": {
+    "inputs": {
+      "switch": [
+        "40",
+        0
+      ],
+      "on_false": [
+        "41",
+        0
+      ],
+      "on_true": [
+        "42",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "MP: DEV ? dev : final"
+    }
+  },
+  "44": {
+    "inputs": {
+      "value": "longtake_real_hybrid_05spec"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "FINAL project name"
+    }
+  },
+  "45": {
+    "inputs": {
+      "value": "longtake_real_hybrid_05spec_dev"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "DEV project name"
+    }
+  },
+  "46": {
+    "inputs": {
+      "switch": [
+        "40",
+        0
+      ],
+      "on_false": [
+        "44",
+        0
+      ],
+      "on_true": [
+        "45",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "Project: DEV ? dev : final"
+    }
+  },
+  "48": {
+    "inputs": {
+      "value": 20
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "FINAL steps (pass 1)"
+    }
+  },
+  "49": {
+    "inputs": {
+      "value": 10
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "DEV steps (pass 1)"
+    }
+  },
+  "50": {
+    "inputs": {
+      "switch": [
+        "40",
+        0
+      ],
+      "on_false": [
+        "48",
+        0
+      ],
+      "on_true": [
+        "49",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "Steps: DEV ? dev : final"
+    }
+  },
+  "51": {
+    "inputs": {
+      "enabled": true,
+      "blend_weight": 0.5,
+      "degree": 1,
+      "ridge_lambda": 0.1,
+      "window_size": 2,
+      "flex_window": 0.75,
+      "warmup_steps": 2,
+      "tail_actual_steps": 2,
+      "max_history": 8,
+      "debug": false,
+      "history_storage": "system_ram",
+      "bootstrap_first_forecast": true,
+      "anchor_residual_feedback": false,
+      "selective_rollback_correction": false,
+      "offline_smoothing_replay": false,
+      "audio_blend_weight": 0,
+      "offline_archive_storage": "system_ram",
+      "model_aware_mode": "full",
+      "model_aware_risk_threshold": 0.65,
+      "model_aware_trust_shrinkage": false,
+      "model_aware_replay_generic_correction": false,
+      "generic_correction_mode": "coordinate_rls",
+      "generic_correction_limiter": "hard_clip",
+      "generic_correction_limit": 0.4,
+      "generic_correction_attenuation": "no_attenuation",
+      "sa_pece_forecast_policy": "balanced",
+      "model": [
+        "39",
+        0
+      ]
+    },
+    "class_type": "SpectrumApplyMiniMaxH3",
+    "_meta": {
+      "title": "Spectrum (quality B: full, no replay, warmup 2, tail 2)"
+    }
+  },
+  "52": {
+    "inputs": {
+      "model": [
+        "39",
+        0
+      ],
+      "clip": [
+        "10",
+        0
+      ],
+      "vae": [
+        "2",
+        0
+      ],
+      "audio_vae": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "easy modelLoaderPack",
+    "_meta": {
+      "title": "Model Loader Pack 2nd (refine, NO Spectrum)"
+    }
+  }
+}

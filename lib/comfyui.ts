@@ -219,6 +219,123 @@ export async function queueLongTake(options: {
   return { promptId, project };
 }
 
+// ---------------------------------------------------------------------------
+// H3 Story V2 (comfy/h3-story-v2-ref2va.json, ComfyUI API format), ported from the Themed
+// Transformation Video Pipeline (core/h3_v2.py). Every segment is a `ref` task on the same image;
+// dual-pass render (x1.25 latent upscale refine). See docs/HANDOFF_h3_story_v2_for_workshop_app.md.
+// ---------------------------------------------------------------------------
+
+// MP, steps and the project folder are links through DEV switches: set the primitives, never
+// nodes 29 / 22 / 15 for those values.
+const STORY_V2 = {
+  project: "15",
+  combine: "17",
+  editor: "29",
+  devMode: "40",
+  megapixels: "41",
+  devMegapixels: "42",
+  projectName: "44",
+  devProjectName: "45",
+  steps: "48",
+  devSteps: "49",
+} as const;
+
+export type StoryV2Options = {
+  segments: { duration: number; prompt: string }[];
+  image: ComfyImage;
+  devMode: boolean;
+  seed: number;
+  megapixels: number;
+  steps: number;
+  devMegapixels: number;
+  devSteps: number;
+  aspectRatio: string;
+  projectBase: string;
+  startSegment?: number;
+};
+
+type TrackData = { tracks: { type: string; segments: unknown[] }[]; total_length: number; frame_rate: number };
+
+export function storyV2TrackData(template: string, segments: StoryV2Options["segments"], image: ComfyImage): string {
+  const trackData = JSON.parse(template) as TrackData;
+  const imagePath = [...image.subfolder.split(/[\\/]+/).filter(Boolean), image.filename].join("/");
+  let start = 0;
+  const entries = segments.map((segment, index) => {
+    const frames = Math.max(1, Math.round(segment.duration * FPS));
+    const entry = {
+      id: randomUUID(),
+      start_frame: start,
+      end_frame: start + frames,
+      color: "var(--multitrack-task-bg)",
+      content: {
+        media_type: "none",
+        task_mode: "ref",
+        // The Workshop's segments always continue the same take.
+        continuity_mode: index === 0 ? "shot" : "context_swap",
+        ref_image_size: "match",
+        images: [
+          {
+            id: randomUUID(),
+            source_type: image.type === "input" ? "input" : "output",
+            file_path: imagePath,
+            file_name: image.filename,
+            shared_reference: true,
+            ...(index > 0 ? { shared_reference_copy: true } : {}),
+          },
+        ],
+        muted: false,
+        volume_db: 0,
+        user_prompt: segment.prompt,
+      },
+    };
+    start += frames;
+    return entry;
+  });
+  if (!trackData.tracks.some((track) => track.type === "task")) {
+    throw new Error("The Story V2 template has no task track.");
+  }
+  for (const track of trackData.tracks) {
+    track.segments = track.type === "task" ? entries : [];
+  }
+  trackData.total_length = start;
+  trackData.frame_rate = FPS;
+  return JSON.stringify(trackData);
+}
+
+export async function buildStoryV2(options: StoryV2Options): Promise<{ workflow: Record<string, ApiNode>; project: string }> {
+  const text = await readFile(path.join(process.cwd(), "comfy", "h3-story-v2-ref2va.json"), "utf8");
+  const workflow = JSON.parse(text) as Record<string, ApiNode>;
+  const editor = workflow[STORY_V2.editor].inputs;
+  editor.track_data = storyV2TrackData(String(editor.track_data), options.segments, options.image);
+  editor["resolution.aspect_ratio"] = options.aspectRatio;
+
+  const fullProject = options.projectBase;
+  const devProject = `${options.projectBase}_dev`;
+  workflow[STORY_V2.devMode].inputs.value = options.devMode;
+  workflow[STORY_V2.megapixels].inputs.value = options.megapixels;
+  workflow[STORY_V2.devMegapixels].inputs.value = options.devMegapixels;
+  workflow[STORY_V2.steps].inputs.value = options.steps;
+  workflow[STORY_V2.devSteps].inputs.value = options.devSteps;
+  workflow[STORY_V2.projectName].inputs.value = fullProject;
+  workflow[STORY_V2.devProjectName].inputs.value = devProject;
+
+  const project = workflow[STORY_V2.project].inputs;
+  project.project_save = "override";
+  project.segment_start_number = options.startSegment || 1;
+  project.segment_count = -1;
+  project.seed = options.seed;
+
+  const active = options.devMode ? devProject : fullProject;
+  workflow[STORY_V2.combine].inputs.project_data = JSON.stringify({ project_name: active, clips: [], auto_combine: true });
+  return { workflow, project: active };
+}
+
+export async function queueStoryV2(options: StoryV2Options): Promise<{ promptId: string; project: string }> {
+  const { workflow, project } = await buildStoryV2(options);
+  const promptId = await queueWorkflow(workflow);
+  return { promptId, project };
+}
+
 export type LongTakeStatus = {
   status: "queued" | "running" | "done" | "error";
   queuePosition: number;

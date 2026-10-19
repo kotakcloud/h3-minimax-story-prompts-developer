@@ -73,9 +73,17 @@ export type ReferenceImage = {
   createdAt: string;
 };
 
+export type VideoEngine = "long-take" | "story-v2";
+
 export type VideoSettings = {
   devMode: boolean;
   seed: number;
+  engine: VideoEngine;
+  // Story V2 only: pass-1 megapixels and steps for FULL and DEV renders.
+  v2Megapixels: number;
+  v2Steps: number;
+  v2DevMegapixels: number;
+  v2DevSteps: number;
 };
 
 export type VideoRunStatus = "queued" | "running" | "done" | "error";
@@ -86,6 +94,9 @@ export type VideoRun = {
   project: string;
   devMode: boolean;
   seed: number;
+  engine?: VideoEngine;
+  megapixels?: number;
+  steps?: number;
   segmentCount: number;
   revisionId: string;
   status: VideoRunStatus;
@@ -143,7 +154,15 @@ export function effectiveGist(story: Pick<Story, "gist" | "analysis" | "useOrigi
 export const DEFAULT_VIDEO_SETTINGS: VideoSettings = {
   devMode: true,
   seed: 907327329980779,
+  engine: "long-take",
+  v2Megapixels: 0.3,
+  v2Steps: 10,
+  v2DevMegapixels: 0.3,
+  v2DevSteps: 10,
 };
+
+// Story V2 is proven with 3–8 s segments only (Themed Transformation Pipeline renders).
+export const STORY_V2_MAX_SEGMENT_SECONDS = 8;
 
 export const DEFAULT_IMAGE_SETTINGS: ImageSettings = {
   aspectRatio: "16:9 (Widescreen)",

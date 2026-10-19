@@ -21,6 +21,9 @@ Open one story, or open several in new tabs. The home page lists all of them.
 5. **Progress: frames** breaks the story into editable clips (4–15s each), keeping the cast and location locked.
 6. **Progress: H3 prompts** writes one paste-ready prompt per frame.
 7. **Export** downloads `{ duration, prompt }` JSON for the other device.
+8. **Video** renders the prompt set with the selected reference image in ComfyUI. Pick a workflow:
+   - **Long take** (`comfy/h3-long-take-ref.json`): fl2va model, single pass, RTX VSR. DEV = draft, off = final.
+   - **Story V2** (`comfy/h3-story-v2-ref2va.json`, from the Themed Transformation Pipeline): ref2va model, every segment a `ref` task on the same image, dual pass with a x1.25 latent-upscale refine. DEV and FULL each have their own megapixels / steps (default 0.3 MP / 10 steps) and project folder (`h3s_<id>_v2_dev` / `h3s_<id>_v2`). Proven with segments of 8 s or less; the Workshop's timestamped prompts are not yet tested with it. Details: `docs/HANDOFF_h3_story_v2_for_workshop_app.md`.
 
 Image generation needs ComfyUI running with the Z-Image Turbo models from the template. Set `COMFYUI_URL` in `.env.local` if ComfyUI is not at `http://127.0.0.1:8188`.
 
