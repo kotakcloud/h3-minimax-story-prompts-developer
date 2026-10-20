@@ -214,6 +214,8 @@ export type Story = {
   promptStyle: PromptStyle;
   // Include the optional H3 prompting tips (comedy, continuity, emotion…) when writing prompts.
   h3Tips: boolean;
+  // OpenRouter model (or comma-separated fallback chain) for every AI step; blank = .env default.
+  aiModel: string;
   frames: Frame[];
   segments: PromptSegment[];
   promptRevisions: PromptRevision[];

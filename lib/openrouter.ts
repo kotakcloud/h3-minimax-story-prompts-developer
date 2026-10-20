@@ -1,5 +1,13 @@
+import { parseModelChain } from "./models";
+
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 export const DEFAULT_MODEL = "deepseek/deepseek-v4-flash-0731";
+
+// The .env default (OPENROUTER_MODEL may be a comma-separated fallback chain).
+export function defaultModels(): string[] {
+  const { models } = parseModelChain(process.env.OPENROUTER_MODEL);
+  return models.length > 0 ? models : [DEFAULT_MODEL];
+}
 
 type ChatMessage = {
   role: "system" | "user" | "assistant";
@@ -35,7 +43,8 @@ function readMessageText(choice: OpenRouterChoice | undefined): string {
   return "";
 }
 
-export type ChatOptions = { maxTokens?: number; timeoutMs?: number };
+// models: the story's validated chain (at most 3); empty or missing = the .env default.
+export type ChatOptions = { maxTokens?: number; timeoutMs?: number; models?: string[] };
 
 const DEFAULT_TIMEOUT_MS = Number(process.env.OPENROUTER_TIMEOUT_MS) || 180_000;
 
@@ -45,12 +54,13 @@ export async function chatCompletion(messages: ChatMessage[], options?: ChatOpti
     throw new Error("OPENROUTER_API_KEY is missing. Add it to .env.local.");
   }
 
-  const model = process.env.OPENROUTER_MODEL || DEFAULT_MODEL;
+  const models = options?.models?.length ? options.models : defaultModels();
+  const model = models.join(", ");
   const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const started = Date.now();
 
   let response: Response;
-  let body: { error?: { message?: string }; choices?: OpenRouterChoice[] };
+  let body: { error?: { message?: string }; choices?: OpenRouterChoice[]; model?: string };
   try {
     response = await fetch(OPENROUTER_URL, {
       method: "POST",
@@ -62,7 +72,9 @@ export async function chatCompletion(messages: ChatMessage[], options?: ChatOpti
         "X-Title": "H3 Story Prompt Workshop",
       },
       body: JSON.stringify({
-        model,
+        model: models[0],
+        // OpenRouter tries these in order when the first one fails.
+        ...(models.length > 1 ? { models } : {}),
         temperature: 0.4,
         max_tokens: options?.maxTokens ?? 8000,
         reasoning: { effort: "low" },
@@ -78,7 +90,7 @@ export async function chatCompletion(messages: ChatMessage[], options?: ChatOpti
     throw error;
   }
   console.log(
-    `[openrouter] ${model} ${response.status} in ${((Date.now() - started) / 1000).toFixed(1)}s (max_tokens ${options?.maxTokens ?? 8000})`,
+    `[openrouter] ${body.model && body.model !== models[0] ? `${model} -> answered by ${body.model}` : model} ${response.status} in ${((Date.now() - started) / 1000).toFixed(1)}s (max_tokens ${options?.maxTokens ?? 8000})`,
   );
 
   if (!response.ok) {

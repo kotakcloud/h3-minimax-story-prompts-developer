@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLoggedFetch } from "@/components/debug-log";
 import { IconButton, Icons } from "@/components/icons";
+import { ModelPicker } from "@/components/model-picker";
 import { UpdateCommentDialog } from "@/components/update-comment-dialog";
 import { TabStatus } from "@/lib/tab-status";
 import { buildExportPayload, buildMarkdownExport, downloadJson, downloadMarkdown } from "@/lib/export";
@@ -200,7 +201,7 @@ export function Workshop({
     const response = await request("/api/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ gist: current.gist }),
+      body: JSON.stringify({ gist: current.gist, model: current.aiModel }),
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Story analysis failed.");
@@ -247,6 +248,7 @@ export function Workshop({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          model: storyRef.current?.aiModel ?? "",
           gist: effectiveGist(source),
           comment: comment.trim(),
           previous: { characters: source.characters, location: source.location },
@@ -282,6 +284,7 @@ export function Workshop({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          model: storyRef.current?.aiModel ?? "",
           gist: effectiveGist(story),
           title: story.title,
           characters: story.characters,
@@ -536,6 +539,7 @@ export function Workshop({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          model: storyRef.current?.aiModel ?? "",
           gist: effectiveGist(story),
           characters: story.characters,
           location: story.location,
@@ -571,6 +575,7 @@ export function Workshop({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          model: storyRef.current?.aiModel ?? "",
           gist: effectiveGist(story),
           title: story.title,
           characters: story.characters,
@@ -651,6 +656,7 @@ export function Workshop({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          model: storyRef.current?.aiModel ?? "",
           gist: effectiveGist(story),
           title: story.title,
           comment,
@@ -789,6 +795,7 @@ export function Workshop({
           <Link href="/" className="text-xs uppercase tracking-[0.18em] text-accent">
             All stories
           </Link>
+          <ModelPicker value={story.aiModel} onChange={(aiModel) => patchStory({ aiModel })} />
           <div>
             <p className="text-xs text-muted">Open another</p>
             <ul className="mt-2 space-y-1">

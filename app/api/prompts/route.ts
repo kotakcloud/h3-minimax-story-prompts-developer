@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { chatJson } from "@/lib/openrouter";
+import { parseModelChain } from "@/lib/models";
 import { clampDuration } from "@/lib/parse";
 import {
   analysisBlock,
@@ -122,7 +123,13 @@ export async function POST(request: Request) {
       analysis?: unknown;
       promptStyle?: string;
       tips?: boolean;
+      model?: string;
     };
+    // The story's OpenRouter model chain; blank = the .env default.
+    const chain = parseModelChain(body.model);
+    if (chain.error) {
+      return NextResponse.json({ error: chain.error }, { status: 400 });
+    }
 
     const frames = Array.isArray(body.frames) ? body.frames : [];
     if (frames.length === 0) {
@@ -210,7 +217,7 @@ export async function POST(request: Request) {
         ].join("\n");
         const generate = async (request: string) => {
           const data = await withBackupRequest(
-            () => chatJson(system, request, { maxTokens: 6000, timeoutMs: 180_000 }),
+            () => chatJson(system, request, { maxTokens: 6000, timeoutMs: 180_000, models: chain.models }),
             BACKUP_AFTER_MS,
             frame.id,
           );

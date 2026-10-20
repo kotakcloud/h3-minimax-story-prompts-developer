@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { chatJson } from "@/lib/openrouter";
+import { parseModelChain } from "@/lib/models";
 import { readPromptWithFormats } from "@/lib/prompts";
 import type { StoryAnalysis, StoryBeat } from "@/lib/types";
 import { STORY_FORMATS } from "@/lib/types";
@@ -49,13 +50,18 @@ function normalize(data: unknown): StoryAnalysis {
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as { gist?: string };
+    const body = (await request.json()) as { gist?: string; model?: string };
+    // The story's OpenRouter model chain; blank = the .env default.
+    const chain = parseModelChain(body.model);
+    if (chain.error) {
+      return NextResponse.json({ error: chain.error }, { status: 400 });
+    }
     const gist = body.gist?.trim();
     if (!gist) {
       return NextResponse.json({ error: "Paste a story gist first." }, { status: 400 });
     }
     const system = await readPromptWithFormats("prompts/analysis-system.md");
-    const data = await chatJson(system, `Analyse this story gist.\n\nGIST:\n${gist}`, { maxTokens: 4000 });
+    const data = await chatJson(system, `Analyse this story gist.\n\nGIST:\n${gist}`, { maxTokens: 4000, models: chain.models });
     return NextResponse.json({ analysis: normalize(data) });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Story analysis failed.";

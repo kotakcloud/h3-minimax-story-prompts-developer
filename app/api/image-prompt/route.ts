@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { chatJson } from "@/lib/openrouter";
+import { parseModelChain } from "@/lib/models";
 import { analysisBlock, readPrompt } from "@/lib/prompts";
 import type { Character, StoryLocation } from "@/lib/types";
 import { DEFAULT_IMAGE_SETTINGS, IMAGE_ASPECT_RATIOS } from "@/lib/types";
@@ -18,7 +19,13 @@ export async function POST(request: Request) {
       characters?: Character[];
       location?: StoryLocation;
       analysis?: unknown;
+      model?: string;
     };
+    // The story's OpenRouter model chain; blank = the .env default.
+    const chain = parseModelChain(body.model);
+    if (chain.error) {
+      return NextResponse.json({ error: chain.error }, { status: 400 });
+    }
     const characters = (Array.isArray(body.characters) ? body.characters : []).filter(
       (character) => !character.voiceOnly,
     );
@@ -43,7 +50,7 @@ export async function POST(request: Request) {
       ...(analysisBlock(body.analysis) ? ["", `STORY ANALYSIS (for tone and staging):\n${analysisBlock(body.analysis)}`] : []),
     ].join("\n");
 
-    const data = await chatJson(system, user, { maxTokens: 3000 });
+    const data = await chatJson(system, user, { maxTokens: 3000, models: chain.models });
     const raw = data && typeof data === "object" ? (data as Record<string, unknown>) : {};
     const prompt = asString(raw.prompt);
     if (!prompt) {

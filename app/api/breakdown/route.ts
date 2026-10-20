@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { chatJson } from "@/lib/openrouter";
+import { parseModelChain } from "@/lib/models";
 import { clampDuration } from "@/lib/parse";
 import { analysisBlock, readPromptWithFormats } from "@/lib/prompts";
 import type { BreakdownResult, Character, Frame, StoryLocation } from "@/lib/types";
@@ -57,7 +58,13 @@ export async function POST(request: Request) {
       location?: StoryLocation;
       layout?: string;
       analysis?: unknown;
+      model?: string;
     };
+    // The story's OpenRouter model chain; blank = the .env default.
+    const chain = parseModelChain(body.model);
+    if (chain.error) {
+      return NextResponse.json({ error: chain.error }, { status: 400 });
+    }
     const gist = body.gist?.trim();
     if (!gist) {
       return NextResponse.json({ error: "Paste a story gist first." }, { status: 400 });
@@ -80,7 +87,7 @@ export async function POST(request: Request) {
     }
 
     const system = await readPromptWithFormats("prompts/breakdown-system.md");
-    const data = await chatJson(system, parts.join("\n"), { maxTokens: 4000 });
+    const data = await chatJson(system, parts.join("\n"), { maxTokens: 4000, models: chain.models });
 
     return NextResponse.json(normalize(data, characters));
   } catch (error) {

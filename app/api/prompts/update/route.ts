@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { chatJson } from "@/lib/openrouter";
+import { parseModelChain } from "@/lib/models";
 import { clampDuration } from "@/lib/parse";
 import {
   analysisBlock,
@@ -70,7 +71,13 @@ export async function POST(request: Request) {
       analysis?: unknown;
       promptStyle?: string;
       tips?: boolean;
+      model?: string;
     };
+    // The story's OpenRouter model chain; blank = the .env default.
+    const chain = parseModelChain(body.model);
+    if (chain.error) {
+      return NextResponse.json({ error: chain.error }, { status: 400 });
+    }
 
     const comment = body.comment?.trim();
     const targets = Array.isArray(body.targets) ? body.targets.filter((item) => item?.id && item.prompt) : [];
@@ -109,7 +116,7 @@ export async function POST(request: Request) {
       `TARGET PROMPTS:\n${JSON.stringify(targets, null, 2)}`,
     ].join("\n");
 
-    let segments = normalize(await chatJson(system, user, { maxTokens: 16000 }), targets);
+    let segments = normalize(await chatJson(system, user, { maxTokens: 16000, models: chain.models }), targets);
     // One retry when an updated prompt still asks H3 to draw text (thought bubbles, captions…)
     // or, in Story V2 style, still carries timestamps or names a subject who is not in the shot.
     const hits = segments.flatMap((segment) => onScreenTextMentions(segment.prompt));
@@ -126,7 +133,7 @@ export async function POST(request: Request) {
       ].filter(Boolean);
       segments = normalize(await chatJson(system, `${user}
 
-${fixes.join("\n\n")}`, { maxTokens: 16000 }), targets);
+${fixes.join("\n\n")}`, { maxTokens: 16000, models: chain.models }), targets);
     }
     if (v2) {
       segments = segments.map((segment) =>

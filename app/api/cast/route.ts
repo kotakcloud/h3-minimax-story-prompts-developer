@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { chatJson } from "@/lib/openrouter";
+import { parseModelChain } from "@/lib/models";
 import { analysisBlock, readPrompt } from "@/lib/prompts";
 import type { Character, StoryLocation } from "@/lib/types";
 
@@ -50,7 +51,13 @@ export async function POST(request: Request) {
       comment?: string;
       previous?: { characters?: Character[]; location?: StoryLocation };
       analysis?: unknown;
+      model?: string;
     };
+    // The story's OpenRouter model chain; blank = the .env default.
+    const chain = parseModelChain(body.model);
+    if (chain.error) {
+      return NextResponse.json({ error: chain.error }, { status: 400 });
+    }
     const gist = body.gist?.trim();
     if (!gist) {
       return NextResponse.json({ error: "Paste a story gist first." }, { status: 400 });
@@ -76,7 +83,7 @@ export async function POST(request: Request) {
     }
 
     const system = await readPrompt("prompts/cast-system.md");
-    const data = await chatJson(system, parts.join("\n"), { maxTokens: 4000 });
+    const data = await chatJson(system, parts.join("\n"), { maxTokens: 4000, models: chain.models });
 
     return NextResponse.json(normalize(data));
   } catch (error) {
