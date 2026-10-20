@@ -1,7 +1,7 @@
 # Handoff: add the "H3 Story V2" video workflow (with a DEV toggle) to the H3 Story Prompt Workshop app
 
 Audience: a new Claude thread working in **`C:\myfiles\projects\my\h3-minimax-story-prompts-developer`** (the "H3 Story Prompt Workshop",
-Next.js, port 48217). Read that repo's `AGENTS.md` first (this is a newer Next.js than you know: read `node_modules/next/dist/docs/` before
+Next.js, port 38217). Read that repo's `AGENTS.md` first (this is a newer Next.js than you know: read `node_modules/next/dist/docs/` before
 coding) and `README.md`. The workflow, mapping and an example of real injected values are attached next to this file in
 `docs/h3_story_v2_workflow/` (copies; the source of truth is the other repo, see section 9).
 

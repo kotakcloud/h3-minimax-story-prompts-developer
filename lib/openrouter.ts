@@ -58,7 +58,7 @@ export async function chatCompletion(messages: ChatMessage[], options?: ChatOpti
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "http://localhost:48217",
+        "HTTP-Referer": "http://localhost:38217",
         "X-Title": "H3 Story Prompt Workshop",
       },
       body: JSON.stringify({

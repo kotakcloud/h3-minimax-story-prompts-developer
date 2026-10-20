@@ -41,16 +41,16 @@ Add your OpenRouter key to `.env.local` to enable story breakdown and prompt gen
 .\start.ps1
 ```
 
-The launcher installs dependencies when needed and frees port `48217` if it is already in use. Open the local app at:
+The launcher installs dependencies when needed and frees port `38217` if it is already in use. Open the local app at:
 
 ```text
-http://localhost:48217
+http://localhost:38217
 ```
 
-The app binds to `0.0.0.0:48217`, so another machine on the same Wi-Fi can open:
+The app binds to `0.0.0.0:38217`, so another machine on the same Wi-Fi can open:
 
 ```text
-http://<this-computer-lan-ip>:48217
+http://<this-computer-lan-ip>:38217
 ```
 
 On Windows, find the PC's LAN address with `ipconfig`. Open that URL on the other machine. Do not start a second copy of the app there, or you will see an empty story list. If the other machine cannot connect, allow Node.js through Windows Defender Firewall on private networks.

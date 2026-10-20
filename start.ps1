@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 Set-Location -Path $PSScriptRoot
 
-$Port = 48217
+$Port = 38217
 
 function Get-PortPids([int]$ListenPort) {
   $pids = @()

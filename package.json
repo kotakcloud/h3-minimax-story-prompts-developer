@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --hostname 0.0.0.0 --port 48217",
+    "dev": "next dev --hostname 0.0.0.0 --port 38217",
     "build": "next build",
-    "start": "next start --hostname 0.0.0.0 --port 48217",
+    "start": "next start --hostname 0.0.0.0 --port 38217",
     "lint": "eslint"
   },
   "dependencies": {
