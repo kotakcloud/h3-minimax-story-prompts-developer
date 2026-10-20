@@ -2,6 +2,7 @@ import { mkdir, readdir, readFile, rename, unlink, writeFile } from "node:fs/pro
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import type { Story, StoryStep, StorySummary } from "./types";
+import { RECOMMENDED_MODEL } from "./models";
 import { DEFAULT_IMAGE_SETTINGS, DEFAULT_VIDEO_SETTINGS, isPromptStyle, isStoryStep } from "./types";
 
 const storiesDir = path.join(process.cwd(), "data", "stories");
@@ -26,7 +27,8 @@ function emptyStory(id: string, now: string): Story {
     videos: [],
     promptStyle: "long-take",
     h3Tips: true,
-    aiModel: "",
+    // New stories start on the recommended model; older ones without the field keep the .env default.
+    aiModel: RECOMMENDED_MODEL,
     frames: [],
     segments: [],
     promptRevisions: [],
