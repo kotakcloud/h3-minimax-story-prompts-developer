@@ -569,6 +569,7 @@ export function Workshop({
 
   async function runPrompts() {
     if (!story) return;
+    if (!story.selectedImageId && !window.confirm("No reference image is selected, so the prompts will be text-only (T2VA). The video workflows need a reference image and reference-image prompts. Generate and select an image on the Image tab first, or write text-only prompts anyway?")) return;
     setBusy("prompts");
     setError("");
     try {
@@ -1141,13 +1142,31 @@ export function Workshop({
                 </button>
                 <button
                   type="button"
-                  onClick={() => goTo("frames")}
+                  onClick={() => {
+                    if (
+                      story.selectedImageId ||
+                      window.confirm(
+                        "No reference image is selected. The video workflows need one, and prompts written without it are text-only. Continue to Frames anyway?",
+                      )
+                    ) {
+                      goTo("frames");
+                    }
+                  }}
                   className="rounded-full bg-foreground px-5 py-2 text-sm font-medium text-background"
                 >
                   Progress: frames
                 </button>
               </div>
             </div>
+            {!story.selectedImageId && (
+              <p className="mb-4 rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-2 text-xs text-amber-300">
+                {story.referenceImages.length > 0
+                  ? "No reference image is selected. Select one below: the H3 prompts and the video use it."
+                  : story.imagePrompt.trim()
+                    ? "No reference image yet. Generate one below and select it: the H3 prompts and the video use it."
+                    : "No reference image yet. Write the image prompt, then generate and select an image: the H3 prompts and the video use it."}
+              </p>
+            )}
 
             <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
               <div className="space-y-4 rounded-2xl border border-line bg-card p-4">
@@ -1524,6 +1543,20 @@ export function Workshop({
                 </button>
               </div>
             </div>
+            {!story.selectedImageId ? (
+              <p className="mb-4 rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-2 text-xs text-amber-300">
+                No reference image is selected, so prompts are written as text-only T2VA, which the video workflows cannot
+                render. Generate and select an image on the Image tab, then write the prompts.
+              </p>
+            ) : (
+              story.segments.length > 0 &&
+              !story.segments.every((segment) => segment.prompt.trimStart().startsWith("subject_definitions")) && (
+                <p className="mb-4 rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-2 text-xs text-amber-300">
+                  These prompts were written without a reference image (text-only). Regenerate them to get reference-image
+                  prompts for the video.
+                </p>
+              )
+            )}
             {story.selectedImageId &&
               story.segments.length > 0 &&
               activePromptStyle(story) !== story.promptStyle && (
