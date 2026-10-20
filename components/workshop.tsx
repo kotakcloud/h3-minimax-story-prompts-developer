@@ -783,9 +783,9 @@ export function Workshop({
     story.activeRevisionId || revisions[revisions.length - 1]?.id || "";
 
   return (
-    <div className="min-h-screen md:grid md:grid-cols-[240px_1fr]">
+    <div className="min-h-[calc(100vh-var(--nav-h))] md:grid md:grid-cols-[240px_1fr]">
       <aside className="border-b border-line bg-card md:border-b-0 md:border-r">
-        <div className="sticky top-0 space-y-4 p-4">
+        <div className="sticky top-[var(--nav-h)] space-y-4 p-4">
           <Link href="/" className="text-xs uppercase tracking-[0.18em] text-accent">
             All stories
           </Link>
@@ -817,51 +817,55 @@ export function Workshop({
         </div>
       </aside>
 
-      <main className="px-5 py-8 sm:px-8">
-        <header className="mb-8 flex flex-wrap items-start justify-between gap-4 border-b border-line pb-6">
-          <div>
-            <p className="font-mono text-xs text-muted">{story.id}</p>
-            <input
-              value={story.title}
-              onChange={(event) => patchStory({ title: event.target.value })}
-              className="mt-1 w-full max-w-xl bg-transparent text-3xl font-semibold tracking-tight outline-none"
-            />
-            <p className="mt-2 text-xs text-muted">{saveState}</p>
-          </div>
-          <div className="flex gap-2">
-            <IconButton
-              label="Export JSON"
-              onClick={exportJson}
-              disabled={story.segments.length === 0}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-accent text-accent-ink disabled:opacity-50"
-            >
-              {Icons.download}
-            </IconButton>
-            <IconButton
-              label="Export Markdown"
-              onClick={exportMarkdown}
-              disabled={story.segments.length === 0}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-line text-foreground disabled:opacity-50"
-            >
-              {Icons.markdown}
-            </IconButton>
-          </div>
-        </header>
+      <main className="px-5 pb-8 sm:px-8">
+        {/* Title row and step tabs stay pinned under the fixed top bar. */}
+        <div className="sticky top-[var(--nav-h)] z-30 -mx-5 mb-6 border-b border-line bg-background px-5 pt-4 shadow-[0_6px_14px_rgba(0,0,0,0.35)] sm:-mx-8 sm:px-8">
+          <header className="mb-3 flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-mono text-xs text-muted">
+                {story.id} · {saveState}
+              </p>
+              <input
+                value={story.title}
+                onChange={(event) => patchStory({ title: event.target.value })}
+                className="mt-1 w-full max-w-xl truncate bg-transparent text-2xl font-semibold tracking-tight outline-none"
+              />
+            </div>
+            <div className="flex gap-2">
+              <IconButton
+                label="Export JSON"
+                onClick={exportJson}
+                disabled={story.segments.length === 0}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-accent text-accent-ink disabled:opacity-50"
+              >
+                {Icons.download}
+              </IconButton>
+              <IconButton
+                label="Export Markdown"
+                onClick={exportMarkdown}
+                disabled={story.segments.length === 0}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-line text-foreground disabled:opacity-50"
+              >
+                {Icons.markdown}
+              </IconButton>
+            </div>
+          </header>
 
-        <nav className="mb-6 flex flex-wrap gap-2">
-          {STORY_STEPS.map((item) => (
-            <button
-              key={item}
-              type="button"
-              onClick={() => goTo(item)}
-              className={`rounded-full px-4 py-1.5 text-sm ${
-                step === item ? "bg-foreground text-background" : "border border-line text-muted"
-              }`}
-            >
-              {stepLabel(item)}
-            </button>
-          ))}
-        </nav>
+          <nav className="flex flex-wrap gap-2 pb-3">
+            {STORY_STEPS.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => goTo(item)}
+                className={`rounded-full px-4 py-1.5 text-sm ${
+                  step === item ? "bg-foreground text-background" : "border border-line text-muted"
+                }`}
+              >
+                {stepLabel(item)}
+              </button>
+            ))}
+          </nav>
+        </div>
 
         {error && (
           <p className="mb-4 rounded-xl border border-red-900/60 bg-red-950/40 px-4 py-3 text-sm text-red-200">

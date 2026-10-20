@@ -8,6 +8,8 @@
   --line: #2d2b26;
   --accent: #d4a017;
   --accent-ink: #1a1406;
+  /* Height of the fixed top bar; content and pinned blocks start below it. */
+  --nav-h: 56px;
 }
 
 @theme inline {
@@ -36,6 +38,15 @@ input {
 button {
   font: inherit;
   cursor: pointer;
+}
+
+/* Author display rules (Tailwind's flex etc.) otherwise beat the UA [hidden] rule. */
+[hidden] {
+  display: none !important;
+}
+
+.topbar {
+  height: var(--nav-h);
 }
 
 button:disabled {
