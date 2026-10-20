@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useLoggedFetch } from "@/components/debug-log";
 import { IconButton, Icons } from "@/components/icons";
 import { ModelPicker } from "@/components/model-picker";
@@ -390,6 +390,8 @@ export function Workshop({
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not start the video.");
       const v2 = settings.engine === "story-v2";
+      // Long take: the workflow's fixed DEV / FINAL resolution and steps.
+      const longTake = settings.devMode ? { megapixels: 0.47, steps: 10 } : { megapixels: 0.8, steps: 16 };
       const run: VideoRun = {
         id: crypto.randomUUID(),
         promptId: data.promptId,
@@ -402,9 +404,14 @@ export function Workshop({
               megapixels: settings.devMode ? settings.v2DevMegapixels : settings.v2Megapixels,
               steps: settings.devMode ? settings.v2DevSteps : settings.v2Steps,
             }
-          : {}),
+          : longTake),
         segmentCount: current.segments.length,
         revisionId: current.activeRevisionId,
+        promptStyle: activePromptStyle(current),
+        durations: current.segments.map((segment) => segment.duration),
+        aspectRatio: image.aspectRatio,
+        imageId: image.id,
+        imageFilename: image.filename,
         status: "queued",
         segmentsDone: 0,
         error: "",
@@ -1783,17 +1790,83 @@ export function Workshop({
                             const started = Date.parse(run.createdAt);
                             const ended = run.finishedAt ? Date.parse(run.finishedAt) : clock || started;
                             const active = run.status === "queued" || run.status === "running";
+                            const v2Run = run.engine === "story-v2";
+                            const revisionIndex = revisions.findIndex((revision) => revision.id === run.revisionId);
+                            const revision = revisions[revisionIndex];
+                            const durations = run.durations || revision?.segments.map((segment) => segment.duration) || [];
+                            const style =
+                              run.promptStyle ||
+                              revision?.promptStyle ||
+                              (revision
+                                ? revision.segments.some((segment) => promptTimestamps(segment.prompt).length > 0)
+                                  ? "long-take"
+                                  : "story-v2"
+                                : undefined);
+                            const runImage = story.referenceImages.find((item) => item.id === run.imageId);
+                            const megapixels = run.megapixels ?? (v2Run ? undefined : run.devMode ? 0.47 : 0.8);
+                            const steps = run.steps ?? (v2Run ? undefined : run.devMode ? 10 : 16);
+                            const details: [string, ReactNode][] = [
+                              [
+                                "Workflow",
+                                v2Run ? "Story V2 (ref2va, dual pass, x1.25 refine)" : "Long take (fl2va, single pass + RTX VSR)",
+                              ],
+                              [
+                                "Quality",
+                                [
+                                  v2Run ? (run.devMode ? "DEV" : "FULL") : run.devMode ? "Draft (DEV)" : "Final",
+                                  megapixels !== undefined ? `${megapixels} MP` : "",
+                                  steps !== undefined ? `${steps} steps` : "",
+                                  run.aspectRatio || "",
+                                ]
+                                  .filter(Boolean)
+                                  .join(" · "),
+                              ],
+                              [
+                                "Prompts",
+                                [
+                                  revisionIndex >= 0
+                                    ? `set ${revisionIndex + 1}${run.revisionId === activeRevisionId ? " (current)" : ""}`
+                                    : "set no longer exists",
+                                  style ? (style === "story-v2" ? "Story V2 style" : "long-take style") : "",
+                                  durations.length
+                                    ? `${durations.length} segments (${durations.join(" + ")} = ${durations.reduce((sum, value) => sum + value, 0)} s)`
+                                    : `${run.segmentCount} segments`,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" · "),
+                              ],
+                              [
+                                "Reference",
+                                runImage ? (
+                                  <span className="inline-flex items-center gap-2">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={imageSrc(runImage)} alt="" className="h-8 w-auto rounded border border-line" />
+                                    {runImage.filename}
+                                    {runImage.id === story.selectedImageId ? " (selected)" : ""}
+                                  </span>
+                                ) : (
+                                  run.imageFilename || "not recorded"
+                                ),
+                              ],
+                              ["Seed", String(run.seed)],
+                              [
+                                "ComfyUI",
+                                <span key="comfy" className="break-all font-mono">
+                                  {run.project} · {run.promptId.slice(0, 8)}
+                                </span>,
+                              ],
+                              [
+                                "Started",
+                                `${new Date(run.createdAt).toLocaleString()}${
+                                  run.finishedAt ? ` · finished ${new Date(run.finishedAt).toLocaleTimeString()}` : ""
+                                }`,
+                              ],
+                            ];
                             return (
                               <li key={run.id} className="rounded-2xl border border-line bg-card p-4">
                                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
-                                  <span>
-                                    {run.engine === "story-v2"
-                                      ? `Story V2 ${run.devMode ? "DEV" : "FULL"} · ${run.megapixels} MP · ${run.steps} steps`
-                                      : run.devMode
-                                        ? "Draft"
-                                        : "Final"}{" "}
-                                    · seed {run.seed} ·{" "}
-                                    {new Date(run.createdAt).toLocaleString()}
+                                  <span className="font-medium text-foreground">
+                                    {v2Run ? "Story V2" : "Long take"} · {run.devMode ? "DEV" : v2Run ? "FULL" : "Final"}
                                   </span>
                                   <span
                                     className={
@@ -1822,6 +1895,14 @@ export function Workshop({
                                     />
                                   </div>
                                 )}
+                                <dl className="mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
+                                  {details.map(([label, value]) => (
+                                    <Fragment key={label}>
+                                      <dt className="text-muted">{label}</dt>
+                                      <dd className="min-w-0 text-foreground/90">{value}</dd>
+                                    </Fragment>
+                                  ))}
+                                </dl>
                                 {run.error && <p className="mt-2 text-xs text-red-200">{run.error}</p>}
                                 {run.video && (
                                   <>
@@ -1830,7 +1911,7 @@ export function Workshop({
                                       controls
                                       className="mt-2 w-full rounded-xl border border-line"
                                     />
-                                    <p className="mt-2 text-xs text-muted">
+                                    <p className="mt-2 break-all text-xs text-muted">
                                       ComfyUI output: {run.video.subfolder}\{run.video.filename}
                                     </p>
                                   </>

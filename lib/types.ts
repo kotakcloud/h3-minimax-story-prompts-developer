@@ -122,6 +122,12 @@ export type VideoRun = {
   steps?: number;
   segmentCount: number;
   revisionId: string;
+  // Recorded at queue time (older runs lack them; the list derives what it can).
+  promptStyle?: PromptStyle;
+  durations?: number[];
+  aspectRatio?: string;
+  imageId?: string;
+  imageFilename?: string;
   status: VideoRunStatus;
   segmentsDone: number;
   error: string;
