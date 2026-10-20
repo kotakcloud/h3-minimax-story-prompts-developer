@@ -1,7 +1,17 @@
 import { NextResponse } from "next/server";
 import { chatJson } from "@/lib/openrouter";
 import { clampDuration } from "@/lib/parse";
-import { analysisBlock, onScreenTextFix, onScreenTextMentions, readPrompt } from "@/lib/prompts";
+import {
+  analysisBlock,
+  ensureContinuousOpener,
+  onScreenTextFix,
+  onScreenTextMentions,
+  promptTimestamps,
+  readPrompt,
+  timestampFix,
+  undefinedSubjects,
+  undefinedSubjectsFix,
+} from "@/lib/prompts";
 import type { Character, Frame, PromptSegment } from "@/lib/types";
 
 export const maxDuration = 300;
@@ -58,6 +68,7 @@ export async function POST(request: Request) {
       targets?: Target[];
       reference?: boolean;
       analysis?: unknown;
+      promptStyle?: string;
     };
 
     const comment = body.comment?.trim();
@@ -69,8 +80,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Select at least one prompt number." }, { status: 400 });
     }
 
+    const v2 = body.reference === true && body.promptStyle === "story-v2";
     const system = await readPrompt(
-      body.reference === true ? "prompts/h3-ref2va-update.md" : "prompts/h3-t2va-update.md",
+      v2
+        ? "prompts/h3-ref2va-v2-update.md"
+        : body.reference === true
+          ? "prompts/h3-ref2va-update.md"
+          : "prompts/h3-t2va-update.md",
     );
     const user = [
       "Apply this update to every listed target prompt in one pass.",
@@ -92,13 +108,30 @@ export async function POST(request: Request) {
     ].join("\n");
 
     let segments = normalize(await chatJson(system, user, { maxTokens: 16000 }), targets);
-    // One retry when an updated prompt still asks H3 to draw text (thought bubbles, captions…).
+    // One retry when an updated prompt still asks H3 to draw text (thought bubbles, captions…)
+    // or, in Story V2 style, still carries timestamps or names a subject who is not in the shot.
     const hits = segments.flatMap((segment) => onScreenTextMentions(segment.prompt));
-    if (hits.length > 0) {
-      console.log(`[prompts/update] on-screen text (${hits.join(", ")}); rewriting`);
+    const times = v2 ? segments.flatMap((segment) => promptTimestamps(segment.prompt)) : [];
+    const ghosts = v2 ? [...new Set(segments.flatMap((segment) => undefinedSubjects(segment.prompt)))] : [];
+    if (hits.length > 0 || times.length > 0 || ghosts.length > 0) {
+      if (hits.length) console.log(`[prompts/update] on-screen text (${hits.join(", ")}); rewriting`);
+      if (times.length) console.log(`[prompts/update] timestamps in a V2 prompt (${times.join(", ")}); rewriting`);
+      if (ghosts.length) console.log(`[prompts/update] undefined subjects in a V2 prompt (${ghosts.join(", ")}); rewriting`);
+      const fixes = [
+        hits.length ? onScreenTextFix(hits) : "",
+        times.length ? timestampFix(times) : "",
+        ghosts.length ? undefinedSubjectsFix(ghosts) : "",
+      ].filter(Boolean);
       segments = normalize(await chatJson(system, `${user}
 
-${onScreenTextFix(hits)}`, { maxTokens: 16000 }), targets);
+${fixes.join("\n\n")}`, { maxTokens: 16000 }), targets);
+    }
+    if (v2) {
+      segments = segments.map((segment) =>
+        targets.find((target) => target.id === segment.id)?.number === 1
+          ? segment
+          : { ...segment, prompt: ensureContinuousOpener(segment.prompt) },
+      );
     }
     return NextResponse.json({ segments });
   } catch (error) {

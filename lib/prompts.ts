@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+export { promptTimestamps } from "./types";
+
 export async function readPrompt(relativePath: string): Promise<string> {
   return readFile(path.join(process.cwd(), relativePath), "utf8");
 }
@@ -50,4 +52,36 @@ export function onScreenTextFix(hits: string[]): string {
     "Rewrite it with no written words anywhere, no double quotes anywhere (spoken words only inside <d>), and without mentioning text, bubbles or captions at all.",
     "A thought becomes the character's off-screen inner voice in their own voice (lips closed, face showing the thought) with the usual timing rules; anything else meant to be read is shown through action, reaction or voiceover.",
   ].join(" ");
+}
+
+export function timestampFix(hits: string[]): string {
+  return [
+    `CORRECTION: your previous answer used timestamps (${hits.slice(0, 6).join(", ")}). Story V2 prompts have no timestamps at all.`,
+    "Rewrite it with no timestamps, time ranges, seconds or durations anywhere; order the beats with words (first, then, as …, finally) inside one continuous take with no cuts.",
+  ].join(" ");
+}
+
+// <Subject N> labels used after subject_definitions without being defined there. In V2 a
+// subject not in the shot is left out entirely; naming it makes H3 draw it anyway.
+export function undefinedSubjects(prompt: string): string[] {
+  const [definitions, ...rest] = prompt.split(/\n\s*summary:/);
+  const defined = new Set(definitions.match(/<Subject \d+>/g) || []);
+  return [...new Set(rest.join("\n").match(/<Subject \d+>/g) || [])].filter((label) => !defined.has(label));
+}
+
+export function undefinedSubjectsFix(labels: string[]): string {
+  return [
+    `CORRECTION: your previous answer names ${labels.join(", ")} without defining them in subject_definitions.`,
+    "A subject who is not in this segment's shot is left out of the prompt entirely: never mention them anywhere, not even as off-frame, just panned away from, or absent. If they ARE visible, define them in subject_definitions and retention_analysis instead.",
+  ].join(" ");
+}
+
+export const CONTINUOUS_OPENER =
+  "The video opens already in progress, continuing the exact same shot from the previous segment: same people, same place, same light, same camera framing.";
+
+// A continuous V2 segment must not cut: without this opener a cut was seen at ~20 s.
+export function ensureContinuousOpener(prompt: string): string {
+  if (/already in progress/i.test(prompt)) return prompt;
+  if (prompt.includes("[Shot 1]")) return prompt.replace("[Shot 1]", `[Shot 1] ${CONTINUOUS_OPENER}`);
+  return prompt.replace(/detailed_description:\n/, (match) => `${match}${CONTINUOUS_OPENER} `);
 }

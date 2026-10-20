@@ -2,7 +2,7 @@ import { mkdir, readdir, readFile, rename, unlink, writeFile } from "node:fs/pro
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import type { Story, StoryStep, StorySummary } from "./types";
-import { DEFAULT_IMAGE_SETTINGS, DEFAULT_VIDEO_SETTINGS, isStoryStep } from "./types";
+import { DEFAULT_IMAGE_SETTINGS, DEFAULT_VIDEO_SETTINGS, isPromptStyle, isStoryStep } from "./types";
 
 const storiesDir = path.join(process.cwd(), "data", "stories");
 
@@ -24,6 +24,7 @@ function emptyStory(id: string, now: string): Story {
     selectedImageId: "",
     videoSettings: { ...DEFAULT_VIDEO_SETTINGS },
     videos: [],
+    promptStyle: "long-take",
     frames: [],
     segments: [],
     promptRevisions: [],
@@ -78,6 +79,7 @@ function asStory(value: unknown, fallbackId: string): Story {
         ? { ...base.videoSettings, ...(raw.videoSettings as Story["videoSettings"]) }
         : base.videoSettings,
     videos: Array.isArray(raw.videos) ? (raw.videos as Story["videos"]) : [],
+    promptStyle: isPromptStyle(raw.promptStyle) ? raw.promptStyle : base.promptStyle,
     frames: Array.isArray(raw.frames) ? (raw.frames as Story["frames"]) : [],
     segments: Array.isArray(raw.segments) ? (raw.segments as Story["segments"]) : [],
     promptRevisions: Array.isArray(raw.promptRevisions)

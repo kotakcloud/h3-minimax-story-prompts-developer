@@ -75,6 +75,29 @@ export type ReferenceImage = {
 
 export type VideoEngine = "long-take" | "story-v2";
 
+// How Ref2VA prompts are written: timestamped beats for the long take, or the
+// timestamp-free style the Story V2 workflow was proven with.
+export type PromptStyle = "long-take" | "story-v2";
+
+export function isPromptStyle(value: unknown): value is PromptStyle {
+  return value === "long-take" || value === "story-v2";
+}
+
+// Story V2 prompts carry no timestamps; the workflow was proven only without them.
+const TIMESTAMP = /\b\d{2}:\d{2}(?:\.\d{1,3})?\b/g;
+
+export function promptTimestamps(prompt: string): string[] {
+  return [...new Set(prompt.match(TIMESTAMP) || [])];
+}
+
+// The style the current prompt set was written in: as recorded on its revision, else
+// inferred (older sets were all written for the long take, with timestamps).
+export function activePromptStyle(story: Pick<Story, "segments" | "promptRevisions" | "activeRevisionId">): PromptStyle {
+  const recorded = story.promptRevisions.find((revision) => revision.id === story.activeRevisionId)?.promptStyle;
+  if (recorded) return recorded;
+  return story.segments.some((segment) => promptTimestamps(segment.prompt).length > 0) ? "long-take" : "story-v2";
+}
+
 export type VideoSettings = {
   devMode: boolean;
   seed: number;
@@ -130,6 +153,7 @@ export type PromptRevision = {
   id: string;
   createdAt: string;
   segments: PromptSegment[];
+  promptStyle?: PromptStyle;
 };
 
 export const STORY_STEPS = ["gist", "cast", "image", "frames", "prompts", "video"] as const;
@@ -187,6 +211,7 @@ export type Story = {
   selectedImageId: string;
   videoSettings: VideoSettings;
   videos: VideoRun[];
+  promptStyle: PromptStyle;
   frames: Frame[];
   segments: PromptSegment[];
   promptRevisions: PromptRevision[];

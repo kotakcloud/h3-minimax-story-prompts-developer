@@ -13,6 +13,7 @@ import type {
   Frame,
   PromptSegment,
   PromptRevision,
+  PromptStyle,
   ReferenceImage,
   Story,
   StoryLocation,
@@ -21,7 +22,17 @@ import type {
   StorySummary,
   VideoRun,
 } from "@/lib/types";
-import { IMAGE_ASPECT_RATIOS, STORY_STEPS, STORY_V2_MAX_SEGMENT_SECONDS, effectiveGist, stepLabel, storyPath, storyRevisions } from "@/lib/types";
+import {
+  IMAGE_ASPECT_RATIOS,
+  STORY_STEPS,
+  STORY_V2_MAX_SEGMENT_SECONDS,
+  activePromptStyle,
+  effectiveGist,
+  promptTimestamps,
+  stepLabel,
+  storyPath,
+  storyRevisions,
+} from "@/lib/types";
 
 type Busy = "analyze" | "cast" | "imagePrompt" | "image" | "breakdown" | "prompts" | "update" | "video" | null;
 
@@ -571,12 +582,13 @@ export function Workshop({
           location: story.location,
           layout: story.imageLayout,
           analysis: story.analysis,
+          promptStyle: story.promptStyle,
         }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Prompt generation failed.");
       const segments = (data.segments || []) as PromptSegment[];
-      await saveRevision(segments);
+      await saveRevision(segments, true, story.selectedImageId ? story.promptStyle : undefined);
       router.push(storyPath(storyId, "prompts"));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Prompt generation failed.");
@@ -585,7 +597,7 @@ export function Workshop({
     }
   }
 
-  async function saveRevision(segments: PromptSegment[], activate = true) {
+  async function saveRevision(segments: PromptSegment[], activate = true, promptStyle?: PromptStyle) {
     const current = storyRef.current;
     if (!current) return;
     const prior = current.promptRevisions.length
@@ -603,6 +615,7 @@ export function Workshop({
       id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
       segments,
+      ...(promptStyle ? { promptStyle } : {}),
     };
     const next: Story = {
       ...current,
@@ -649,6 +662,7 @@ export function Workshop({
           targets,
           reference: Boolean(story.selectedImageId),
           analysis: story.analysis,
+          promptStyle: activePromptStyle(story),
         }),
       });
       const data = await response.json();
@@ -671,7 +685,7 @@ export function Workshop({
     try {
       const byId = new Map(updated.map((segment) => [segment.id, segment]));
       const segments = current.segments.map((segment) => byId.get(segment.id) || segment);
-      await saveRevision(segments, true);
+      await saveRevision(segments, true, current.selectedImageId ? activePromptStyle(current) : undefined);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Prompt update failed.");
     } finally {
@@ -1256,6 +1270,12 @@ export function Workshop({
                 </p>
               </div>
               <div className="flex items-center gap-3">
+                <PromptStyleSelect
+                  value={story.promptStyle}
+                  reference={Boolean(story.selectedImageId)}
+                  disabled={busy !== null}
+                  onChange={(promptStyle) => patchStory({ promptStyle })}
+                />
                 <IconButton label="Add frame" onClick={addFrame}>
                   {Icons.plus}
                 </IconButton>
@@ -1383,7 +1403,13 @@ export function Workshop({
                   );
                 })}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <PromptStyleSelect
+                  value={story.promptStyle}
+                  reference={Boolean(story.selectedImageId)}
+                  disabled={busy !== null}
+                  onChange={(promptStyle) => patchStory({ promptStyle })}
+                />
                 <button
                   type="button"
                   onClick={() => setUpdateOpen(true)}
@@ -1409,6 +1435,14 @@ export function Workshop({
                 </button>
               </div>
             </div>
+            {story.selectedImageId &&
+              story.segments.length > 0 &&
+              activePromptStyle(story) !== story.promptStyle && (
+                <p className="mb-4 text-xs text-amber-300">
+                  This prompt set is written in the {activePromptStyle(story) === "story-v2" ? "Story V2" : "long-take"} style.
+                  Regenerate to write it in the {story.promptStyle === "story-v2" ? "Story V2" : "long-take"} style.
+                </p>
+              )}
             {story.segments.length === 0 ? (
               <p className="text-sm text-muted">
                 No prompts yet. Open Frames and run Progress: H3 prompts.
@@ -1458,6 +1492,9 @@ export function Workshop({
               const v2Mp = settings.devMode ? settings.v2DevMegapixels : settings.v2Megapixels;
               const v2Steps = settings.devMode ? settings.v2DevSteps : settings.v2Steps;
               const longSegments = story.segments.filter((segment) => segment.duration > STORY_V2_MAX_SEGMENT_SECONDS);
+              const timestamped = story.segments
+                .filter((segment) => promptTimestamps(segment.prompt).length > 0)
+                .map((segment) => segment.id);
               // Measured in the Pipeline: ~44 s of compute per output second at 0.3 MP / 10 steps; scaled by MP x steps.
               const v2Minutes = Math.max(1, Math.round((totalVideoSeconds * 44 * (v2Mp / 0.3) * (v2Steps / 10)) / 60));
               return (
@@ -1504,6 +1541,18 @@ export function Workshop({
                           </select>
                         </label>
                       </div>
+                      {v2 && timestamped.length > 0 && (
+                        <p className="text-xs text-amber-300">
+                          These prompts use long-take timestamps ({timestamped.join(", ")}). Story V2 is proven only with
+                          timestamp-free prompts: switch the prompt style to Story V2 on the Prompts step and regenerate.
+                        </p>
+                      )}
+                      {!v2 && refPrompts && story.segments.length > 0 && timestamped.length === 0 && (
+                        <p className="text-xs text-amber-300">
+                          These prompts are written in the Story V2 style (no timestamps); the long take expects timestamped
+                          continuation segments.
+                        </p>
+                      )}
                       {v2 && longSegments.length > 0 && (
                         <p className="text-xs text-amber-300">
                           Story V2 is proven with segments of {STORY_V2_MAX_SEGMENT_SECONDS}s or less;{" "}
@@ -1693,5 +1742,41 @@ export function Workshop({
         onApply={applyUpdate}
       />
     </div>
+  );
+}
+
+// Ref2VA prompts come in two styles: timestamped beats for the long take, or the
+// timestamp-free style the Story V2 workflow was proven with.
+function PromptStyleSelect({
+  value,
+  reference,
+  disabled,
+  onChange,
+}: {
+  value: PromptStyle;
+  reference: boolean;
+  disabled: boolean;
+  onChange: (value: PromptStyle) => void;
+}) {
+  return (
+    <label
+      className="flex items-center gap-2 text-xs text-muted"
+      title={
+        reference
+          ? "Style used the next time prompts are written. Story V2: no timestamps, continuous segments open already in progress, absent characters left out."
+          : "Prompt styles apply to reference-image prompts only. Select a reference image on the Image step."
+      }
+    >
+      Prompt style
+      <select
+        value={reference ? value : "long-take"}
+        disabled={disabled || !reference}
+        onChange={(event) => onChange(event.target.value as PromptStyle)}
+        className="rounded-md border border-line bg-background px-2 py-1 text-sm text-foreground"
+      >
+        <option value="long-take">Long take (timestamped)</option>
+        <option value="story-v2">Story V2 (no timestamps)</option>
+      </select>
+    </label>
   );
 }
