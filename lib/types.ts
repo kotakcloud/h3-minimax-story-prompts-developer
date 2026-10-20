@@ -242,6 +242,7 @@ export type StorySummary = {
   id: string;
   title: string;
   step: StoryStep;
+  createdAt: string;
   updatedAt: string;
   frameCount: number;
   segmentCount: number;

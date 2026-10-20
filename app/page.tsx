@@ -17,6 +17,13 @@ function stepLabel(step: StorySummary["step"]) {
   return "Prompts";
 }
 
+// Local date and time, e.g. 20 Oct 2026, 09:12 (the list renders client-side after its fetch).
+function formatDate(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "unknown";
+  return date.toLocaleString(undefined, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
 export default function Home() {
   const router = useRouter();
   const request = useLoggedFetch();
@@ -138,6 +145,11 @@ export default function Home() {
                 </Link>
                 <p className="mt-1 font-mono text-xs text-muted">
                   {story.id} · {stepLabel(story.step)} · {story.frameCount} frames · {story.segmentCount} prompts
+                </p>
+                <p className="mt-0.5 text-xs text-muted">
+                  <span title={story.createdAt}>Created {formatDate(story.createdAt)}</span>
+                  {" · "}
+                  <span title={story.updatedAt}>Updated {formatDate(story.updatedAt)}</span>
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">

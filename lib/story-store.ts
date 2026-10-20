@@ -104,6 +104,7 @@ function toSummary(story: Story): StorySummary {
     id: story.id,
     title: story.title,
     step: story.step,
+    createdAt: story.createdAt,
     updatedAt: story.updatedAt,
     frameCount: story.frames.length,
     segmentCount: story.segments.length,
