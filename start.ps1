@@ -28,6 +28,17 @@ function Get-PortPids([int]$ListenPort) {
   return @($pids | Where-Object { $_ -and $_ -ne 0 })
 }
 
+# Stop leftover Next dev processes from this project (the next-server child can outlive its parent).
+$projectPath = [regex]::Escape($PSScriptRoot)
+$stale = @(
+  Get-CimInstance Win32_Process -Filter "Name='node.exe'" -ErrorAction SilentlyContinue |
+    Where-Object { $_.CommandLine -match $projectPath -and $_.CommandLine -match "next" }
+)
+foreach ($proc in $stale) {
+  Write-Host "Stopping leftover Next process PID $($proc.ProcessId)."
+  Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue
+}
+
 $occupied = Get-PortPids $Port
 if ($occupied.Count -gt 0) {
   Write-Host "Port $Port is in use by PID $($occupied -join ', '). Stopping it."
@@ -42,6 +53,15 @@ if ($occupied.Count -gt 0) {
       Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
     }
   }
+}
+
+# Wait for the OS to release the port before starting.
+$deadline = (Get-Date).AddSeconds(15)
+while ((Get-PortPids $Port).Count -gt 0 -and (Get-Date) -lt $deadline) {
+  Start-Sleep -Milliseconds 500
+}
+if ((Get-PortPids $Port).Count -gt 0) {
+  throw "Port $Port is still in use after 15 seconds."
 }
 
 if (-not (Test-Path "node_modules")) {
