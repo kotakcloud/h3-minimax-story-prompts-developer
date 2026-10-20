@@ -23,6 +23,7 @@ export default function Home() {
   const [stories, setStories] = useState<StorySummary[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   async function refresh() {
     const response = await request("/api/stories");
@@ -49,6 +50,20 @@ export default function Home() {
     }
   }
 
+  async function setArchived(id: string, archived: boolean) {
+    const response = await request(`/api/stories/${id}/archive`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ archived }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      setError(data.error || "Could not archive the story.");
+      return;
+    }
+    setStories((current) => current.map((story) => (story.id === id ? { ...story, archived } : story)));
+  }
+
   async function removeStory(id: string) {
     if (!window.confirm("Delete this story from this machine?")) return;
     const response = await request(`/api/stories/${id}`, { method: "DELETE" });
@@ -59,6 +74,9 @@ export default function Home() {
     }
     setStories((current) => current.filter((story) => story.id !== id));
   }
+
+  const archivedCount = stories.filter((story) => story.archived).length;
+  const visible = stories.filter((story) => story.archived === showArchived);
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-4xl px-5 py-10 sm:px-8">
@@ -87,11 +105,29 @@ export default function Home() {
         </p>
       )}
 
-      {stories.length === 0 ? (
-        <p className="text-sm text-muted">No stories yet. Create one to start a gist.</p>
+      {archivedCount > 0 && (
+        <div className="mb-4 flex justify-end">
+          <button
+            type="button"
+            onClick={() => setShowArchived((show) => !show)}
+            className="rounded-full border border-line px-4 py-1.5 text-sm text-muted"
+          >
+            {showArchived ? "Back to stories" : `Archived (${archivedCount})`}
+          </button>
+        </div>
+      )}
+
+      {visible.length === 0 ? (
+        <p className="text-sm text-muted">
+          {showArchived
+            ? "No archived stories."
+            : stories.length > 0
+              ? "All stories are archived."
+              : "No stories yet. Create one to start a gist."}
+        </p>
       ) : (
         <ul className="space-y-3">
-          {stories.map((story) => (
+          {visible.map((story) => (
             <li
               key={story.id}
               className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-card px-4 py-4"
@@ -115,6 +151,12 @@ export default function Home() {
                 <IconLink href={storyPath(story.id, story.step)} label="Open in new tab" target="_blank">
                   {Icons.external}
                 </IconLink>
+                <IconButton
+                  label={story.archived ? "Unarchive" : "Archive"}
+                  onClick={() => setArchived(story.id, !story.archived)}
+                >
+                  {story.archived ? Icons.unarchive : Icons.archive}
+                </IconButton>
                 <IconButton label="Delete" onClick={() => removeStory(story.id)}>
                   {Icons.trash}
                 </IconButton>

@@ -799,7 +799,9 @@ export function Workshop({
           <div>
             <p className="text-xs text-muted">Open another</p>
             <ul className="mt-2 space-y-1">
-              {stories.map((item) => (
+              {stories
+                .filter((item) => !item.archived || item.id === storyId)
+                .map((item) => (
                 <li key={item.id} className="flex items-center gap-2">
                   <Link
                     href={storyPath(item.id, item.step)}

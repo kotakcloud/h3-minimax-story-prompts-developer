@@ -37,6 +37,21 @@ export const Icons = {
       <path d="M19 13v6H5V5h6" />
     </Svg>
   ),
+  archive: (
+    <Svg>
+      <path d="M4 5h16v4H4z" />
+      <path d="M6 9v10h12V9" />
+      <path d="M10 13h4" />
+    </Svg>
+  ),
+  unarchive: (
+    <Svg>
+      <path d="M4 5h16v4H4z" />
+      <path d="M6 9v10h12V9" />
+      <path d="m9.5 15 2.5-2.5 2.5 2.5" />
+      <path d="M12 12.5V18" />
+    </Svg>
+  ),
   trash: (
     <Svg>
       <path d="M5 7h14" />

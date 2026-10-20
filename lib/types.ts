@@ -216,6 +216,8 @@ export type Story = {
   h3Tips: boolean;
   // OpenRouter model (or comma-separated fallback chain) for every AI step; blank = .env default.
   aiModel: string;
+  // Archived stories are hidden from the story lists until unarchived.
+  archived: boolean;
   frames: Frame[];
   segments: PromptSegment[];
   promptRevisions: PromptRevision[];
@@ -243,6 +245,7 @@ export type StorySummary = {
   updatedAt: string;
   frameCount: number;
   segmentCount: number;
+  archived: boolean;
 };
 
 export function isStoryStep(value: string): value is StoryStep {

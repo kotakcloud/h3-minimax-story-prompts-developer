@@ -29,6 +29,7 @@ function emptyStory(id: string, now: string): Story {
     h3Tips: true,
     // New stories start on the recommended model; older ones without the field keep the .env default.
     aiModel: RECOMMENDED_MODEL,
+    archived: false,
     frames: [],
     segments: [],
     promptRevisions: [],
@@ -86,6 +87,7 @@ function asStory(value: unknown, fallbackId: string): Story {
     promptStyle: isPromptStyle(raw.promptStyle) ? raw.promptStyle : base.promptStyle,
     h3Tips: raw.h3Tips !== false,
     aiModel: typeof raw.aiModel === "string" ? raw.aiModel : "",
+    archived: raw.archived === true,
     frames: Array.isArray(raw.frames) ? (raw.frames as Story["frames"]) : [],
     segments: Array.isArray(raw.segments) ? (raw.segments as Story["segments"]) : [],
     promptRevisions: Array.isArray(raw.promptRevisions)
@@ -105,6 +107,7 @@ function toSummary(story: Story): StorySummary {
     updatedAt: story.updatedAt,
     frameCount: story.frames.length,
     segmentCount: story.segments.length,
+    archived: story.archived,
   };
 }
 
@@ -143,9 +146,9 @@ export async function createStory(): Promise<Story> {
   return story;
 }
 
-export async function writeStory(story: Story): Promise<Story> {
+export async function writeStory(story: Story, options: { touch?: boolean } = {}): Promise<Story> {
   await ensureDir();
-  const next = { ...story, updatedAt: new Date().toISOString() };
+  const next = options.touch === false ? story : { ...story, updatedAt: new Date().toISOString() };
   const file = storyFile(next.id);
   const temp = `${file}.${process.pid}.tmp`;
   await writeFile(temp, JSON.stringify(next, null, 2), "utf8");
@@ -159,12 +162,21 @@ export async function updateStory(id: string, patch: Partial<Story>): Promise<St
   const rest = { ...patch };
   delete rest.id;
   delete rest.createdAt;
+  // Only setArchived changes this, so an open editor's autosave cannot unarchive a story.
+  delete rest.archived;
   return writeStory({
     ...current,
     ...rest,
     id: current.id,
     createdAt: current.createdAt,
   });
+}
+
+// Archiving keeps updatedAt, so an unarchived story returns to its old place in the list.
+export async function setArchived(id: string, archived: boolean): Promise<Story | null> {
+  const current = await readStory(id);
+  if (!current) return null;
+  return writeStory({ ...current, archived }, { touch: false });
 }
 
 export async function deleteStory(id: string): Promise<boolean> {
