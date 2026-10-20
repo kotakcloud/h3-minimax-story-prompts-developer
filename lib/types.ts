@@ -212,6 +212,8 @@ export type Story = {
   videoSettings: VideoSettings;
   videos: VideoRun[];
   promptStyle: PromptStyle;
+  // Include the optional H3 prompting tips (comedy, continuity, emotion…) when writing prompts.
+  h3Tips: boolean;
   frames: Frame[];
   segments: PromptSegment[];
   promptRevisions: PromptRevision[];

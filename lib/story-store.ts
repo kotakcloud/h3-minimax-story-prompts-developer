@@ -25,6 +25,7 @@ function emptyStory(id: string, now: string): Story {
     videoSettings: { ...DEFAULT_VIDEO_SETTINGS },
     videos: [],
     promptStyle: "long-take",
+    h3Tips: true,
     frames: [],
     segments: [],
     promptRevisions: [],
@@ -80,6 +81,7 @@ function asStory(value: unknown, fallbackId: string): Story {
         : base.videoSettings,
     videos: Array.isArray(raw.videos) ? (raw.videos as Story["videos"]) : [],
     promptStyle: isPromptStyle(raw.promptStyle) ? raw.promptStyle : base.promptStyle,
+    h3Tips: raw.h3Tips !== false,
     frames: Array.isArray(raw.frames) ? (raw.frames as Story["frames"]) : [],
     segments: Array.isArray(raw.segments) ? (raw.segments as Story["segments"]) : [],
     promptRevisions: Array.isArray(raw.promptRevisions)

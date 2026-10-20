@@ -49,12 +49,15 @@ Each `prompt` is raw H3 text the user will paste into a MiniMax H3 generator. In
   Speed: "at slow speed" / "at fast speed" (omit if normal).
   Example: The camera pushes in with small amplitude at slow speed toward the folded letter in her hands.
 
+<!-- h3-tips -->
 ## Characters and continuity
 
 - Repeat identity anchors in every shot: appearance, clothing, key props, and the location/light description, word for word across segments.
 - Use the provided character lock. Do not redesign hair, wardrobe, age, or body.
 - Track state: wet/open/broken/messy stays that way in later shots of the same clip, and across segments when the story continues.
 - Keep screen direction and geography coherent from segment to segment.
+
+<!-- /h3-tips -->
 
 ## Dialogue and text
 
@@ -76,9 +79,12 @@ Each `prompt` is raw H3 text the user will paste into a MiniMax H3 generator. In
 - overall_soundscape: 1–4 English sentences, one paragraph. Ambience + physical action + non-verbal human sound. Never repeat dialogue, singing or diegetic music here. `N/A` only for explicit total silence.
 - non_diegetic_music: 1–3 English sentences. Score the characters cannot hear: instrumentation, tempo, rhythm, dynamics. No mood-word essays. Diegetic music stays in the description. `N/A` if none.
 
+<!-- h3-tips -->
 ## Creative enhancement (apply, do not label)
 
 Enrich each clip across camera identity, visual texture, pacing, character detail, spatial geography, continuity, and sound. Still stay faithful to the frame summary.
+
+<!-- /h3-tips -->
 
 ## Output hygiene
 

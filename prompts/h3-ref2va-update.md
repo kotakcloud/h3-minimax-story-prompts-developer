@@ -18,7 +18,10 @@ Rules:
 - Keep the continuation rules: segments after the first open with "The video opens on the final moment of the previous shot…" and use timestamps shifted by +0.920 s (content runs 00:00.920 to duration + 0.920).
 - Keep every spoken line timed with an explicit start and "finishes it completely by …", ending at least 1.5 s before the segment ends, with silence stated before and after.
 - Write in English. Keep dialogue verbatim unless the comment changes it.
-- Keep the H3 rules of the original prompts: no double quotes anywhere (spoken words only inside <d>), positive wording, a concrete style label, silent beats say what the mouths do, each segment ends settled on the people's own bodies.
+- Never use double quotes anywhere in the prompt (spoken words only inside <d>).
+<!-- h3-tips -->
+- Keep the H3 rules of the original prompts: positive wording, a concrete style label, silent beats say what the mouths do, each segment ends settled on the people's own bodies.
+<!-- /h3-tips -->
 - No written text in the video: never add thought bubbles, speech bubbles, captions, subtitles, signs or on-screen text. If a target prompt has any, rewrite it: a thought becomes the character's off-screen inner voice (own voice, lips closed, face showing the thought) with the usual timing; any other text is dropped and shown through action or reaction. Do not mention text at all in the result.
 
 Schema:

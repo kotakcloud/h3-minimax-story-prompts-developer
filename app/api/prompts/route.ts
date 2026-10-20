@@ -121,6 +121,7 @@ export async function POST(request: Request) {
       layout?: string;
       analysis?: unknown;
       promptStyle?: string;
+      tips?: boolean;
     };
 
     const frames = Array.isArray(body.frames) ? body.frames : [];
@@ -144,11 +145,12 @@ export async function POST(request: Request) {
     const reference = body.reference === true;
     // Story V2 style exists only for reference-image (Ref2VA) prompts.
     const v2 = reference && body.promptStyle === "story-v2";
+    const tips = { tips: body.tips !== false };
     const system = v2
-      ? await readPromptWithFormats("prompts/h3-ref2va-v2-system.md")
+      ? await readPromptWithFormats("prompts/h3-ref2va-v2-system.md", tips)
       : reference
-        ? await readPromptWithFormats("prompts/h3-ref2va-system.md")
-        : await readPrompt("prompts/h3-t2va-system.md");
+        ? await readPromptWithFormats("prompts/h3-ref2va-system.md", tips)
+        : await readPrompt("prompts/h3-t2va-system.md", tips);
     const analysis = analysisBlock(body.analysis);
     const perFrame = await Promise.all(
       breakdown.frames.map(async (frame, index) => {

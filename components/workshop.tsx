@@ -583,6 +583,7 @@ export function Workshop({
           layout: story.imageLayout,
           analysis: story.analysis,
           promptStyle: story.promptStyle,
+          tips: story.h3Tips,
         }),
       });
       const data = await response.json();
@@ -663,6 +664,7 @@ export function Workshop({
           reference: Boolean(story.selectedImageId),
           analysis: story.analysis,
           promptStyle: activePromptStyle(story),
+          tips: story.h3Tips,
         }),
       });
       const data = await response.json();
@@ -1276,6 +1278,7 @@ export function Workshop({
                   disabled={busy !== null}
                   onChange={(promptStyle) => patchStory({ promptStyle })}
                 />
+                <H3TipsCheckbox checked={story.h3Tips} disabled={busy !== null} onChange={(h3Tips) => patchStory({ h3Tips })} />
                 <IconButton label="Add frame" onClick={addFrame}>
                   {Icons.plus}
                 </IconButton>
@@ -1410,6 +1413,7 @@ export function Workshop({
                   disabled={busy !== null}
                   onChange={(promptStyle) => patchStory({ promptStyle })}
                 />
+                <H3TipsCheckbox checked={story.h3Tips} disabled={busy !== null} onChange={(h3Tips) => patchStory({ h3Tips })} />
                 <button
                   type="button"
                   onClick={() => setUpdateOpen(true)}
@@ -1777,6 +1781,28 @@ function PromptStyleSelect({
         <option value="long-take">Long take (timestamped)</option>
         <option value="story-v2">Story V2 (no timestamps)</option>
       </select>
+    </label>
+  );
+}
+
+// The optional H3 prompting tips (comedy timing, chaining, continuity, emotion, things H3
+// does badly). The format, dialogue and no-on-screen-text rules always apply.
+function H3TipsCheckbox({
+  checked,
+  disabled,
+  onChange,
+}: {
+  checked: boolean;
+  disabled: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label
+      className="flex items-center gap-2 text-xs text-muted"
+      title="Include the H3 prompting tips (comedy timing, segment chaining, continuity, emotion, things H3 does badly) when writing or updating prompts. The prompt format, dialogue and no-on-screen-text rules always apply."
+    >
+      <input type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />
+      H3 tips
     </label>
   );
 }

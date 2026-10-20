@@ -3,13 +3,18 @@ import path from "node:path";
 
 export { promptTimestamps } from "./types";
 
-export async function readPrompt(relativePath: string): Promise<string> {
-  return readFile(path.join(process.cwd(), relativePath), "utf8");
+// Sections between <!-- h3-tips --> and <!-- /h3-tips --> are the optional H3 prompting
+// tips: kept (without the markers) when tips are on, dropped when they are off.
+const TIPS_BLOCK = /<!-- h3-tips -->\r?\n([\s\S]*?)<!-- \/h3-tips -->\r?\n(?:\r?\n)?/g;
+
+export async function readPrompt(relativePath: string, options: { tips?: boolean } = {}): Promise<string> {
+  const text = await readFile(path.join(process.cwd(), relativePath), "utf8");
+  return text.replace(TIPS_BLOCK, (_match, body: string) => (options.tips === false ? "" : `${body}\n`));
 }
 
 // System prompt plus the shared story-format catalogue.
-export async function readPromptWithFormats(relativePath: string): Promise<string> {
-  const [system, formats] = await Promise.all([readPrompt(relativePath), readPrompt("prompts/story-formats.md")]);
+export async function readPromptWithFormats(relativePath: string, options: { tips?: boolean } = {}): Promise<string> {
+  const [system, formats] = await Promise.all([readPrompt(relativePath, options), readPrompt("prompts/story-formats.md")]);
   return `${system}\n\n---\n\nSTORY FORMATS (shared reference):\n\n${formats}`;
 }
 

@@ -95,7 +95,9 @@ H3 cannot draw readable text: any bubble, caption, sign or written line comes ou
 - A character's thought (a thought bubble, "he thinks …", "she wonders …" in the frame or analysis) becomes an inner voice: `<Subject 1> (S1) is heard in an off-screen inner voice, his own voice, thinking: <d>[Gujarati] …</d>` with the same rules as dialogue. Right after it: "His lips stay completely closed; only his eyes and face show the thought."
 - Never write thought bubbles, speech bubbles, captions, subtitles, title cards, on-screen text, written signs, labels, or phone/screen messages anywhere in the prompt. Do not mention them at all, not even to forbid them. Describe only people, faces, actions, props and the place.
 - If the frame relies on reading something, show it through a reaction, a voiceover or the inner voice instead.
+- Never put double quotes anywhere in the prompt: H3 renders words inside double quotes as on-screen text. Spoken words go only inside <d>…</d>.
 
+<!-- h3-tips -->
 ## Comedy timing and format
 
 - Follow the STORY ANALYSIS: its format, the beat this segment carries, the tone and any sensitivity note.
@@ -128,8 +130,9 @@ H3 cannot draw readable text: any bubble, caption, sign or written line comes ou
 
 - Phone buzzes, notifications, message pop-ups: H3 draws them as stickers or UI graphics that then stay in every later segment. If a phone matters, say "the phone screen lights up" and nothing more.
 - Negative wording ("no stickers", "don't show a logo", "no glasses"): H3 can add but not subtract, so it may draw the thing anyway. Phrase it positively instead (clear, unobstructed eyes; bare-headed).
-- Double quotes: H3 renders words inside double quotes as on-screen text. Never put double quotes anywhere in the prompt; spoken words go only inside <d>…</d>.
 - Named third-party IP, real celebrities, trademarked characters.
+
+<!-- /h3-tips -->
 
 ## Output hygiene
 

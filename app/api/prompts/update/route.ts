@@ -69,6 +69,7 @@ export async function POST(request: Request) {
       reference?: boolean;
       analysis?: unknown;
       promptStyle?: string;
+      tips?: boolean;
     };
 
     const comment = body.comment?.trim();
@@ -87,6 +88,7 @@ export async function POST(request: Request) {
         : body.reference === true
           ? "prompts/h3-ref2va-update.md"
           : "prompts/h3-t2va-update.md",
+      { tips: body.tips !== false },
     );
     const user = [
       "Apply this update to every listed target prompt in one pass.",

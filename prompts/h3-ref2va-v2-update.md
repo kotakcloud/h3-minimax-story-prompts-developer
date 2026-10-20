@@ -21,7 +21,10 @@ Rules:
 - The description names what fills the background on both sides of the frame (taken from the location: walls, trees and foliage, sky), so no area of the frame stays undefined.
 - Keep every spoken line early in the segment after a short silent beat, finished well before the end, with silence stated in words before and after. One spoken line per segment unless the frame has two (a narrator line and an inner voice, or a real back-and-forth): then both, in separate beats with a short silence between.
 - Write in English. Keep dialogue verbatim unless the comment changes it.
-- Keep the H3 rules of the original prompts: no double quotes anywhere (spoken words only inside <d>), positive wording, a concrete style label, silent beats say what the mouths do, each segment ends settled on the people's own bodies.
+- Never use double quotes anywhere in the prompt (spoken words only inside <d>).
+<!-- h3-tips -->
+- Keep the H3 rules of the original prompts: positive wording, a concrete style label, silent beats say what the mouths do, each segment ends settled on the people's own bodies.
+<!-- /h3-tips -->
 - No written text in the video: never add thought bubbles, speech bubbles, captions, subtitles, signs or on-screen text. If a target prompt has any, rewrite it: a thought becomes the character's off-screen inner voice (own voice, lips closed, face showing the thought); any other text is dropped and shown through action or reaction. Do not mention text at all in the result.
 
 Schema:
