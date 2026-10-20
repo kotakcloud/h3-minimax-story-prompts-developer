@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLoggedFetch } from "@/components/debug-log";
 import { IconButton, Icons } from "@/components/icons";
 import { ModelPicker } from "@/components/model-picker";
+import { framesFromAnalysis } from "@/lib/beats";
 import { UpdateCommentDialog } from "@/components/update-comment-dialog";
 import { TabStatus } from "@/lib/tab-status";
 import { buildExportPayload, buildMarkdownExport, downloadJson, downloadMarkdown } from "@/lib/export";
@@ -571,6 +572,14 @@ export function Workshop({
     setBusy("prompts");
     setError("");
     try {
+      // The Frames step is optional: without frames, write one prompt per analysis beat
+      // (short beats merged), and keep those frames on the story.
+      let frames = story.frames;
+      if (frames.length === 0) {
+        frames = framesFromAnalysis(story.analysis);
+        if (frames.length === 0) throw new Error("No frames and no analysis beats. Run the analysis on Cast or break into frames first.");
+        if (storyRef.current) storyRef.current = { ...storyRef.current, frames };
+      }
       const response = await request("/api/prompts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -579,7 +588,7 @@ export function Workshop({
           gist: effectiveGist(story),
           title: story.title,
           characters: story.characters,
-          frames: story.frames,
+          frames,
           reference: Boolean(story.selectedImageId),
           location: story.location,
           layout: story.imageLayout,
@@ -1302,6 +1311,24 @@ export function Workshop({
                 <IconButton label="Add frame" onClick={addFrame}>
                   {Icons.plus}
                 </IconButton>
+                {story.analysis?.beats?.length ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (
+                        story.frames.length === 0 ||
+                        window.confirm("Replace the current frames with the analysis beats? This clears the prompts.")
+                      ) {
+                        patchStory({ frames: framesFromAnalysis(story.analysis), segments: [] });
+                      }
+                    }}
+                    disabled={busy !== null}
+                    title="One frame per analysis beat, short beats merged, no AI call"
+                    className="rounded-full border border-line px-4 py-2 text-sm"
+                  >
+                    Use analysis beats
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => {
@@ -1361,7 +1388,7 @@ export function Workshop({
 
             {story.frames.length === 0 ? (
               <p className="text-sm text-muted">
-                No frames yet. Run Break into frames above.
+                No frames yet. Run Break into frames (AI) or Use analysis beats above, or skip this step: Write H3 prompts on Prompts uses the analysis beats.
               </p>
             ) : (
               <ol className="space-y-4">
@@ -1464,10 +1491,19 @@ export function Workshop({
                   <button
                     type="button"
                     onClick={runPrompts}
-                    disabled={busy !== null || story.frames.length === 0}
+                    disabled={busy !== null || (story.frames.length === 0 && !story.analysis?.beats?.length)}
+                    title={
+                      story.frames.length === 0
+                        ? "No frames yet: one prompt per analysis beat (short beats merged)."
+                        : undefined
+                    }
                     className="rounded-full border border-line px-4 py-2 text-sm"
                   >
-                    {busy === "prompts" ? "Writing H3 prompts…" : "Write H3 prompts"}
+                    {busy === "prompts"
+                      ? "Writing H3 prompts…"
+                      : story.frames.length === 0
+                        ? "Write H3 prompts from beats"
+                        : "Write H3 prompts"}
                   </button>
                 ) : (
                   <IconButton
@@ -1498,7 +1534,7 @@ export function Workshop({
               )}
             {story.segments.length === 0 ? (
               <p className="text-sm text-muted">
-                No prompts yet. Run Write H3 prompts above.
+                No prompts yet. Run Write H3 prompts above. Frames are optional: without them, each analysis beat becomes one segment.
               </p>
             ) : (
               <ol className="space-y-5">
