@@ -266,7 +266,6 @@ export function Workshop({
       setStory(await persist(next));
       setCastCommentOpen(false);
       setCastComment("");
-      router.push(storyPath(storyId, "cast"));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cast extraction failed.");
     } finally {
@@ -302,7 +301,6 @@ export function Workshop({
       };
       skipSave.current = true;
       setStory(await persist(next));
-      router.push(storyPath(storyId, "image"));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Image prompt generation failed.");
     } finally {
@@ -557,7 +555,6 @@ export function Workshop({
       };
       skipSave.current = true;
       setStory(await persist(next));
-      router.push(storyPath(storyId, "frames"));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Breakdown failed.");
     } finally {
@@ -590,7 +587,6 @@ export function Workshop({
       if (!response.ok) throw new Error(data.error || "Prompt generation failed.");
       const segments = (data.segments || []) as PromptSegment[];
       await saveRevision(segments, true, story.selectedImageId ? story.promptStyle : undefined);
-      router.push(storyPath(storyId, "prompts"));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Prompt generation failed.");
     } finally {
@@ -888,17 +884,11 @@ export function Workshop({
             <div className="mt-4 flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={runAnalyzeAndCast}
-                disabled={busy !== null || !story.gist.trim()}
+                onClick={() => goTo("cast")}
                 className="rounded-full bg-foreground px-5 py-2 text-sm font-medium text-background"
               >
-                {busy === "analyze"
-                  ? "Analysing the story…"
-                  : busy === "cast"
-                    ? "Extracting cast and location…"
-                    : "Progress: analyse, cast & location"}
+                Progress: cast & location
               </button>
-              {busy && <p className="self-center text-xs text-muted">OpenRouter can take one to two minutes.</p>}
             </div>
           </section>
         )}
@@ -922,11 +912,24 @@ export function Workshop({
                 </IconButton>
                 <button
                   type="button"
-                  onClick={runImagePrompt}
-                  disabled={busy !== null || story.characters.length === 0 || !story.location.description.trim()}
+                  onClick={runAnalyzeAndCast}
+                  disabled={busy !== null || !story.gist.trim()}
+                  className="rounded-full border border-line px-4 py-2 text-sm"
+                >
+                  {busy === "analyze"
+                    ? "Analysing the story…"
+                    : busy === "cast"
+                      ? "Extracting cast and location…"
+                      : story.characters.length > 0
+                        ? "Analyse & extract again"
+                        : "Analyse & extract cast"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goTo("image")}
                   className="rounded-full bg-foreground px-5 py-2 text-sm font-medium text-background"
                 >
-                  {busy === "imagePrompt" ? "Writing image prompt…" : "Progress: reference image prompt"}
+                  Progress: reference image
                 </button>
               </div>
             </div>
@@ -1046,7 +1049,7 @@ export function Workshop({
             {busy && <p className="mb-4 text-xs text-muted">OpenRouter can take one to two minutes.</p>}
 
             {story.characters.length === 0 ? (
-              <p className="text-sm text-muted">No cast yet. Go back to Gist and run Progress: cast & location.</p>
+              <p className="text-sm text-muted">No cast yet. Run Analyse & extract cast above.</p>
             ) : (
               <>
                 <h3 className="mb-2 text-xs uppercase tracking-wider text-muted">Characters</h3>
@@ -1102,20 +1105,24 @@ export function Workshop({
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <IconButton
-                  label={busy === "imagePrompt" ? "Writing image prompt" : "Rewrite image prompt"}
-                  onClick={runImagePrompt}
-                  disabled={busy !== null || story.characters.length === 0}
-                >
-                  {Icons.refresh}
-                </IconButton>
                 <button
                   type="button"
-                  onClick={runBreakdown}
-                  disabled={busy !== null || !story.gist.trim() || !story.selectedImageId}
+                  onClick={runImagePrompt}
+                  disabled={busy !== null || story.characters.length === 0}
+                  className="rounded-full border border-line px-4 py-2 text-sm"
+                >
+                  {busy === "imagePrompt"
+                    ? "Writing image prompt…"
+                    : story.imagePrompt.trim()
+                      ? "Rewrite image prompt"
+                      : "Write image prompt"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goTo("frames")}
                   className="rounded-full bg-foreground px-5 py-2 text-sm font-medium text-background"
                 >
-                  {busy === "breakdown" ? "Breaking into frames…" : "Progress: frames"}
+                  Progress: frames
                 </button>
               </div>
             </div>
@@ -1284,11 +1291,29 @@ export function Workshop({
                 </IconButton>
                 <button
                   type="button"
-                  onClick={runPrompts}
-                  disabled={busy !== null || story.frames.length === 0}
+                  onClick={() => {
+                    if (
+                      story.frames.length === 0 ||
+                      window.confirm("Break the story into frames again? This replaces the current frames and clears the prompts.")
+                    ) {
+                      void runBreakdown();
+                    }
+                  }}
+                  disabled={busy !== null || !story.gist.trim()}
+                  className="rounded-full border border-line px-4 py-2 text-sm"
+                >
+                  {busy === "breakdown"
+                    ? "Breaking into frames…"
+                    : story.frames.length > 0
+                      ? "Break into frames again"
+                      : "Break into frames"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goTo("prompts")}
                   className="rounded-full bg-foreground px-5 py-2 text-sm font-medium text-background"
                 >
-                  {busy === "prompts" ? "Writing H3 prompts…" : "Progress: H3 prompts"}
+                  Progress: H3 prompts
                 </button>
               </div>
             </div>
@@ -1323,7 +1348,7 @@ export function Workshop({
 
             {story.frames.length === 0 ? (
               <p className="text-sm text-muted">
-                No frames yet. Go back to Gist and run Progress: frames.
+                No frames yet. Run Break into frames above.
               </p>
             ) : (
               <ol className="space-y-4">
@@ -1422,13 +1447,24 @@ export function Workshop({
                 >
                   Update with comment
                 </button>
-                <IconButton
-                  label={busy === "prompts" ? "Writing H3 prompts" : "Regenerate prompts"}
-                  onClick={runPrompts}
-                  disabled={busy !== null || story.frames.length === 0}
-                >
-                  {Icons.refresh}
-                </IconButton>
+                {story.segments.length === 0 ? (
+                  <button
+                    type="button"
+                    onClick={runPrompts}
+                    disabled={busy !== null || story.frames.length === 0}
+                    className="rounded-full border border-line px-4 py-2 text-sm"
+                  >
+                    {busy === "prompts" ? "Writing H3 prompts…" : "Write H3 prompts"}
+                  </button>
+                ) : (
+                  <IconButton
+                    label={busy === "prompts" ? "Writing H3 prompts" : "Regenerate prompts"}
+                    onClick={runPrompts}
+                    disabled={busy !== null || story.frames.length === 0}
+                  >
+                    {Icons.refresh}
+                  </IconButton>
+                )}
                 <button
                   type="button"
                   onClick={() => goTo("video")}
@@ -1449,7 +1485,7 @@ export function Workshop({
               )}
             {story.segments.length === 0 ? (
               <p className="text-sm text-muted">
-                No prompts yet. Open Frames and run Progress: H3 prompts.
+                No prompts yet. Run Write H3 prompts above.
               </p>
             ) : (
               <ol className="space-y-5">
