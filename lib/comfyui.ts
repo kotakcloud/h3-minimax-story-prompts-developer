@@ -104,6 +104,36 @@ async function historyEntry(promptId: string): Promise<HistoryEntry | undefined>
   return history[promptId];
 }
 
+function wasInterrupted(entry: HistoryEntry): boolean {
+  return Boolean(entry.status?.messages?.some(([kind]) => kind === "execution_interrupted"));
+}
+
+// Stops only this job: a running one is interrupted by prompt id (ComfyUI ignores the call when
+// another prompt is running), a pending one is removed from the queue. Other work on the GPU is untouched.
+export async function cancelPrompt(promptId: string): Promise<"interrupted" | "removed" | "not-found"> {
+  const queue = (await comfyJson(`${COMFYUI_URL}/queue`)) as {
+    queue_running?: [number, string][];
+    queue_pending?: [number, string][];
+  };
+  if ((queue.queue_running || []).some((item) => item[1] === promptId)) {
+    await comfyJson(`${COMFYUI_URL}/interrupt`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt_id: promptId }),
+    });
+    return "interrupted";
+  }
+  if ((queue.queue_pending || []).some((item) => item[1] === promptId)) {
+    await comfyJson(`${COMFYUI_URL}/queue`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ delete: [promptId] }),
+    });
+    return "removed";
+  }
+  return "not-found";
+}
+
 function executionError(entry: HistoryEntry): string {
   const failure = entry.status?.messages?.find(([kind]) => kind === "execution_error")?.[1];
   return String(failure?.exception_message || "unknown error").trim();
@@ -337,7 +367,7 @@ export async function queueStoryV2(options: StoryV2Options): Promise<{ promptId:
 }
 
 export type LongTakeStatus = {
-  status: "queued" | "running" | "done" | "error";
+  status: "queued" | "running" | "done" | "error" | "cancelled";
   queuePosition: number;
   segmentsDone: number;
   video: ComfyImage | null;
@@ -352,6 +382,9 @@ export async function longTakeStatus(
 ): Promise<LongTakeStatus> {
   const entry = await historyEntry(promptId);
   if (entry?.status?.status_str === "error") {
+    if (wasInterrupted(entry)) {
+      return { status: "cancelled", queuePosition: 0, segmentsDone: 0, video: null, error: "" };
+    }
     return { status: "error", queuePosition: 0, segmentsDone: 0, video: null, error: executionError(entry) };
   }
   if (entry?.status?.completed) {

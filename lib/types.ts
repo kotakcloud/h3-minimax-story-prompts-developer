@@ -109,7 +109,7 @@ export type VideoSettings = {
   v2DevSteps: number;
 };
 
-export type VideoRunStatus = "queued" | "running" | "done" | "error";
+export type VideoRunStatus = "queued" | "running" | "done" | "error" | "cancelled";
 
 export type VideoRun = {
   id: string;

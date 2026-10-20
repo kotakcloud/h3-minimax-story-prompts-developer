@@ -358,6 +358,51 @@ export function Workshop({
     }
   }
 
+  async function cancelVideo(run: VideoRun) {
+    if (
+      !window.confirm(
+        run.status === "queued"
+          ? "Remove this video from the ComfyUI queue?"
+          : "Stop this video now? Segments already finished stay in its ComfyUI project folder; nothing else on the GPU is stopped.",
+      )
+    ) {
+      return;
+    }
+    setError("");
+    try {
+      const response = await request("/api/video/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ promptId: run.promptId }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not stop the video.");
+      if (data.result === "not-found") {
+        setError("ComfyUI no longer has this job (it may have just finished); its status updates on the next check.");
+        return;
+      }
+      const latest = storyRef.current;
+      if (!latest) return;
+      const next: Story = {
+        ...latest,
+        videos: latest.videos.map((item) =>
+          item.id === run.id
+            ? {
+                ...item,
+                status: "cancelled",
+                error: "",
+                finishedAt: new Date().toISOString(),
+              }
+            : item,
+        ),
+      };
+      skipSave.current = true;
+      setStory(await persist(next));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not stop the video.");
+    }
+  }
+
   async function runVideo() {
     const current = storyRef.current || story;
     if (!current) return;
@@ -461,7 +506,7 @@ export function Workshop({
         ) {
           return;
         }
-        const finished = data.status === "done" || data.status === "error";
+        const finished = data.status === "done" || data.status === "error" || data.status === "cancelled";
         setStory((current) =>
           current
             ? {
@@ -513,7 +558,8 @@ export function Workshop({
       const { key, label } = lastTabTask.current;
       const run = key.startsWith("video:") ? story?.videos.find((item) => `video:${item.id}` === key) : undefined;
       const failed = run ? run.status === "error" : Boolean(error);
-      TabStatus.finished(failed ? "failed" : "done", run ? "Video" : label);
+      if (run?.status === "cancelled") TabStatus.idle();
+      else TabStatus.finished(failed ? "failed" : "done", run ? "Video" : label);
     } else {
       TabStatus.idle();
     }
@@ -1874,7 +1920,9 @@ export function Workshop({
                                         ? "text-emerald-300"
                                         : run.status === "error"
                                           ? "text-red-300"
-                                          : "text-amber-300"
+                                          : run.status === "cancelled"
+                                            ? "text-muted"
+                                            : "text-amber-300"
                                     }
                                   >
                                     {run.status === "queued" &&
@@ -1883,8 +1931,18 @@ export function Workshop({
                                       `Running · ${run.segmentsDone}/${run.segmentCount} segments done`}
                                     {run.status === "done" && "Done"}
                                     {run.status === "error" && "Failed"}
+                                    {run.status === "cancelled" && "Cancelled"}
                                     {" · "}
                                     {formatDuration(ended - started)}
+                                    {active && (
+                                      <button
+                                        type="button"
+                                        onClick={() => void cancelVideo(run)}
+                                        className="ml-2 rounded-full border border-red-400/50 px-2.5 py-0.5 text-red-300 hover:bg-red-400/10"
+                                      >
+                                        {run.status === "queued" ? "Remove" : "Stop"}
+                                      </button>
+                                    )}
                                   </span>
                                 </div>
                                 {active && (
