@@ -183,6 +183,8 @@ export type PromptRevision = {
   createdAt: string;
   segments: PromptSegment[];
   promptStyle?: PromptStyle;
+  // Set on a copy whose spoken lines were translated (e.g. "Gujarati").
+  language?: string;
 };
 
 export const STORY_STEPS = ["gist", "cast", "image", "frames", "prompts", "video"] as const;

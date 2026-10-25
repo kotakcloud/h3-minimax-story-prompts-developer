@@ -38,7 +38,7 @@ import {
   storyRevisions,
 } from "@/lib/types";
 
-type Busy = "analyze" | "cast" | "imagePrompt" | "image" | "upload" | "breakdown" | "prompts" | "update" | "video" | null;
+type Busy = "analyze" | "cast" | "imagePrompt" | "image" | "upload" | "translate" | "breakdown" | "prompts" | "update" | "video" | null;
 
 const VIDEO_POLL_MS = 5000;
 
@@ -135,6 +135,7 @@ const BUSY_LABELS: Record<NonNullable<Busy>, string> = {
   imagePrompt: "Image prompt",
   image: "Reference image",
   upload: "Uploading image",
+  translate: "Translating dialogue",
   breakdown: "Frames",
   prompts: "H3 prompts",
   update: "Prompt update",
@@ -182,6 +183,7 @@ export function Workshop({
   const skipSave = useRef(true);
   const storyRef = useRef<Story | null>(null);
   const [gridUpload, setGridUpload] = useState({ on: false, rows: 2, cols: 2 });
+  const [dialogueLanguage, setDialogueLanguage] = useState("Gujarati");
   const persistTail = useRef(Promise.resolve());
 
   useEffect(() => {
@@ -885,7 +887,43 @@ export function Workshop({
     }
   }
 
-  async function saveRevision(segments: PromptSegment[], activate = true, promptStyle?: PromptStyle) {
+  // A copy of the current prompt set with only the spoken lines translated: same shots, camera and panels,
+  // so a render with the same seed gives the same film in another language.
+  async function runTranslate() {
+    const current = storyRef.current || story;
+    if (!current || current.segments.length === 0) return;
+    const language = dialogueLanguage.trim();
+    if (!language) return;
+    setBusy("translate");
+    setError("");
+    try {
+      const response = await request("/api/prompts/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: current.aiModel,
+          language,
+          segments: current.segments,
+          context: effectiveGist(current),
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Translation failed.");
+      if (!data.lines) throw new Error("These prompts have no spoken lines to translate.");
+      await saveRevision(data.segments as PromptSegment[], true, activePromptStyle(current), language);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Translation failed.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function saveRevision(
+    segments: PromptSegment[],
+    activate = true,
+    promptStyle?: PromptStyle,
+    language?: string,
+  ) {
     const current = storyRef.current;
     if (!current) return;
     const prior = current.promptRevisions.length
@@ -904,6 +942,7 @@ export function Workshop({
       createdAt: new Date().toISOString(),
       segments,
       ...(promptStyle ? { promptStyle } : {}),
+      ...(language ? { language } : {}),
     };
     const next: Story = {
       ...current,
@@ -1931,7 +1970,7 @@ export function Workshop({
                     <button
                       key={revision.id}
                       type="button"
-                      title={`Prompt set ${index + 1}`}
+                      title={`Prompt set ${index + 1}${revision.language ? ` · dialogue in ${revision.language}` : ""}`}
                       aria-label={`Prompt set ${index + 1}`}
                       onClick={() =>
                         patchStory({
@@ -1958,6 +1997,31 @@ export function Workshop({
                   onChange={(promptStyle) => patchStory({ promptStyle })}
                 />
                 <H3TipsCheckbox checked={story.h3Tips} disabled={busy !== null} onChange={(h3Tips) => patchStory({ h3Tips })} />
+                <span className="flex items-center gap-1">
+                  <input
+                    value={dialogueLanguage}
+                    onChange={(event) => setDialogueLanguage(event.target.value)}
+                    list="dialogue-languages"
+                    aria-label="Dialogue language"
+                    className="w-28 rounded-full border border-line bg-background px-3 py-2 text-sm"
+                  />
+                  <datalist id="dialogue-languages">
+                    {["Gujarati", "Hindi", "English", "Marathi", "Tamil", "Telugu", "Bengali", "Punjabi", "Spanish", "French"].map(
+                      (language) => (
+                        <option key={language} value={language} />
+                      ),
+                    )}
+                  </datalist>
+                  <button
+                    type="button"
+                    onClick={() => void runTranslate()}
+                    disabled={busy !== null || story.segments.length === 0 || !dialogueLanguage.trim()}
+                    title="New prompt set with only the spoken lines translated; shots, camera and panels stay the same. Render with the same seed to compare."
+                    className="rounded-full border border-line px-4 py-2 text-sm"
+                  >
+                    {busy === "translate" ? "Translating…" : "Language version"}
+                  </button>
+                </span>
                 <button
                   type="button"
                   onClick={() => setUpdateOpen(true)}

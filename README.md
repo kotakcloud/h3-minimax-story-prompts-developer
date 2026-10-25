@@ -30,6 +30,13 @@ Image generation needs ComfyUI running with the Z-Image Turbo models from the te
 
 On the Image tab you can also **upload your own picture** (Upload image, or drop a file on the image area). The browser converts it to PNG (scaled down to at most 4 MP) and the app stores it in ComfyUI's output folder next to the generated ones (`h3-story/<story id>/upload_<time>.png`), so both video workflows use it the same way. Its aspect ratio is matched to the nearest supported one. The **Layout** box under the prompt (who stands where) feeds the H3 prompts: edit it to match an uploaded picture.
 
+### Dialogue in another language
+
+On the Prompts tab, type a language (Gujarati, Hindi, ...) and press **Language version**: the app copies the current
+prompt set and translates only the spoken lines (`<d>[Language] ...</d>`), in the language's own script, keeping their
+length and emotion. Everything else (shots, camera, panels, looks) stays identical, so rendering it with the same seed
+gives the same film in the other language. The new set is marked with its language on its set button.
+
 ### Storyboard grids
 
 A reference picture can be a **storyboard grid** of scenes. Tick *Storyboard grid of scenes* and set rows x columns before
