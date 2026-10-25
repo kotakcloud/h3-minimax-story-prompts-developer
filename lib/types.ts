@@ -76,7 +76,7 @@ export type ReferenceImage = {
   originalName?: string;
 };
 
-export type VideoEngine = "long-take" | "story-v2";
+export type VideoEngine = "long-take" | "story-v2" | "veda-turbo" | "sage-sla";
 
 // How Ref2VA prompts are written: timestamped beats for the long take, or the
 // timestamp-free style the Story V2 workflow was proven with.
@@ -123,6 +123,9 @@ export type VideoRun = {
   engine?: VideoEngine;
   megapixels?: number;
   steps?: number;
+  // Veda Turbo / Sage SLA canvas.
+  width?: number;
+  height?: number;
   segmentCount: number;
   revisionId: string;
   // Recorded at queue time (older runs lack them; the list derives what it can).
@@ -187,7 +190,8 @@ export function effectiveGist(story: Pick<Story, "gist" | "analysis" | "useOrigi
 export const DEFAULT_VIDEO_SETTINGS: VideoSettings = {
   devMode: true,
   seed: 907327329980779,
-  engine: "long-take",
+  // Veda Turbo is the fastest workflow and the default for new stories.
+  engine: "veda-turbo",
   v2Megapixels: 0.3,
   v2Steps: 10,
   v2DevMegapixels: 0.3,

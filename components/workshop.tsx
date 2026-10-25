@@ -7,6 +7,7 @@ import { useLoggedFetch } from "@/components/debug-log";
 import { IconButton, Icons } from "@/components/icons";
 import { ModelPicker } from "@/components/model-picker";
 import { framesFromAnalysis } from "@/lib/beats";
+import { FAST_ENGINE_STEPS, VIDEO_ENGINES, engineInfo, fastStorySize, isFastEngine } from "@/lib/engines";
 import { UpdateCommentDialog } from "@/components/update-comment-dialog";
 import { TabStatus } from "@/lib/tab-status";
 import { buildExportPayload, buildMarkdownExport, downloadJson, downloadMarkdown } from "@/lib/export";
@@ -519,6 +520,16 @@ export function Workshop({
       const v2 = settings.engine === "story-v2";
       // Long take: the workflow's fixed DEV / FINAL resolution and steps.
       const longTake = settings.devMode ? { megapixels: 0.47, steps: 10 } : { megapixels: 0.8, steps: 16 };
+      // Veda Turbo / Sage SLA: the canvas the server picked and the workflow's steps.
+      const fast =
+        data.size && typeof data.size.width === "number"
+          ? {
+              megapixels: Math.round((data.size.width * data.size.height) / 10_000) / 100,
+              steps: Number(data.steps) || 0,
+              width: data.size.width as number,
+              height: data.size.height as number,
+            }
+          : null;
       const run: VideoRun = {
         id: crypto.randomUUID(),
         promptId: data.promptId,
@@ -531,7 +542,7 @@ export function Workshop({
               megapixels: settings.devMode ? settings.v2DevMegapixels : settings.v2Megapixels,
               steps: settings.devMode ? settings.v2DevSteps : settings.v2Steps,
             }
-          : longTake),
+          : fast || longTake),
         segmentCount: current.segments.length,
         revisionId: current.activeRevisionId,
         promptStyle: activePromptStyle(current),
@@ -1787,6 +1798,27 @@ export function Workshop({
               const totalVideoSeconds = story.segments.reduce((sum, segment) => sum + segment.duration, 0);
               const settings = story.videoSettings;
               const v2 = settings.engine === "story-v2";
+              const fastEngine = isFastEngine(settings.engine) ? settings.engine : null;
+              const fastCanvas = fastStorySize(image?.aspectRatio || "16:9", settings.devMode).size;
+              // Fast workflows: learn the time from this story's finished runs (same workflow and mode).
+              const fastRuns = story.videos.filter(
+                (run) =>
+                  run.status === "done" &&
+                  run.engine === settings.engine &&
+                  run.devMode === settings.devMode &&
+                  run.finishedAt &&
+                  (run.durations?.length || 0) > 0,
+              );
+              const fastSecondsPerOutput = fastRuns.length
+                ? fastRuns.reduce(
+                    (sum, run) =>
+                      sum +
+                      (Date.parse(run.finishedAt) - Date.parse(run.createdAt)) /
+                        1000 /
+                        (run.durations || []).reduce((a, b) => a + b, 0),
+                    0,
+                  ) / fastRuns.length
+                : 0;
               const v2Mp = settings.devMode ? settings.v2DevMegapixels : settings.v2Megapixels;
               const v2Steps = settings.devMode ? settings.v2DevSteps : settings.v2Steps;
               const longSegments = story.segments.filter((segment) => segment.duration > STORY_V2_MAX_SEGMENT_SECONDS);
@@ -1801,7 +1833,7 @@ export function Workshop({
                     <div>
                       <h2 className="text-sm font-medium uppercase tracking-wider text-muted">Video</h2>
                       <p className="mt-1 text-xs text-muted">
-                        Runs the {v2 ? "H3 Story V2" : "H3 long-take"} workflow in ComfyUI with the current prompt set ({story.segments.length}{" "}
+                        Runs the H3 {engineInfo(settings.engine).label.split(" (")[0]} workflow in ComfyUI with the current prompt set ({story.segments.length}{" "}
                         segments · {totalVideoSeconds}s) and the selected reference image.
                       </p>
                     </div>
@@ -1834,8 +1866,11 @@ export function Workshop({
                             onChange={(event) => updateVideoSettings({ engine: event.target.value as typeof settings.engine })}
                             className="rounded-md border border-line bg-background px-2 py-1 text-sm text-foreground"
                           >
-                            <option value="long-take">Long take (fl2va, single pass + VSR)</option>
-                            <option value="story-v2">Story V2 (ref2va, dual pass)</option>
+                            {VIDEO_ENGINES.map((engine) => (
+                              <option key={engine.id} value={engine.id}>
+                                {engine.label}
+                              </option>
+                            ))}
                           </select>
                         </label>
                       </div>
@@ -1845,7 +1880,7 @@ export function Workshop({
                           timestamp-free prompts: switch the prompt style to Story V2 on the Prompts step and regenerate.
                         </p>
                       )}
-                      {!v2 && refPrompts && story.segments.length > 0 && timestamped.length === 0 && (
+                      {settings.engine === "long-take" && refPrompts && story.segments.length > 0 && timestamped.length === 0 && (
                         <p className="text-xs text-amber-300">
                           These prompts are written in the Story V2 style (no timestamps); the long take expects timestamped
                           continuation segments.
@@ -1867,7 +1902,9 @@ export function Workshop({
                           />
                           DEV MODE
                           <span className="text-xs text-muted">
-                            {v2
+                            {fastEngine
+                              ? `${settings.devMode ? "draft" : "full"} · ${fastCanvas.width}×${fastCanvas.height} · ${FAST_ENGINE_STEPS[fastEngine]} steps · single pass`
+                              : v2
                               ? `${settings.devMode ? "draft" : "full"} · ${v2Mp} MP · ${v2Steps} steps · x1.25 refine`
                               : settings.devMode
                                 ? "fast draft · 0.47 MP · 10 steps"
@@ -1941,7 +1978,11 @@ export function Workshop({
                           {busy === "video" ? "Sending to ComfyUI…" : running ? "Video in progress…" : "Generate video"}
                         </button>
                         <p className="text-xs text-muted">
-                          {v2
+                          {fastEngine
+                            ? fastSecondsPerOutput > 0
+                              ? `About ${Math.max(1, Math.round((totalVideoSeconds * fastSecondsPerOutput) / 60))} min, from ${fastRuns.length} earlier run${fastRuns.length > 1 ? "s" : ""} of this workflow in this story.`
+                              : "No timing measured yet for this workflow here; the first run sets the estimate."
+                            : v2
                             ? `About ${v2Minutes} min at these settings. A different MP or step count gives a different take.`
                             : story.videoSettings.devMode
                               ? "A draft takes about 11–14 min."
@@ -1960,6 +2001,7 @@ export function Workshop({
                             const ended = run.finishedAt ? Date.parse(run.finishedAt) : clock || started;
                             const active = run.status === "queued" || run.status === "running";
                             const v2Run = run.engine === "story-v2";
+                            const fastRun = isFastEngine(run.engine);
                             const revisionIndex = revisions.findIndex((revision) => revision.id === run.revisionId);
                             const revision = revisions[revisionIndex];
                             const durations = run.durations || revision?.segments.map((segment) => segment.duration) || [];
@@ -1972,17 +2014,18 @@ export function Workshop({
                                   : "story-v2"
                                 : undefined);
                             const runImage = story.referenceImages.find((item) => item.id === run.imageId);
-                            const megapixels = run.megapixels ?? (v2Run ? undefined : run.devMode ? 0.47 : 0.8);
-                            const steps = run.steps ?? (v2Run ? undefined : run.devMode ? 10 : 16);
+                            const megapixels = run.megapixels ?? (v2Run || fastRun ? undefined : run.devMode ? 0.47 : 0.8);
+                            const steps = run.steps ?? (v2Run || fastRun ? undefined : run.devMode ? 10 : 16);
                             const details: [string, ReactNode][] = [
                               [
                                 "Workflow",
-                                v2Run ? "Story V2 (ref2va, dual pass, x1.25 refine)" : "Long take (fl2va, single pass + RTX VSR)",
+                                engineInfo(run.engine).detail,
                               ],
                               [
                                 "Quality",
                                 [
-                                  v2Run ? (run.devMode ? "DEV" : "FULL") : run.devMode ? "Draft (DEV)" : "Final",
+                                  v2Run || fastRun ? (run.devMode ? "DEV" : "FULL") : run.devMode ? "Draft (DEV)" : "Final",
+                                  run.width && run.height ? `${run.width}×${run.height}` : "",
                                   megapixels !== undefined ? `${megapixels} MP` : "",
                                   steps !== undefined ? `${steps} steps` : "",
                                   run.aspectRatio || "",
@@ -2035,7 +2078,7 @@ export function Workshop({
                               <li key={run.id} className="rounded-2xl border border-line bg-card p-4">
                                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
                                   <span className="font-medium text-foreground">
-                                    {v2Run ? "Story V2" : "Long take"} · {run.devMode ? "DEV" : v2Run ? "FULL" : "Final"}
+                                    {engineInfo(run.engine).label.split(" (")[0]} · {run.devMode ? "DEV" : v2Run || fastRun ? "FULL" : "Final"}
                                   </span>
                                   <span
                                     className={

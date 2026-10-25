@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
+import { fastStorySize, type FastStoryEngine, type Size } from "./engines";
 
 export const COMFYUI_URL = (process.env.COMFYUI_URL || "http://127.0.0.1:8188").replace(/\/+$/, "");
 
@@ -302,7 +303,12 @@ export type StoryV2Options = {
 
 type TrackData = { tracks: { type: string; segments: unknown[] }[]; total_length: number; frame_rate: number };
 
-export function storyV2TrackData(template: string, segments: StoryV2Options["segments"], image: ComfyImage): string {
+export function storyV2TrackData(
+  template: string,
+  segments: StoryV2Options["segments"],
+  image: ComfyImage,
+  refImageSize = "match",
+): string {
   const trackData = JSON.parse(template) as TrackData;
   const imagePath = [...image.subfolder.split(/[\\/]+/).filter(Boolean), image.filename].join("/");
   let start = 0;
@@ -318,7 +324,7 @@ export function storyV2TrackData(template: string, segments: StoryV2Options["seg
         task_mode: "ref",
         // The Workshop's segments always continue the same take.
         continuity_mode: index === 0 ? "shot" : "context_swap",
-        ref_image_size: "match",
+        ref_image_size: refImageSize,
         images: [
           {
             id: randomUUID(),
@@ -382,6 +388,100 @@ export async function queueStoryV2(options: StoryV2Options): Promise<{ promptId:
   return { promptId, project };
 }
 
+// ---------------------------------------------------------------------------
+// H3 Story fast workflows (ComfyUI "Story Speed Tests", converted to API format):
+// comfy/h3-story-veda-turbo.json  ref2va w4a8 mixed + Taomate 3-step LoRA + Veda sparse attention, 4 steps
+// comfy/h3-story-sage-sla.json    ref2va w4a8 mixed + ref2v turbo 8-step LoRA + Sage + H3 SLA 0.85, 10 steps
+// Both: single pass, every segment a `ref` task (ref_image_size max). DEV only changes the
+// canvas (editor size preset) and the project folder, both through switches fed by primitives.
+// ---------------------------------------------------------------------------
+
+const FAST_TEMPLATES: Record<FastStoryEngine, string> = {
+  "veda-turbo": "h3-story-veda-turbo.json",
+  "sage-sla": "h3-story-sage-sla.json",
+};
+
+const STORY_FAST = {
+  project: "32",
+  combine: "29",
+  editor: "33",
+  steps: "21",
+  devMode: "47",
+  size: "48",
+  devSize: "49",
+  projectName: "51",
+  devProjectName: "52",
+} as const;
+
+export type FastStoryOptions = {
+  engine: FastStoryEngine;
+  segments: { duration: number; prompt: string }[];
+  image: ComfyImage;
+  devMode: boolean;
+  seed: number;
+  aspectRatio: string;
+  projectBase: string;
+};
+
+export async function buildFastStory(
+  options: FastStoryOptions,
+): Promise<{ workflow: Record<string, ApiNode>; project: string; steps: number; size: Size }> {
+  const text = await readFile(path.join(process.cwd(), "comfy", FAST_TEMPLATES[options.engine]), "utf8");
+  const workflow = JSON.parse(text) as Record<string, ApiNode>;
+  const editor = workflow[STORY_FAST.editor].inputs;
+  const template = JSON.parse(String(editor.track_data)) as {
+    tracks: { type: string; segments: { content?: { ref_image_size?: string } }[] }[];
+  };
+  const refImageSize =
+    template.tracks.find((track) => track.type === "task")?.segments[0]?.content?.ref_image_size || "max";
+  editor.track_data = storyV2TrackData(String(editor.track_data), options.segments, options.image, refImageSize);
+
+  const full = fastStorySize(options.aspectRatio, false);
+  const dev = fastStorySize(options.aspectRatio, true);
+  const size = (options.devMode ? dev : full).size;
+  if (full.preset && dev.preset) {
+    workflow[STORY_FAST.size].inputs.value = full.preset;
+    workflow[STORY_FAST.devSize].inputs.value = dev.preset;
+  } else {
+    // No preset for this aspect ratio: give the editor a custom size directly (the switch only
+    // carries preset names).
+    editor.resolution = "width x height (custom)";
+    editor["resolution.width"] = size.width;
+    editor["resolution.height"] = size.height;
+    workflow[STORY_FAST.size].inputs.value = "width x height (custom)";
+    workflow[STORY_FAST.devSize].inputs.value = "width x height (custom)";
+  }
+
+  const fullProject = options.projectBase;
+  const devProject = `${options.projectBase}_dev`;
+  workflow[STORY_FAST.devMode].inputs.value = options.devMode;
+  workflow[STORY_FAST.projectName].inputs.value = fullProject;
+  workflow[STORY_FAST.devProjectName].inputs.value = devProject;
+
+  const project = workflow[STORY_FAST.project].inputs;
+  project.project_save = "override";
+  project.segment_start_number = 1;
+  project.segment_count = -1;
+  project.seed = options.seed;
+
+  const activeProject = options.devMode ? devProject : fullProject;
+  workflow[STORY_FAST.combine].inputs.project_data = JSON.stringify({
+    project_name: activeProject,
+    clips: [],
+    auto_combine: true,
+  });
+  const steps = Number(workflow[STORY_FAST.steps]?.inputs.steps) || 0;
+  return { workflow, project: activeProject, steps, size };
+}
+
+export async function queueFastStory(
+  options: FastStoryOptions,
+): Promise<{ promptId: string; project: string; steps: number; size: Size }> {
+  const { workflow, project, steps, size } = await buildFastStory(options);
+  const promptId = await queueWorkflow(workflow);
+  return { promptId, project, steps, size };
+}
+
 export type LongTakeStatus = {
   status: "queued" | "running" | "done" | "error" | "cancelled";
   queuePosition: number;
@@ -404,7 +504,13 @@ export async function longTakeStatus(
     return { status: "error", queuePosition: 0, segmentsDone: 0, video: null, error: executionError(entry) };
   }
   if (entry?.status?.completed) {
-    const video = entry.outputs?.[LONG_TAKE.save]?.images?.[0] || null;
+    // Long take / Story V2 save from node 25, the fast story workflows from node 35.
+    const video =
+      entry.outputs?.[LONG_TAKE.save]?.images?.[0] ||
+      Object.values(entry.outputs || {})
+        .flatMap((output) => output.images || [])
+        .find((file) => /\.(mp4|webm|mov|mkv)$/i.test(file.filename)) ||
+      null;
     return {
       status: video ? "done" : "error",
       queuePosition: 0,

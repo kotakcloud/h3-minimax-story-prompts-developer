@@ -1,0 +1,405 @@
+{
+  "20": {
+    "inputs": {
+      "sampler_name": "euler"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "21": {
+    "inputs": {
+      "scheduler": "beta",
+      "steps": 10,
+      "denoise": 1,
+      "model": [
+        "42:41",
+        0
+      ]
+    },
+    "class_type": "BasicScheduler",
+    "_meta": {
+      "title": "★ Steps — set them here (beta scheduler)",
+      "cnr_id": "comfy-core",
+      "ver": "0.34.2"
+    }
+  },
+  "23": {
+    "inputs": {
+      "sampler_name": "sa_solver"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect",
+      "cnr_id": "comfy-core",
+      "ver": "0.33.0"
+    }
+  },
+  "29": {
+    "inputs": {
+      "project_data": "{\"project_name\":\"test2\",\"width\":768,\"height\":1344,\"frame_rate\":24,\"clips\":[{\"id\":\"segment-0\",\"index\":0,\"file_path\":\"easy_media/projects/test2/video_0_1.mp4\",\"file_name\":\"video_0_1.mp4\",\"media_revision\":\"1792781273381635800\",\"source_start_frame\":0,\"source_end_frame\":124,\"source_frame_count\":124,\"updated_at\":1792781280.6817164,\"continuity_mode\":\"shot\",\"audio_locked\":false,\"enabled\":true,\"video_files\":[{\"file_path\":\"easy_media/projects/test2/video_0_1.mp4\",\"file_name\":\"video_0_1.mp4\",\"media_revision\":\"1792781273381635800\",\"source_frame_count\":124,\"continuity_mode\":\"shot\"}]},{\"id\":\"segment-1\",\"index\":1,\"file_path\":\"easy_media/projects/test2/video_1_1.mp4\",\"file_name\":\"video_1_1.mp4\",\"media_revision\":\"1792781890713651900\",\"source_start_frame\":0,\"source_end_frame\":175,\"source_frame_count\":175,\"updated_at\":1792781905.867012,\"continuity_mode\":\"context_swap\",\"audio_locked\":false,\"enabled\":true,\"video_files\":[{\"file_path\":\"easy_media/projects/test2/video_1_1.mp4\",\"file_name\":\"video_1_1.mp4\",\"media_revision\":\"1792781890713651900\",\"source_frame_count\":175,\"continuity_mode\":\"context_swap\"}]}],\"auto_combine\":true,\"updated_at\":1792781905.867012}",
+      "project_name": [
+        "32",
+        0
+      ]
+    },
+    "class_type": "easy multitrackProjectVideoCombine",
+    "_meta": {
+      "title": "MultiTrack Project Video Combine",
+      "cnr_id": "comfyui-easy-media",
+      "ver": "5739638c646a66a93d60c51714593b2b96a2a3b6"
+    }
+  },
+  "32": {
+    "inputs": {
+      "project_name": [
+        "53",
+        0
+      ],
+      "project_save": "override",
+      "segment_start_number": 1,
+      "segment_count": -1,
+      "seed": 913498332346151,
+      "sampling_plan": "custom",
+      "sampling_mode": "single",
+      "1st_pass_only": false,
+      "disable_2nd_noise": false,
+      "upscale_by": 1.5,
+      "upscale_model": "None",
+      "enabled_tiling": "false",
+      "tracks_info": [
+        "33",
+        0
+      ],
+      "model_loader": [
+        "42:25",
+        0
+      ],
+      "sampler": [
+        "20",
+        0
+      ],
+      "sampler_2nd": [
+        "23",
+        0
+      ],
+      "sigmas": [
+        "21",
+        0
+      ],
+      "sigmas_2nd": [
+        "34",
+        0
+      ]
+    },
+    "class_type": "easy multitrackProject",
+    "_meta": {
+      "title": "MultiTrack Project",
+      "cnr_id": "comfyui-easy-media",
+      "ver": "5739638c646a66a93d60c51714593b2b96a2a3b6"
+    }
+  },
+  "33": {
+    "inputs": {
+      "resolution": [
+        "50",
+        0
+      ],
+      "resolution.resize_method": "stretch",
+      "format": "MiniMax",
+      "track_data": "{\"muted\":false,\"volume_db\":0,\"task_markers\":[],\"task_overview\":false,\"tracks\":[{\"id\":\"c64f6cef-34eb-4602-820a-defc4ced0f45\",\"name\":\"Task 0\",\"type\":\"task\",\"task_mode\":\"default\",\"color\":\"var(--multitrack-task-bg)\",\"muted\":false,\"solo\":false,\"volume_db\":0,\"locked\":false,\"segments\":[{\"id\":\"ce9e9ed0-9c9c-40c1-b309-c5581e42172c\",\"start_frame\":0,\"end_frame\":120,\"color\":\"var(--multitrack-task-bg)\",\"content\":{\"media_type\":\"none\",\"task_mode\":\"ref\",\"continuity_mode\":\"shot\",\"ref_image_size\":\"max\",\"images\":[{\"id\":\"be78994c-7e84-409e-8b3a-bc902d2e890e\",\"source_type\":\"input\",\"file_path\":\"005_FLUX.2 Klein 9B Image Inpainting with edit image__cleavage-example_00002_.png\",\"file_name\":\"005_FLUX.2 Klein 9B Image Inpainting with edit image__cleavage-example_00002_.png\",\"shared_reference\":true}],\"muted\":false,\"volume_db\":0,\"user_prompt\":\"subject_definitions:\\n<Subject 1>, the young woman whose face, hair and outfit come entirely from <Picture 1>.\\n\\nsummary:\\n[reference generation] <Subject 1> is seated comfortably on a park bench in a calm outdoor park during soft natural daylight. The camera faces her directly from the front at a fixed medium-full framing, showing her from approximately head to knees and keeping this framing consistent for the entire video. She casually performs several small, natural poses while remaining seated.\\n\\nretention_analysis:\\n<Subject 1> (appears in [Shot 1]): fully_preserved - face, hair and outfit follow exactly, with no change of clothing, hairstyle or accessories.\\n\\ndetailed_description:\\n Fixed front-facing medium-full camera framing, approximately head to knees, with <Subject 1> clearly visible and the camera maintaining the same height, distance and angle throughout the entire segment. Soft natural daytime lighting remains consistent across the shot. The environment is a pleasant green public park with a bench, grass, trees and subtle distant background activity kept visually unobtrusive.\\n\\n00:00.000-00:00.500: <Subject 1> sits naturally on the bench facing directly toward the camera, relaxed, with a small playful shift of her shoulders. She is silent.\\n\\n00:00.500-00:02.800: <Subject 1> (S1) looks at the viewer and says, <d>[English] Last summer, I went to my grandfather's house.</d>\\n\\n00:02.800-00:04.000: Right away, without a pause, <Subject 1> (S1) adds, <d>[English] He talked about you.</d>\\n\\n00:04.000-00:05.000: <Subject 1> has finished speaking. Her mouth is closed and she holds a soft, warm smile, silently looking at the camera.\\n\\noverall_soundscape:\\nNatural diegetic park ambience only: soft distant birds, subtle leaves moving in a light breeze, faint distant outdoor activity and quiet natural environmental sound.\\n\\nnon_diegetic_music:\\nN/A\"}},{\"id\":\"ab896154-a783-43ce-90a3-b1a0a16e0aff\",\"start_frame\":120,\"end_frame\":312,\"color\":\"var(--multitrack-task-bg)\",\"content\":{\"media_type\":\"none\",\"task_mode\":\"ref\",\"continuity_mode\":\"context_swap\",\"ref_image_size\":\"max\",\"images\":[{\"id\":\"b00aa69f-340c-4ff7-9052-48ae63cabd2a\",\"source_type\":\"input\",\"file_path\":\"005_FLUX.2 Klein 9B Image Inpainting with edit image__cleavage-example_00002_.png\",\"file_name\":\"005_FLUX.2 Klein 9B Image Inpainting with edit image__cleavage-example_00002_.png\",\"shared_reference\":true,\"shared_reference_copy\":true}],\"muted\":false,\"volume_db\":0,\"user_prompt\":\"subject_definitions:\\n<Subject 1>, the young woman whose face, hair and outfit come entirely from <Picture 1>.\\n\\nsummary:\\n[reference generation] Continuing from the previous moment, <Subject 1> remains seated on the same park bench under the same soft daylight. The camera stays fixed at a front-facing medium-full framing (head to knees). She offers a warm subtle smile, and elaborates gently with natural body language.\\n\\nretention_analysis:\\n<Subject 1> (appears in [Shot 1]): fully_preserved - face, hair, clothing, and accessories remain completely identical without any variation.\\n\\ndetailed_description:\\nFixed front-facing medium-full camera framing, approximately head to knees, maintaining exact height, distance, and angle throughout the entire segment. Soft daytime lighting, the park bench, surrounding green grass, and trees remain identical to the previous shot with no background shifts or camera movement.\\n\\n00:00.000-00:01.000: <Subject 1> gives a soft, reminiscent smile, tilts her head slightly and rests one hand on the bench beside her, looking at the camera with warmth and curiosity. She is silent.\\n\\n00:01.000-00:03.500: <Subject 1> (S1) leans forward slightly and says, <d>[English] He kept an old photo of you two in his study.</d>\\n\\n00:03.500-00:05.000: Right away, without a pause, <Subject 1> (S1) asks, <d>[English] What happened back then?</d>\\n\\n00:05.000-00:08.000: <Subject 1> has finished speaking. Her mouth is closed; she waits silently for an answer with a gentle, curious expression.\\n\\noverall_soundscape:\\nNatural diegetic park ambience only: gentle leaf rustling in a subtle breeze, soft distant birds chirping, and quiet open-air environmental room tone.\\n\\nnon_diegetic_music:\\nN/A\"}}]},{\"id\":\"d15f065c-25c4-4922-8570-01dde0d3caf0\",\"name\":\"Video 0\",\"type\":\"video\",\"color\":\"var(--primary)\",\"muted\":false,\"solo\":false,\"volume_db\":0,\"locked\":false,\"segments\":[],\"audio_locked\":false}],\"total_length\":312,\"frame_rate\":24}"
+    },
+    "class_type": "easy multiTrackEditor",
+    "_meta": {
+      "title": "MultiTrack Editor",
+      "cnr_id": "comfyui-easy-media",
+      "ver": "1254e0e0afa9afee268027b9540fdc91c888ebc5"
+    }
+  },
+  "34": {
+    "inputs": {
+      "sigmas": "0.50, 0.30, 0.14, 0.06, 0.0"
+    },
+    "class_type": "ManualSigmas",
+    "_meta": {
+      "title": "Pass 2 sigmas (only used if sampling_mode = dual — ignore)",
+      "cnr_id": "comfy-core",
+      "ver": "0.34.2"
+    }
+  },
+  "35": {
+    "inputs": {
+      "filename_prefix": [
+        "29",
+        1
+      ],
+      "format": "auto",
+      "format.codec": "auto",
+      "codec": "auto",
+      "video": [
+        "29",
+        0
+      ]
+    },
+    "class_type": "SaveVideo",
+    "_meta": {
+      "title": "Save final video",
+      "cnr_id": "comfy-core",
+      "ver": "0.37.4"
+    }
+  },
+  "44": {
+    "inputs": {},
+    "class_type": "PixaromaRunTimer",
+    "_meta": {
+      "title": "Run Timer Pixaroma",
+      "ver": "4cfb6c55f565ad4d1fd0f1279cac96c88029a61a"
+    }
+  },
+  "45": {
+    "inputs": {
+      "ResolutionState": "{\"mode\":\"preset\",\"ratio\":\"9:16\",\"w\":768,\"h\":1344,\"custom_w\":1024,\"custom_h\":1024,\"custom_ratio_w\":4,\"custom_ratio_h\":3,\"snap\":16}"
+    },
+    "class_type": "PixaromaResolution",
+    "_meta": {
+      "title": "Resolution (not wired: pick the size on the MultiTrack editor)",
+      "ver": "4cfb6c55f565ad4d1fd0f1279cac96c88029a61a"
+    }
+  },
+  "47": {
+    "inputs": {
+      "value": false
+    },
+    "class_type": "PrimitiveBoolean",
+    "_meta": {
+      "title": "DEV MODE  (ON = 544x960 fast ideation | OFF = 768x1344 final)",
+      "cnr_id": "comfy-core",
+      "ver": "0.42.0"
+    }
+  },
+  "48": {
+    "inputs": {
+      "value": "768 x 1344 (9:16)"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Final size (editor preset)",
+      "cnr_id": "comfy-core",
+      "ver": "0.42.0"
+    }
+  },
+  "49": {
+    "inputs": {
+      "value": "544 x 960 (9:16)"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "DEV size (editor preset)",
+      "cnr_id": "comfy-core",
+      "ver": "0.42.0"
+    }
+  },
+  "50": {
+    "inputs": {
+      "switch": [
+        "47",
+        0
+      ],
+      "on_false": [
+        "48",
+        0
+      ],
+      "on_true": [
+        "49",
+        0
+      ]
+    },
+    "class_type": "LazySwitchKJ",
+    "_meta": {
+      "title": "Switch: size",
+      "cnr_id": "comfyui-kjnodes",
+      "ver": "1.5.1"
+    }
+  },
+  "51": {
+    "inputs": {
+      "value": "test2"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "Final project folder",
+      "cnr_id": "comfy-core",
+      "ver": "0.42.0"
+    }
+  },
+  "52": {
+    "inputs": {
+      "value": "test2_dev"
+    },
+    "class_type": "PrimitiveString",
+    "_meta": {
+      "title": "DEV project folder",
+      "cnr_id": "comfy-core",
+      "ver": "0.42.0"
+    }
+  },
+  "53": {
+    "inputs": {
+      "switch": [
+        "47",
+        0
+      ],
+      "on_false": [
+        "51",
+        0
+      ],
+      "on_true": [
+        "52",
+        0
+      ]
+    },
+    "class_type": "LazySwitchKJ",
+    "_meta": {
+      "title": "Switch: project folder",
+      "cnr_id": "comfyui-kjnodes",
+      "ver": "1.5.1"
+    }
+  },
+  "42:19": {
+    "inputs": {
+      "clip_name": "qwen\\qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "type": "minimax",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP",
+      "cnr_id": "comfy-core",
+      "ver": "0.29.0"
+    }
+  },
+  "42:22": {
+    "inputs": {
+      "unet_name": "minimax-h3\\minimax_h3_ref2va_pruned_w4a8_mixed.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model",
+      "cnr_id": "comfy-core",
+      "ver": "0.34.2"
+    }
+  },
+  "42:26": {
+    "inputs": {
+      "vae_name": "minimax-h3\\minimax_h3_video_vae_fp16.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE",
+      "cnr_id": "comfy-core",
+      "ver": "0.29.0"
+    }
+  },
+  "42:27": {
+    "inputs": {
+      "vae_name": "minimax-h3\\minimax_h3_audio_vae_fp32.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE",
+      "cnr_id": "comfy-core",
+      "ver": "0.29.0"
+    }
+  },
+  "42:25": {
+    "inputs": {
+      "model": [
+        "42:41",
+        0
+      ],
+      "clip": [
+        "42:19",
+        0
+      ],
+      "vae": [
+        "42:26",
+        0
+      ],
+      "audio_vae": [
+        "42:27",
+        0
+      ]
+    },
+    "class_type": "easy modelLoaderPack",
+    "_meta": {
+      "title": "Model Loader Pack",
+      "cnr_id": "comfyui-easy-media",
+      "ver": "e1893122c0e5a26d3544e99e4b35124d64901e66"
+    }
+  },
+  "42:24": {
+    "inputs": {
+      "lora_name": "minimax-h3\\minimax_h3_ref2v_turbo_8step_v1.1_768p_comfyui_bf16.safetensors",
+      "strength_model": 1,
+      "model": [
+        "42:22",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Load LoRA",
+      "cnr_id": "comfy-core",
+      "ver": "0.32.0"
+    }
+  },
+  "42:40": {
+    "inputs": {
+      "sage_attention": "auto",
+      "allow_compile": false,
+      "model": [
+        "42:24",
+        0
+      ]
+    },
+    "class_type": "PathchSageAttentionKJ",
+    "_meta": {
+      "title": "Patch Sage Attention KJ",
+      "cnr_id": "comfyui-kjnodes",
+      "ver": "e8e88f7c88e3f6205b122f5de87e69a09fbce5ac"
+    }
+  },
+  "42:41": {
+    "inputs": {
+      "sparsity_ratio": 0.85,
+      "block_size": "64",
+      "min_seq_len": 12228,
+      "dense_last_steps": 1,
+      "protect_audio": true,
+      "enabled": true,
+      "dense_steps": "0",
+      "dense_backend": "sage:auto",
+      "disable_fp16_accum": true,
+      "stabilize_motion": false,
+      "reference_protection": "Off",
+      "tail_correction": false,
+      "use_int8_qk": true,
+      "engine": "comfy_kitchen",
+      "model": [
+        "42:40",
+        0
+      ]
+    },
+    "class_type": "H3SLAAttention",
+    "_meta": {
+      "title": "H3 SLA Attention",
+      "cnr_id": "plaguekind-nodes",
+      "aux_id": "PlagueKind/ComfyUI-PlagueKind-Nodes",
+      "ver": "6ca3037bd16dc143b6d461c67c87a28ca8074063"
+    }
+  }
+}

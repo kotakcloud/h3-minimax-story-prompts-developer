@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { queueLongTake, queueStoryV2 } from "@/lib/comfyui";
+import { queueFastStory, queueLongTake, queueStoryV2 } from "@/lib/comfyui";
+import { isFastEngine } from "@/lib/engines";
 import { IMAGE_ASPECT_RATIOS } from "@/lib/types";
 
 function clampNumber(value: unknown, min: number, max: number, fallback: number): number {
@@ -38,16 +39,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Select a reference image first." }, { status: 400 });
     }
 
+    const aspectRatio = (IMAGE_ASPECT_RATIOS as readonly string[]).includes(body.aspectRatio || "")
+      ? String(body.aspectRatio)
+      : "16:9 (Widescreen)";
+    const comfyImage = { filename: image.filename, subfolder: image.subfolder || "", type: image.type || "output" };
+
+    // Veda Turbo / Sage SLA: single pass with the workflow's own steps; DEV switches the canvas.
+    if (isFastEngine(body.engine)) {
+      const queued = await queueFastStory({
+        engine: body.engine,
+        segments,
+        image: comfyImage,
+        devMode: body.devMode !== false,
+        seed: Math.max(0, Math.floor(Number(body.seed) || 0)),
+        aspectRatio,
+        projectBase: `h3s_${storyId.slice(0, 8)}_${body.engine === "veda-turbo" ? "veda" : "sage"}`,
+      });
+      return NextResponse.json(queued);
+    }
+
     if (body.engine === "story-v2") {
-      const aspectRatio = (IMAGE_ASPECT_RATIOS as readonly string[]).includes(body.aspectRatio || "")
-        ? String(body.aspectRatio)
-        : "16:9 (Widescreen)";
       // Megapixels move in 0.1 steps (Easy-Media rounds anything finer).
       const mp = (value: unknown) => Math.round(clampNumber(value, 0.1, 2, 0.3) * 10) / 10;
       const steps = (value: unknown) => Math.round(clampNumber(value, 4, 60, 10));
       const queued = await queueStoryV2({
         segments,
-        image: { filename: image.filename, subfolder: image.subfolder || "", type: image.type || "output" },
+        image: comfyImage,
         devMode: body.devMode !== false,
         seed: Math.max(0, Math.floor(Number(body.seed) || 0)),
         megapixels: mp(body.megapixels),
