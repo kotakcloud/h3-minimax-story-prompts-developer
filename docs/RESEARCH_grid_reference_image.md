@@ -164,6 +164,14 @@ keep **option B** as a speed option for large grids or slow renders (crop at upl
 to), 3x3 grids, grids with captions, FULL mode, Story V2 (dual pass) with a grid, prompts written by the LLM instead of
 by hand. Test files: the grid and panels in ComfyUI `output/h3-story/gridab/`, the script in this session's scratchpad.
 
+### 6b. Through the app (2026-10-25, after implementing it)
+Story "[Grid test] The Last Coin" (24ef3f94): the same 2x2 grid uploaded as a storyboard, **Frames from grid**
+(gemini-3.7-flash, 13 s: one frame per panel, all cuts, character looks read from the panels), Story V2 prompts with the
+storyboard lines, **Generate video** clicked in the app: Veda Turbo DEV, whole-grid feed, 5+5+7+6 s. Done in 736 s,
+23.5 s 960x544 with audio (`easy_media/projects/h3s_24ef3f94_veda_dev/out/`). Every segment opens on its panel (window,
+coin close-up, old man with the cake box, boy running down the street), no grid artifacts, and the boy's denim jacket and
+the old man's cap and coat match the grid. Not checked: the spoken lines (audio not listened to).
+
 ## 7. Not verified
 Beyond section 6: the community claims are third-party and unmeasured; panel-order accuracy on bigger boards, behaviour
 with captions in panels, and the best per-panel duration are still open.
