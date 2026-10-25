@@ -30,6 +30,7 @@ function emptyStory(id: string, now: string): Story {
     // New stories start on the recommended model; older ones without the field keep the .env default.
     aiModel: RECOMMENDED_MODEL,
     archived: false,
+    gridFeed: "whole",
     frames: [],
     segments: [],
     promptRevisions: [],
@@ -88,6 +89,7 @@ function asStory(value: unknown, fallbackId: string): Story {
     h3Tips: raw.h3Tips !== false,
     aiModel: typeof raw.aiModel === "string" ? raw.aiModel : "",
     archived: raw.archived === true,
+    gridFeed: raw.gridFeed === "panels" ? "panels" : "whole",
     frames: Array.isArray(raw.frames) ? (raw.frames as Story["frames"]) : [],
     segments: Array.isArray(raw.segments) ? (raw.segments as Story["segments"]) : [],
     promptRevisions: Array.isArray(raw.promptRevisions)

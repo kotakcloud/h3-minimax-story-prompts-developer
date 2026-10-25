@@ -9,9 +9,11 @@ export function defaultModels(): string[] {
   return models.length > 0 ? models : [DEFAULT_MODEL];
 }
 
+type ContentPart = { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
+
 type ChatMessage = {
   role: "system" | "user" | "assistant";
-  content: string;
+  content: string | ContentPart[];
 };
 
 type OpenRouterMessage = {
@@ -44,7 +46,8 @@ function readMessageText(choice: OpenRouterChoice | undefined): string {
 }
 
 // models: the story's validated chain (at most 3); empty or missing = the .env default.
-export type ChatOptions = { maxTokens?: number; timeoutMs?: number; models?: string[] };
+// images: data URLs attached to the user message (needs an image-capable model).
+export type ChatOptions = { maxTokens?: number; timeoutMs?: number; models?: string[]; images?: string[] };
 
 const DEFAULT_TIMEOUT_MS = Number(process.env.OPENROUTER_TIMEOUT_MS) || 180_000;
 
@@ -109,10 +112,13 @@ export async function chatCompletion(messages: ChatMessage[], options?: ChatOpti
 }
 
 export async function chatJson(system: string, user: string, options?: ChatOptions): Promise<unknown> {
+  const userContent: ChatMessage["content"] = options?.images?.length
+    ? [{ type: "text", text: user }, ...options.images.map((url) => ({ type: "image_url" as const, image_url: { url } }))]
+    : user;
   const first = await chatCompletion(
     [
       { role: "system", content: system },
-      { role: "user", content: user },
+      { role: "user", content: userContent },
     ],
     options,
   );
@@ -124,7 +130,7 @@ export async function chatJson(system: string, user: string, options?: ChatOptio
     const repaired = await chatCompletion(
       [
         { role: "system", content: system },
-        { role: "user", content: user },
+        { role: "user", content: userContent },
         { role: "assistant", content: first },
         {
           role: "user",

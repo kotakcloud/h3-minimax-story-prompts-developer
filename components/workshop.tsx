@@ -7,6 +7,7 @@ import { useLoggedFetch } from "@/components/debug-log";
 import { IconButton, Icons } from "@/components/icons";
 import { ModelPicker } from "@/components/model-picker";
 import { framesFromAnalysis } from "@/lib/beats";
+import { panelPosition, selectedGrid } from "@/lib/grid";
 import { FAST_ENGINE_STEPS, VIDEO_ENGINES, engineInfo, fastStorySize, isFastEngine } from "@/lib/engines";
 import { UpdateCommentDialog } from "@/components/update-comment-dialog";
 import { TabStatus } from "@/lib/tab-status";
@@ -61,7 +62,7 @@ function nearestAspectRatio(width: number, height: number): string {
   return best;
 }
 
-async function toPng(file: File): Promise<{ blob: Blob; width: number; height: number }> {
+async function toPng(file: File): Promise<{ blob: Blob; width: number; height: number; canvas: HTMLCanvasElement }> {
   const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
   const scale = Math.min(1, Math.sqrt(UPLOAD_MAX_PIXELS / (bitmap.width * bitmap.height)));
   const width = Math.max(1, Math.round(bitmap.width * scale));
@@ -75,7 +76,51 @@ async function toPng(file: File): Promise<{ blob: Blob; width: number; height: n
   bitmap.close();
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
   if (!blob) throw new Error("Could not convert the image to PNG.");
-  return { blob, width, height };
+  return { blob, width, height, canvas };
+}
+
+// Cuts a storyboard grid into its panels (reading order), trimming near-white gutters and margins
+// from each cell's edges so the panels hold picture only.
+async function cutPanels(
+  canvas: HTMLCanvasElement,
+  rows: number,
+  cols: number,
+): Promise<{ blob: Blob; width: number; height: number }[]> {
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("This browser cannot cut the grid.");
+  const cellW = canvas.width / cols;
+  const cellH = canvas.height / rows;
+  const isBlank = (x: number, y: number, w: number, h: number) => {
+    const data = context.getImageData(x, y, Math.max(1, w), Math.max(1, h)).data;
+    let light = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i] > 235 && data[i + 1] > 235 && data[i + 2] > 235) light += 1;
+    }
+    return light / (data.length / 4) > 0.97;
+  };
+  const panels: { blob: Blob; width: number; height: number }[] = [];
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < cols; col += 1) {
+      let x0 = Math.round(col * cellW);
+      let y0 = Math.round(row * cellH);
+      let x1 = Math.round((col + 1) * cellW);
+      let y1 = Math.round((row + 1) * cellH);
+      const maxTrimX = Math.round(cellW * 0.08);
+      const maxTrimY = Math.round(cellH * 0.08);
+      for (let i = 0; i < maxTrimX && isBlank(x0, y0, 1, y1 - y0); i += 1) x0 += 1;
+      for (let i = 0; i < maxTrimX && isBlank(x1 - 1, y0, 1, y1 - y0); i += 1) x1 -= 1;
+      for (let i = 0; i < maxTrimY && isBlank(x0, y0, x1 - x0, 1); i += 1) y0 += 1;
+      for (let i = 0; i < maxTrimY && isBlank(x0, y1 - 1, x1 - x0, 1); i += 1) y1 -= 1;
+      const panel = document.createElement("canvas");
+      panel.width = x1 - x0;
+      panel.height = y1 - y0;
+      panel.getContext("2d")?.drawImage(canvas, x0, y0, panel.width, panel.height, 0, 0, panel.width, panel.height);
+      const blob = await new Promise<Blob | null>((resolve) => panel.toBlob(resolve, "image/png"));
+      if (!blob) throw new Error("Could not cut the grid.");
+      panels.push({ blob, width: panel.width, height: panel.height });
+    }
+  }
+  return panels;
 }
 
 const BUSY_LABELS: Record<NonNullable<Busy>, string> = {
@@ -130,6 +175,7 @@ export function Workshop({
   const [saveState, setSaveState] = useState("Saved");
   const skipSave = useRef(true);
   const storyRef = useRef<Story | null>(null);
+  const [gridUpload, setGridUpload] = useState({ on: false, rows: 2, cols: 2 });
   const persistTail = useRef(Promise.resolve());
 
   useEffect(() => {
@@ -361,12 +407,29 @@ export function Workshop({
     setError("");
     try {
       const png = await toPng(file);
-      const form = new FormData();
-      form.append("storyId", story.id);
-      form.append("image", png.blob, "upload.png");
-      const response = await request("/api/image/upload", { method: "POST", body: form });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Upload failed.");
+      const stamp = new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
+      const send = async (blob: Blob, suffix = "") => {
+        const form = new FormData();
+        form.append("storyId", story.id);
+        form.append("image", blob, "upload.png");
+        form.append("stamp", stamp);
+        if (suffix) form.append("suffix", suffix);
+        const response = await request("/api/image/upload", { method: "POST", body: form });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Upload failed.");
+        return data.image as { filename: string; subfolder: string; type: string };
+      };
+      const data = { image: await send(png.blob) };
+      let grid: ReferenceImage["grid"];
+      if (gridUpload.on) {
+        const rows = Math.max(1, Math.min(4, gridUpload.rows));
+        const cols = Math.max(1, Math.min(4, gridUpload.cols));
+        if (rows * cols < 2) throw new Error("A storyboard grid needs at least 2 panels.");
+        const cut = await cutPanels(png.canvas, rows, cols);
+        const panels = [];
+        for (const [index, panel] of cut.entries()) panels.push(await send(panel.blob, `_p${index + 1}`));
+        grid = { rows, cols, panelAspectRatio: nearestAspectRatio(cut[0].width, cut[0].height), panels };
+      }
       const current = storyRef.current || story;
       const image: ReferenceImage = {
         id: crypto.randomUUID(),
@@ -380,6 +443,7 @@ export function Workshop({
         createdAt: new Date().toISOString(),
         source: "upload",
         originalName: file.name,
+        ...(grid ? { grid } : {}),
       };
       const next: Story = {
         ...current,
@@ -675,6 +739,42 @@ export function Workshop({
   function updateImageSettings(next: Partial<Story["imageSettings"]>) {
     if (!story) return;
     patchStory({ imageSettings: { ...story.imageSettings, ...next } });
+  }
+
+  // Storyboard grid: one frame per panel, written by a model that looks at the picture.
+  async function runGridFrames() {
+    if (!story) return;
+    const grid = selectedGrid(story);
+    if (!grid?.grid) return;
+    setBusy("breakdown");
+    setError("");
+    try {
+      const response = await request("/api/grid/frames", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: storyRef.current?.aiModel ?? "",
+          gist: effectiveGist(story),
+          title: story.title,
+          characters: story.characters,
+          location: story.location,
+          analysis: story.analysis,
+          image: { filename: grid.filename, subfolder: grid.subfolder, type: grid.type },
+          rows: grid.grid.rows,
+          cols: grid.grid.cols,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Reading the grid failed.");
+      const current = storyRef.current || story;
+      const next: Story = { ...current, frames: data.frames || [], segments: [], step: "frames" };
+      skipSave.current = true;
+      setStory(await persist(next));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Reading the grid failed.");
+    } finally {
+      setBusy(null);
+    }
   }
 
   async function runBreakdown() {
@@ -1444,6 +1544,50 @@ export function Workshop({
                     or drop a picture here. Best: everyone visible, calm, in the video&apos;s aspect ratio.
                   </p>
                 </div>
+                <div className="mb-3 flex flex-wrap items-center gap-3 text-xs text-muted">
+                  <label
+                    className="flex items-center gap-2"
+                    title="The picture is a grid of scenes (a storyboard). Each panel becomes a shot; the panels are also cut out."
+                  >
+                    <input
+                      type="checkbox"
+                      checked={gridUpload.on}
+                      disabled={busy !== null}
+                      onChange={(event) => setGridUpload((grid) => ({ ...grid, on: event.target.checked }))}
+                    />
+                    Storyboard grid of scenes
+                  </label>
+                  {gridUpload.on && (
+                    <>
+                      <label className="flex items-center gap-1">
+                        rows
+                        <input
+                          type="number"
+                          min={1}
+                          max={4}
+                          value={gridUpload.rows}
+                          onChange={(event) => setGridUpload((grid) => ({ ...grid, rows: Number(event.target.value) || 1 }))}
+                          className="w-12 rounded-md border border-line bg-background px-1 py-0.5 text-foreground"
+                        />
+                      </label>
+                      <label className="flex items-center gap-1">
+                        columns
+                        <input
+                          type="number"
+                          min={1}
+                          max={4}
+                          value={gridUpload.cols}
+                          onChange={(event) => setGridUpload((grid) => ({ ...grid, cols: Number(event.target.value) || 1 }))}
+                          className="w-12 rounded-md border border-line bg-background px-1 py-0.5 text-foreground"
+                        />
+                      </label>
+                      <span>
+                        Panels read left to right, top to bottom. Use clean panels without captions or numbers, the same
+                        characters in each, and the video&apos;s aspect ratio per panel.
+                      </span>
+                    </>
+                  )}
+                </div>
                 {story.referenceImages.length === 0 ? (
                   <p className="text-sm text-muted">No images yet. Generate one from the prompt or upload your own.</p>
                 ) : (
@@ -1490,6 +1634,39 @@ export function Workshop({
                         }`;
                       })()}
                     </p>
+                    {(() => {
+                      const grid = selectedGrid(story)?.grid;
+                      if (!grid) return null;
+                      return (
+                        <div className="space-y-2 rounded-xl border border-accent/40 bg-accent/5 p-3 text-xs text-muted">
+                          <p className="text-foreground">
+                            Storyboard grid {grid.rows}×{grid.cols} · {grid.rows * grid.cols} panels · panels{" "}
+                            {grid.panelAspectRatio.split(" ")[0]}, so the video is {grid.panelAspectRatio.split(" ")[0]}.
+                            Make the frames with Frames from grid on the Frames tab.
+                          </p>
+                          <p>Give H3 on each segment:</p>
+                          <label className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              name="grid-feed"
+                              checked={story.gridFeed === "whole"}
+                              onChange={() => patchStory({ gridFeed: "whole" })}
+                            />
+                            the whole grid, naming the segment&apos;s panel (default; tested)
+                          </label>
+                          <label className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              name="grid-feed"
+                              checked={story.gridFeed === "panels"}
+                              onChange={() => patchStory({ gridFeed: "panels" })}
+                            />
+                            only the segment&apos;s own panel (faster; tested)
+                          </label>
+                          <p>Write the H3 prompts after changing this: the prompts name the picture differently.</p>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
@@ -1517,6 +1694,24 @@ export function Workshop({
                 <IconButton label="Add frame" onClick={addFrame}>
                   {Icons.plus}
                 </IconButton>
+                {selectedGrid(story) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (
+                        story.frames.length === 0 ||
+                        window.confirm("Replace the current frames with one frame per grid panel? This clears the prompts.")
+                      ) {
+                        void runGridFrames();
+                      }
+                    }}
+                    disabled={busy !== null}
+                    title="One frame per storyboard panel; the AI looks at the grid (needs an image-capable model such as google/gemini-3.7-flash)"
+                    className="rounded-full border border-accent px-4 py-2 text-sm text-accent"
+                  >
+                    {busy === "breakdown" ? "Reading the grid…" : "Frames from grid"}
+                  </button>
+                )}
                 {story.analysis?.beats?.length ? (
                   <button
                     type="button"
@@ -1624,6 +1819,49 @@ export function Workshop({
                           className="w-16 rounded-md border border-line bg-background px-2 py-1 text-foreground"
                         />
                       </label>
+                      {(() => {
+                        const grid = selectedGrid(story)?.grid;
+                        if (!grid) return null;
+                        const count = grid.rows * grid.cols;
+                        return (
+                          <>
+                            <label className="flex items-center gap-2 text-xs text-muted">
+                              Panel
+                              <select
+                                value={frame.panel ?? ""}
+                                onChange={(event) =>
+                                  updateFrame(frame.id, { panel: event.target.value ? Number(event.target.value) : undefined })
+                                }
+                                title={frame.panel ? panelPosition(frame.panel, grid.rows, grid.cols) : "No panel"}
+                                className="rounded-md border border-line bg-background px-2 py-1 text-foreground"
+                              >
+                                <option value="">none</option>
+                                {Array.from({ length: count }, (_, i) => (
+                                  <option key={i + 1} value={i + 1}>
+                                    {i + 1} · {panelPosition(i + 1, grid.rows, grid.cols).replace(" panel", "")}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            {index > 0 && (
+                              <label className="flex items-center gap-2 text-xs text-muted">
+                                Join
+                                <select
+                                  value={frame.join || "continuous"}
+                                  onChange={(event) =>
+                                    updateFrame(frame.id, { join: event.target.value === "cut" ? "cut" : "continuous" })
+                                  }
+                                  title="Cut: a new shot that opens on its panel. Continue: carries on the previous shot."
+                                  className="rounded-md border border-line bg-background px-2 py-1 text-foreground"
+                                >
+                                  <option value="cut">Cut</option>
+                                  <option value="continuous">Continue</option>
+                                </select>
+                              </label>
+                            )}
+                          </>
+                        );
+                      })()}
                       <IconButton label="Move up" onClick={() => moveFrame(index, -1)}>
                         {Icons.up}
                       </IconButton>

@@ -74,6 +74,14 @@ export type ReferenceImage = {
   // "upload" = the user's own picture (no prompt or seed); missing = generated in ComfyUI.
   source?: "upload";
   originalName?: string;
+  // A storyboard grid of scene panels (read left to right, top to bottom). The panels are also
+  // stored cut out, for the one-panel-per-segment feed.
+  grid?: {
+    rows: number;
+    cols: number;
+    panelAspectRatio: string;
+    panels: { filename: string; subfolder: string; type: string }[];
+  };
 };
 
 export type VideoEngine = "long-take" | "story-v2" | "veda-turbo" | "sage-sla";
@@ -147,6 +155,10 @@ export type Frame = {
   title: string;
   summary: string;
   duration: number;
+  // Storyboard grid stories: the panel this frame plays (1-based) and how it joins the previous
+  // frame. Without a join every frame after the first continues the take (the long-take default).
+  panel?: number;
+  join?: "cut" | "continuous";
 };
 
 export type BreakdownResult = {
@@ -159,6 +171,9 @@ export type PromptSegment = {
   id: string;
   duration: number;
   prompt: string;
+  // Copied from the frame when the prompts are written (storyboard grid stories).
+  panel?: number;
+  join?: "cut" | "continuous";
 };
 
 export type PromptRevision = {
@@ -229,6 +244,8 @@ export type Story = {
   h3Tips: boolean;
   // OpenRouter model (or comma-separated fallback chain) for every AI step; blank = .env default.
   aiModel: string;
+  // Storyboard grid: give H3 the whole grid on every segment, or only the segment's own panel.
+  gridFeed: "whole" | "panels";
   // Archived stories are hidden from the story lists until unarchived.
   archived: boolean;
   frames: Frame[];
