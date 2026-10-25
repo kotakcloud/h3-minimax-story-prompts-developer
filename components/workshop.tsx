@@ -36,15 +36,53 @@ import {
   storyRevisions,
 } from "@/lib/types";
 
-type Busy = "analyze" | "cast" | "imagePrompt" | "image" | "breakdown" | "prompts" | "update" | "video" | null;
+type Busy = "analyze" | "cast" | "imagePrompt" | "image" | "upload" | "breakdown" | "prompts" | "update" | "video" | null;
 
 const VIDEO_POLL_MS = 5000;
+
+// Uploaded pictures are stored as PNG (the long take reads the size from the PNG header),
+// scaled down to at most this many pixels.
+const UPLOAD_MAX_PIXELS = 4_000_000;
+
+// The supported aspect ratio closest to width x height.
+function nearestAspectRatio(width: number, height: number): string {
+  const target = Math.log(width / height);
+  let best: string = IMAGE_ASPECT_RATIOS[0];
+  let bestDistance = Infinity;
+  for (const ratio of IMAGE_ASPECT_RATIOS) {
+    const [w, h] = ratio.split(" ")[0].split(":").map(Number);
+    const distance = Math.abs(Math.log(w / h) - target);
+    if (distance < bestDistance) {
+      best = ratio;
+      bestDistance = distance;
+    }
+  }
+  return best;
+}
+
+async function toPng(file: File): Promise<{ blob: Blob; width: number; height: number }> {
+  const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+  const scale = Math.min(1, Math.sqrt(UPLOAD_MAX_PIXELS / (bitmap.width * bitmap.height)));
+  const width = Math.max(1, Math.round(bitmap.width * scale));
+  const height = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("This browser cannot convert the image.");
+  context.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close();
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+  if (!blob) throw new Error("Could not convert the image to PNG.");
+  return { blob, width, height };
+}
 
 const BUSY_LABELS: Record<NonNullable<Busy>, string> = {
   analyze: "Story analysis",
   cast: "Cast",
   imagePrompt: "Image prompt",
   image: "Reference image",
+  upload: "Uploading image",
   breakdown: "Frames",
   prompts: "H3 prompts",
   update: "Prompt update",
@@ -307,6 +345,50 @@ export function Workshop({
       setStory(await persist(next));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Image prompt generation failed.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function uploadImage(file: File) {
+    if (!story) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Choose an image file (PNG, JPG, WebP…).");
+      return;
+    }
+    setBusy("upload");
+    setError("");
+    try {
+      const png = await toPng(file);
+      const form = new FormData();
+      form.append("storyId", story.id);
+      form.append("image", png.blob, "upload.png");
+      const response = await request("/api/image/upload", { method: "POST", body: form });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Upload failed.");
+      const current = storyRef.current || story;
+      const image: ReferenceImage = {
+        id: crypto.randomUUID(),
+        filename: data.image.filename,
+        subfolder: data.image.subfolder,
+        type: data.image.type,
+        prompt: "",
+        seed: 0,
+        aspectRatio: nearestAspectRatio(png.width, png.height),
+        megapixels: Math.round((png.width * png.height) / 10_000) / 100,
+        createdAt: new Date().toISOString(),
+        source: "upload",
+        originalName: file.name,
+      };
+      const next: Story = {
+        ...current,
+        referenceImages: [image, ...current.referenceImages],
+        selectedImageId: image.id,
+      };
+      skipSave.current = true;
+      setStory(await persist(next));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed.");
     } finally {
       setBusy(null);
     }
@@ -1177,7 +1259,7 @@ export function Workshop({
               <div>
                 <h2 className="text-sm font-medium uppercase tracking-wider text-muted">Reference image</h2>
                 <p className="mt-1 text-xs text-muted">
-                  Generated with Z-Image Turbo in ComfyUI. The selected image becomes the H3 reference.
+                  Generate one with Z-Image Turbo in ComfyUI or upload your own. The selected image becomes the H3 reference.
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -1241,12 +1323,16 @@ export function Workshop({
                     className="mt-2 w-full resize-y rounded-xl border border-line bg-background px-3 py-2 text-sm normal-case leading-6 tracking-normal text-foreground outline-none focus:border-accent"
                   />
                 </label>
-                {story.imageLayout && (
-                  <p className="text-xs leading-5 text-muted">
-                    <span className="uppercase tracking-wider">Layout · </span>
-                    {story.imageLayout}
-                  </p>
-                )}
+                <label className="block text-xs uppercase tracking-wider text-muted">
+                  Layout (who stands where in the picture; the H3 prompts use it)
+                  <textarea
+                    value={story.imageLayout}
+                    onChange={(event) => patchStory({ imageLayout: event.target.value })}
+                    rows={3}
+                    placeholder="e.g. S1 left third facing right, S2 right third facing left, camera at eye level"
+                    className="mt-2 w-full resize-y rounded-xl border border-line bg-background px-3 py-2 text-xs normal-case leading-5 tracking-normal text-foreground outline-none focus:border-accent"
+                  />
+                </label>
                 <div className="flex flex-wrap items-end gap-3 text-xs text-muted">
                   <label className="flex flex-col gap-1">
                     Aspect
@@ -1313,9 +1399,42 @@ export function Workshop({
                 </div>
               </div>
 
-              <div>
+              <div
+                onDragOver={(event) => {
+                  if (event.dataTransfer.types.includes("Files")) event.preventDefault();
+                }}
+                onDrop={(event) => {
+                  const file = event.dataTransfer.files[0];
+                  if (!file) return;
+                  event.preventDefault();
+                  if (busy === null) void uploadImage(file);
+                }}
+              >
+                <div className="mb-3 flex flex-wrap items-center gap-3">
+                  <label
+                    className={`inline-flex cursor-pointer items-center rounded-full border border-line px-4 py-1.5 text-sm ${
+                      busy !== null ? "pointer-events-none opacity-50" : ""
+                    }`}
+                  >
+                    {busy === "upload" ? "Uploading…" : "Upload image"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={busy !== null}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        event.target.value = "";
+                        if (file) void uploadImage(file);
+                      }}
+                    />
+                  </label>
+                  <p className="text-xs text-muted">
+                    or drop a picture here. Best: everyone visible, calm, in the video&apos;s aspect ratio.
+                  </p>
+                </div>
                 {story.referenceImages.length === 0 ? (
-                  <p className="text-sm text-muted">No images yet. Generate one from the prompt.</p>
+                  <p className="text-sm text-muted">No images yet. Generate one from the prompt or upload your own.</p>
                 ) : (
                   <div className="space-y-3">
                     {(() => {
@@ -1336,7 +1455,7 @@ export function Workshop({
                         <button
                           key={image.id}
                           type="button"
-                          title={`Seed ${image.seed}`}
+                          title={image.source === "upload" ? `Uploaded: ${image.originalName || image.filename}` : `Seed ${image.seed}`}
                           onClick={() => patchStory({ selectedImageId: image.id })}
                           className={`overflow-hidden rounded-lg border-2 ${
                             image.id === story.selectedImageId ? "border-accent" : "border-transparent opacity-70"
@@ -1353,7 +1472,11 @@ export function Workshop({
                         const selected =
                           story.referenceImages.find((image) => image.id === story.selectedImageId) ||
                           story.referenceImages[0];
-                        return `${selected.subfolder}/${selected.filename}`;
+                        return `${selected.subfolder}/${selected.filename}${
+                          selected.source === "upload"
+                            ? ` (uploaded${selected.originalName ? ` from ${selected.originalName}` : ""}, ${selected.aspectRatio}). Check that the Layout on the left matches this picture.`
+                            : ""
+                        }`;
                       })()}
                     </p>
                   </div>

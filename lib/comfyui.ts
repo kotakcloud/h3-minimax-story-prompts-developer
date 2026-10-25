@@ -41,6 +41,22 @@ async function comfyJson(url: string, init?: RequestInit): Promise<unknown> {
   return body;
 }
 
+// A user's own reference picture (already PNG, see the Image tab), stored next to the generated
+// ones in ComfyUI's output folder so both video workflows read it the same way.
+export async function uploadReferenceImage(png: Blob, subfolder: string, filename: string): Promise<ComfyImage> {
+  const form = new FormData();
+  form.append("image", png, filename);
+  form.append("type", "output");
+  form.append("subfolder", subfolder);
+  const uploaded = (await comfyJson(`${COMFYUI_URL}/upload/image`, { method: "POST", body: form })) as {
+    name?: string;
+    subfolder?: string;
+    type?: string;
+  };
+  if (!uploaded.name) throw new Error("ComfyUI did not accept the image.");
+  return { filename: uploaded.name, subfolder: uploaded.subfolder ?? subfolder, type: uploaded.type || "output" };
+}
+
 export async function generateReferenceImage(options: {
   prompt: string;
   negative: string;

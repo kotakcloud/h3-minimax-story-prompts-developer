@@ -71,6 +71,9 @@ export type ReferenceImage = {
   aspectRatio: string;
   megapixels: number;
   createdAt: string;
+  // "upload" = the user's own picture (no prompt or seed); missing = generated in ComfyUI.
+  source?: "upload";
+  originalName?: string;
 };
 
 export type VideoEngine = "long-take" | "story-v2";
