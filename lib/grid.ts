@@ -43,6 +43,29 @@ export function isFreshShot(index: number, join: Frame["join"]): boolean {
   return index === 0 || join === "cut";
 }
 
+// Instructions for the prompt writer when a segment plays a storyboard panel.
+export function storyboardInstructions(
+  panel: number,
+  rows: number,
+  cols: number,
+  feed: GridFeed,
+  fresh: boolean,
+): string[] {
+  const lines = storyboardLines(panel, rows, cols, feed);
+  return [
+    feed === "whole"
+      ? `STORYBOARD: <Picture 1> is a ${rows}x${cols} storyboard grid of scene panels (read left to right, top to bottom). This segment plays panel ${panel}, the ${panelPosition(panel, rows, cols)}.`
+      : `STORYBOARD: <Picture 1> is panel ${panel} of the storyboard, cut out on its own, the frame this segment plays.`,
+    `In subject_definitions, define each visible character as shown in ${lines.source}, and instead of any appearance-anchor or setting line for <Picture 1> write exactly this line: ${lines.picture}`,
+    `In retention_analysis the <Picture 1> line is exactly: ${lines.retention}`,
+    "The summary starts with [reference generation] and describes a single full-frame shot of this panel's moment.",
+    fresh
+      ? "This segment is a fresh shot (the first one, or a cut): it opens on the panel's composition, framing, light and setting. No already-in-progress or continuation opener, no carried-over frames."
+      : "This segment continues the previous shot without a cut; the panel shows where it goes.",
+    "Let the panel carry the composition; write the motion, camera move, dialogue, sound and the end state. Describe only the people visible in the panel.",
+  ];
+}
+
 // The <Picture 1> lines a storyboard segment must carry (the wording of the render test).
 export function storyboardLines(
   panel: number,

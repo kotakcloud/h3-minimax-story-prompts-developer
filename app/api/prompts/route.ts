@@ -14,6 +14,7 @@ import {
   undefinedSubjects,
   undefinedSubjectsFix,
 } from "@/lib/prompts";
+import { isFreshShot, storyboardInstructions, type GridFeed } from "@/lib/grid";
 import type { BreakdownResult, PromptSegment, StoryLocation } from "@/lib/types";
 
 export const maxDuration = 300;
@@ -124,6 +125,8 @@ export async function POST(request: Request) {
       promptStyle?: string;
       tips?: boolean;
       model?: string;
+      // The selected reference image is a storyboard grid.
+      grid?: { rows?: number; cols?: number; feed?: string };
     };
     // The story's OpenRouter model chain; blank = the .env default.
     const chain = parseModelChain(body.model);
@@ -144,8 +147,18 @@ export async function POST(request: Request) {
         title: frame.title?.trim() || `Frame ${index + 1}`,
         summary: frame.summary?.trim() || "",
         duration: clampDuration(frame.duration),
+        ...(frame.panel ? { panel: Math.round(Number(frame.panel)) } : {}),
+        ...(frame.join === "cut" || frame.join === "continuous" ? { join: frame.join } : {}),
       })),
     };
+    const grid =
+      body.grid && Number(body.grid.rows) >= 1 && Number(body.grid.cols) >= 1
+        ? {
+            rows: Math.round(Number(body.grid.rows)),
+            cols: Math.round(Number(body.grid.cols)),
+            feed: (body.grid.feed === "panels" ? "panels" : "whole") as GridFeed,
+          }
+        : null;
 
     // One call per frame, all in parallel: a single call for the whole story regularly
     // ran past several minutes, while per-frame calls finish in well under that.
@@ -161,12 +174,20 @@ export async function POST(request: Request) {
     const analysis = analysisBlock(body.analysis);
     const perFrame = await Promise.all(
       breakdown.frames.map(async (frame, index) => {
+        // A cut (or the first segment) starts a fresh shot; everything else continues the take.
+        const fresh = isFreshShot(index, frame.join);
+        const storyboard =
+          reference && grid && frame.panel
+            ? storyboardInstructions(frame.panel, grid.rows, grid.cols, grid.feed, fresh)
+            : [];
         const lines = v2
           ? [
               `Write exactly one Story V2 Ref2VA H3 prompt for segment ${index + 1} of ${breakdown.frames.length} (id "${frame.id}", ${frame.duration} s). No timestamps anywhere.`,
               index === 0
                 ? "This is SEGMENT 1: a fresh shot in the place of <Picture 1>."
-                : "This is a CONTINUOUS segment: [Shot 1] opens with the exact already-in-progress sentence and the take never cuts.",
+                : fresh
+                  ? "This segment starts with a CUT: a fresh shot, so it does NOT open with the already-in-progress sentence; one continuous take inside the segment."
+                  : "This is a CONTINUOUS segment: [Shot 1] opens with the exact already-in-progress sentence and the take never cuts.",
               "Leave out every character who is not in this segment's shot. Name the background on both sides of the frame.",
               "Keep character identity locked and stay continuous with the neighbouring segments.",
               "",
@@ -183,8 +204,8 @@ export async function POST(request: Request) {
           : reference
           ? [
               `Write exactly one Ref2VA H3 prompt for segment ${index + 1} of ${breakdown.frames.length} (id "${frame.id}", ${frame.duration} s).`,
-              index === 0
-                ? `This is SEGMENT 1: it starts from <Picture 1>; timestamps run 00:00.000 to 00:${String(frame.duration).padStart(2, "0")}.000.`
+              fresh
+                ? `This is ${index === 0 ? "SEGMENT 1" : "a new shot after a CUT"}: it starts fresh${storyboard.length ? " on its storyboard panel" : " from <Picture 1>"}; timestamps run 00:00.000 to 00:${String(frame.duration).padStart(2, "0")}.000, and it does NOT open on the previous shot's final moment.`
                 : `This is a CONTINUATION segment: open with the previous shot's final moment; content timestamps run 00:00.920 to ${continuationEnd(frame.duration)}.`,
               "Keep character identity locked and stay continuous with the neighbouring segments.",
               "",
@@ -209,6 +230,7 @@ export async function POST(request: Request) {
             ];
         const user = [
           ...lines,
+          ...(storyboard.length ? ["", ...storyboard] : []),
           ...(analysis ? ["", `STORY ANALYSIS:\n${analysis}`] : []),
           "",
           `ALL FRAMES (context only):\n${JSON.stringify(breakdown.frames, null, 2)}`,
@@ -221,8 +243,12 @@ export async function POST(request: Request) {
             BACKUP_AFTER_MS,
             frame.id,
           );
-          const segments = normalize(data, { ...breakdown, frames: [frame] });
-          return v2 && index > 0
+          const segments = normalize(data, { ...breakdown, frames: [frame] }).map((segment) => ({
+            ...segment,
+            ...(frame.panel ? { panel: frame.panel } : {}),
+            ...(frame.join ? { join: frame.join } : {}),
+          }));
+          return v2 && !fresh
             ? segments.map((segment) => ({ ...segment, prompt: ensureContinuousOpener(segment.prompt) }))
             : segments;
         };
@@ -232,7 +258,10 @@ export async function POST(request: Request) {
         const hits = segments.flatMap((segment) => onScreenTextMentions(segment.prompt));
         const times = v2 ? segments.flatMap((segment) => promptTimestamps(segment.prompt)) : [];
         const ghosts = v2 ? [...new Set(segments.flatMap((segment) => undefinedSubjects(segment.prompt)))] : [];
-        if (hits.length === 0 && times.length === 0 && ghosts.length === 0) return segments;
+        // Storyboard segments must name <Picture 1> as the storyboard.
+        const noBoard = storyboard.length > 0 && segments.some((segment) => !/storyboard/i.test(segment.prompt));
+        if (hits.length === 0 && times.length === 0 && ghosts.length === 0 && !noBoard) return segments;
+        if (noBoard) console.log(`[prompts] frame ${frame.id}: storyboard line missing; rewriting`);
         if (hits.length) console.log(`[prompts] frame ${frame.id}: on-screen text (${hits.join(", ")}); rewriting`);
         if (times.length) console.log(`[prompts] frame ${frame.id}: timestamps in a V2 prompt (${times.join(", ")}); rewriting`);
         if (ghosts.length) console.log(`[prompts] frame ${frame.id}: undefined subjects in a V2 prompt (${ghosts.join(", ")}); rewriting`);
@@ -240,6 +269,7 @@ export async function POST(request: Request) {
           hits.length ? onScreenTextFix(hits) : "",
           times.length ? timestampFix(times) : "",
           ghosts.length ? undefinedSubjectsFix(ghosts) : "",
+          noBoard ? `CORRECTION: the <Picture 1> line is missing. ${storyboard[1]}` : "",
         ].filter(Boolean);
         return generate(`${user}
 

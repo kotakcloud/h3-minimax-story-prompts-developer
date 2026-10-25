@@ -14,6 +14,9 @@ Schema:
       "duration": 5,
       "join": "cut"
     }
+  ],
+  "characters": [
+    { "id": "S1", "look": "age, build, hair, skin, clothes with colours, signature prop: exactly as drawn in the panels" }
   ]
 }
 
@@ -21,7 +24,9 @@ Rules:
 - Exactly one frame per panel, in reading order, `panel` numbered 1..N. Never skip, merge or reorder panels.
 - Describe what is really in each panel: who is visible, positions, framing, light, setting. Do not invent people who are
   not in the panel; a character absent from a panel is absent from that frame.
-- Use the CHARACTER LOCK names and ids (S1, S2...) for the people you recognise; keep their looks as locked.
+- Use the CHARACTER LOCK names and ids (S1, S2...) for the people you recognise. The panels win over the lock: in
+  `characters`, give every on-screen character you can see a `look` copied from the panels (hair, clothes, colours,
+  props), in one or two sentences, and use those looks in the summaries. Skip voice-only characters (narrator).
 - The action: what plausibly happens in a few seconds starting from the panel, matching the story (GIST, STORY ANALYSIS).
   One dominant action. The clip should land close to what the next panel needs.
 - Dialogue and narration stay verbatim from the gist and go in the frame whose panel shows that moment. At most two

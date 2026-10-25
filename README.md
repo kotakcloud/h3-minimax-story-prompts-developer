@@ -30,6 +30,23 @@ Image generation needs ComfyUI running with the Z-Image Turbo models from the te
 
 On the Image tab you can also **upload your own picture** (Upload image, or drop a file on the image area). The browser converts it to PNG (scaled down to at most 4 MP) and the app stores it in ComfyUI's output folder next to the generated ones (`h3-story/<story id>/upload_<time>.png`), so both video workflows use it the same way. Its aspect ratio is matched to the nearest supported one. The **Layout** box under the prompt (who stands where) feeds the H3 prompts: edit it to match an uploaded picture.
 
+### Storyboard grids
+
+A reference picture can be a **storyboard grid** of scenes. Tick *Storyboard grid of scenes* and set rows x columns before
+uploading: the browser also cuts the panels out (trimming white gutters) and the panel aspect ratio becomes the video's.
+Use clean panels without captions or numbers, the same characters in every panel. Then:
+
+- **Frames > Frames from grid** sends the picture to the story's AI model (needs one that can see images, e.g.
+  `google/gemini-3.7-flash`) and writes one frame per panel (reading order), each with its panel and a *Cut* join, and
+  updates the character looks to what the panels show. Panel and join can be changed per frame.
+- **Image tab**: choose what H3 gets on each segment: the **whole grid**, naming the segment's panel (default), or **only
+  the segment's own panel** (faster). Both were tested on Veda Turbo: H3 opens each segment on the right panel with no grid
+  borders in the video (`docs/RESEARCH_grid_reference_image.md`, section 6).
+- **Prompts** name `<Picture 1>` as the storyboard reference for the segment's panel; cut segments start fresh (no
+  continuation opener or +0.92 s timing).
+- **Video**: every cut is a fresh shot (`continuity_mode: shot`), the reference keeps its detail (`ref_image_size: max`),
+  and grids need a ref2va workflow (Veda Turbo, Sage SLA, Story V2), not the long take.
+
 ### Spend badge
 
 The top bar shows `Spent: $X.XX` (plus ` / $LIMIT` when the key has a limit): the total spend of the OpenRouter key, read from OpenRouter's `GET /api/v1/auth/key` by the server route `/api/openrouter-usage`. Only `usage` and `limit` reach the browser, never the key. The server caches a good answer for 60 s; the badge refreshes every minute while the tab is visible and stays hidden on any failure. It counts every project that uses the same key.

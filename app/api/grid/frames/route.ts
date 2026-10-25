@@ -91,7 +91,16 @@ export async function POST(request: Request) {
     if (frames.some((frame) => !frame.summary)) {
       throw new Error("The model did not describe every panel. Try again or pick another model.");
     }
-    return NextResponse.json({ frames });
+    // Character looks as drawn in the panels, for the locked ids only.
+    const known = new Set((body.characters || []).map((character) => character.id));
+    const looks = (Array.isArray((data as { characters?: unknown })?.characters)
+      ? (data as { characters: unknown[] }).characters
+      : []
+    )
+      .map((item) => item as Record<string, unknown>)
+      .map((item) => ({ id: asString(item.id), look: asString(item.look) }))
+      .filter((item) => item.look && known.has(item.id));
+    return NextResponse.json({ frames, looks });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Reading the grid failed.";
     return NextResponse.json({ error: message }, { status: 500 });

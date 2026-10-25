@@ -42,6 +42,12 @@ type Busy = "analyze" | "cast" | "imagePrompt" | "image" | "upload" | "breakdown
 
 const VIDEO_POLL_MS = 5000;
 
+// What the prompt routes need to know about a storyboard grid reference (null otherwise).
+function gridForPrompts(story: Story) {
+  const grid = selectedGrid(story)?.grid;
+  return grid ? { rows: grid.rows, cols: grid.cols, feed: story.gridFeed } : null;
+}
+
 // Uploaded pictures are stored as PNG (the long take reads the size from the PNG header),
 // scaled down to at most this many pixels.
 const UPLOAD_MAX_PIXELS = 4_000_000;
@@ -567,12 +573,22 @@ export function Workshop({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           storyId: current.id,
-          segments: current.segments.map((segment) => ({ duration: segment.duration, prompt: segment.prompt })),
+          segments: current.segments.map((segment) => {
+            const frame = current.frames.find((item) => item.id === segment.id);
+            return {
+              duration: segment.duration,
+              prompt: segment.prompt,
+              join: segment.join ?? frame?.join,
+              panel: segment.panel ?? frame?.panel,
+            };
+          }),
           image: { filename: image.filename, subfolder: image.subfolder, type: image.type },
+          // Storyboard grid: the video takes the panel's aspect ratio, not the grid's.
+          grid: image.grid ? { feed: current.gridFeed, panels: image.grid.panels } : undefined,
           devMode: settings.devMode,
           seed: settings.seed,
           engine: settings.engine,
-          aspectRatio: image.aspectRatio,
+          aspectRatio: image.grid?.panelAspectRatio ?? image.aspectRatio,
           megapixels: settings.v2Megapixels,
           steps: settings.v2Steps,
           devMegapixels: settings.v2DevMegapixels,
@@ -611,8 +627,9 @@ export function Workshop({
         revisionId: current.activeRevisionId,
         promptStyle: activePromptStyle(current),
         durations: current.segments.map((segment) => segment.duration),
-        aspectRatio: image.aspectRatio,
+        aspectRatio: image.grid?.panelAspectRatio ?? image.aspectRatio,
         imageId: image.id,
+        ...(image.grid ? { gridFeed: current.gridFeed } : {}),
         imageFilename: image.filename,
         status: "queued",
         segmentsDone: 0,
@@ -767,7 +784,19 @@ export function Workshop({
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Reading the grid failed.");
       const current = storyRef.current || story;
-      const next: Story = { ...current, frames: data.frames || [], segments: [], step: "frames" };
+      // The grid decides how the characters look: take the looks the model read from the panels.
+      const looks = new Map<string, string>(
+        ((data.looks || []) as { id: string; look: string }[]).map((item) => [item.id, item.look]),
+      );
+      const next: Story = {
+        ...current,
+        characters: current.characters.map((character) =>
+          looks.has(character.id) ? { ...character, look: looks.get(character.id) as string } : character,
+        ),
+        frames: data.frames || [],
+        segments: [],
+        step: "frames",
+      };
       skipSave.current = true;
       setStory(await persist(next));
     } catch (err) {
@@ -842,6 +871,7 @@ export function Workshop({
           analysis: story.analysis,
           promptStyle: story.promptStyle,
           tips: story.h3Tips,
+          grid: gridForPrompts(story),
         }),
       });
       const data = await response.json();
@@ -905,6 +935,8 @@ export function Workshop({
             prompt: segment.prompt,
             title: frame?.title || `Prompt ${index + 1}`,
             summary: frame?.summary || "",
+            ...(segment.panel ?? frame?.panel ? { panel: segment.panel ?? frame?.panel } : {}),
+            ...(segment.join ?? frame?.join ? { join: segment.join ?? frame?.join } : {}),
           };
         })
         .filter((target) => ids.includes(target.id));
@@ -923,6 +955,7 @@ export function Workshop({
           analysis: story.analysis,
           promptStyle: activePromptStyle(story),
           tips: story.h3Tips,
+          grid: gridForPrompts(story),
         }),
       });
       const data = await response.json();
@@ -1700,7 +1733,9 @@ export function Workshop({
                     onClick={() => {
                       if (
                         story.frames.length === 0 ||
-                        window.confirm("Replace the current frames with one frame per grid panel? This clears the prompts.")
+                        window.confirm(
+                          "Replace the current frames with one frame per grid panel? This clears the prompts and updates the character looks to match the grid.",
+                        )
                       ) {
                         void runGridFrames();
                       }
@@ -2037,7 +2072,9 @@ export function Workshop({
               const settings = story.videoSettings;
               const v2 = settings.engine === "story-v2";
               const fastEngine = isFastEngine(settings.engine) ? settings.engine : null;
-              const fastCanvas = fastStorySize(image?.aspectRatio || "16:9", settings.devMode).size;
+              const videoAspect = image?.grid?.panelAspectRatio ?? image?.aspectRatio ?? "16:9";
+              const fastCanvas = fastStorySize(videoAspect, settings.devMode).size;
+              const gridLongTake = Boolean(image?.grid) && settings.engine === "long-take";
               // Fast workflows: learn the time from this story's finished runs (same workflow and mode).
               const fastRuns = story.videos.filter(
                 (run) =>
@@ -2112,6 +2149,12 @@ export function Workshop({
                           </select>
                         </label>
                       </div>
+                      {gridLongTake && (
+                        <p className="text-xs text-amber-300">
+                          The reference is a storyboard grid: pick Veda Turbo, Sage SLA or Story V2. The long take cannot cut
+                          between panels.
+                        </p>
+                      )}
                       {v2 && timestamped.length > 0 && (
                         <p className="text-xs text-amber-300">
                           These prompts use long-take timestamps ({timestamped.join(", ")}). Story V2 is proven only with
@@ -2210,7 +2253,7 @@ export function Workshop({
                         <button
                           type="button"
                           onClick={runVideo}
-                          disabled={busy !== null || running || !image || story.segments.length === 0}
+                          disabled={busy !== null || running || !image || story.segments.length === 0 || gridLongTake}
                           className="rounded-full bg-accent px-6 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50"
                         >
                           {busy === "video" ? "Sending to ComfyUI…" : running ? "Video in progress…" : "Generate video"}
@@ -2293,6 +2336,11 @@ export function Workshop({
                                     <img src={imageSrc(runImage)} alt="" className="h-8 w-auto rounded border border-line" />
                                     {runImage.filename}
                                     {runImage.id === story.selectedImageId ? " (selected)" : ""}
+                                    {runImage.grid
+                                      ? ` · storyboard ${runImage.grid.rows}×${runImage.grid.cols}, ${
+                                          run.gridFeed === "panels" ? "one panel per segment" : "whole grid per segment"
+                                        }`
+                                      : ""}
                                   </span>
                                 ) : (
                                   run.imageFilename || "not recorded"

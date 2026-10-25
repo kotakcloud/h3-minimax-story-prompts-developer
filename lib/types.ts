@@ -142,6 +142,8 @@ export type VideoRun = {
   aspectRatio?: string;
   imageId?: string;
   imageFilename?: string;
+  // Set when the reference was a storyboard grid: what H3 got on each segment.
+  gridFeed?: "whole" | "panels";
   status: VideoRunStatus;
   segmentsDone: number;
   error: string;

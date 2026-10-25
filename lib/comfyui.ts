@@ -287,8 +287,12 @@ const STORY_V2 = {
   devSteps: "49",
 } as const;
 
+// A segment of a ref2va story. join "cut" starts a fresh shot (continuity "shot"); image gives the
+// segment its own reference (a storyboard panel) instead of the story's shared picture.
+export type StorySegment = { duration: number; prompt: string; join?: "cut" | "continuous"; image?: ComfyImage };
+
 export type StoryV2Options = {
-  segments: { duration: number; prompt: string }[];
+  segments: StorySegment[];
   image: ComfyImage;
   devMode: boolean;
   seed: number;
@@ -299,6 +303,8 @@ export type StoryV2Options = {
   aspectRatio: string;
   projectBase: string;
   startSegment?: number;
+  // Storyboard grids use "max" so the panels keep their detail.
+  refImageSize?: "match" | "max";
 };
 
 type TrackData = { tracks: { type: string; segments: unknown[] }[]; total_length: number; frame_rate: number };
@@ -310,10 +316,11 @@ export function storyV2TrackData(
   refImageSize = "match",
 ): string {
   const trackData = JSON.parse(template) as TrackData;
-  const imagePath = [...image.subfolder.split(/[\\/]+/).filter(Boolean), image.filename].join("/");
+  const pathOf = (item: ComfyImage) => [...item.subfolder.split(/[\\/]+/).filter(Boolean), item.filename].join("/");
   let start = 0;
   const entries = segments.map((segment, index) => {
     const frames = Math.max(1, Math.round(segment.duration * FPS));
+    const own = segment.image;
     const entry = {
       id: randomUUID(),
       start_frame: start,
@@ -322,18 +329,25 @@ export function storyV2TrackData(
       content: {
         media_type: "none",
         task_mode: "ref",
-        // The Workshop's segments always continue the same take.
-        continuity_mode: index === 0 ? "shot" : "context_swap",
+        // Segments continue the same take unless their join is a cut (storyboard grids).
+        continuity_mode: index === 0 || segment.join === "cut" ? "shot" : "context_swap",
         ref_image_size: refImageSize,
         images: [
-          {
-            id: randomUUID(),
-            source_type: image.type === "input" ? "input" : "output",
-            file_path: imagePath,
-            file_name: image.filename,
-            shared_reference: true,
-            ...(index > 0 ? { shared_reference_copy: true } : {}),
-          },
+          own
+            ? {
+                id: randomUUID(),
+                source_type: own.type === "input" ? "input" : "output",
+                file_path: pathOf(own),
+                file_name: own.filename,
+              }
+            : {
+                id: randomUUID(),
+                source_type: image.type === "input" ? "input" : "output",
+                file_path: pathOf(image),
+                file_name: image.filename,
+                shared_reference: true,
+                ...(index > 0 ? { shared_reference_copy: true } : {}),
+              },
         ],
         muted: false,
         volume_db: 0,
@@ -358,7 +372,12 @@ export async function buildStoryV2(options: StoryV2Options): Promise<{ workflow:
   const text = await readFile(path.join(process.cwd(), "comfy", "h3-story-v2-ref2va.json"), "utf8");
   const workflow = JSON.parse(text) as Record<string, ApiNode>;
   const editor = workflow[STORY_V2.editor].inputs;
-  editor.track_data = storyV2TrackData(String(editor.track_data), options.segments, options.image);
+  editor.track_data = storyV2TrackData(
+    String(editor.track_data),
+    options.segments,
+    options.image,
+    options.refImageSize || "match",
+  );
   editor["resolution.aspect_ratio"] = options.aspectRatio;
 
   const fullProject = options.projectBase;
@@ -415,12 +434,13 @@ const STORY_FAST = {
 
 export type FastStoryOptions = {
   engine: FastStoryEngine;
-  segments: { duration: number; prompt: string }[];
+  segments: StorySegment[];
   image: ComfyImage;
   devMode: boolean;
   seed: number;
   aspectRatio: string;
   projectBase: string;
+  refImageSize?: "match" | "max";
 };
 
 export async function buildFastStory(
@@ -434,7 +454,12 @@ export async function buildFastStory(
   };
   const refImageSize =
     template.tracks.find((track) => track.type === "task")?.segments[0]?.content?.ref_image_size || "max";
-  editor.track_data = storyV2TrackData(String(editor.track_data), options.segments, options.image, refImageSize);
+  editor.track_data = storyV2TrackData(
+    String(editor.track_data),
+    options.segments,
+    options.image,
+    options.refImageSize || refImageSize,
+  );
 
   const full = fastStorySize(options.aspectRatio, false);
   const dev = fastStorySize(options.aspectRatio, true);

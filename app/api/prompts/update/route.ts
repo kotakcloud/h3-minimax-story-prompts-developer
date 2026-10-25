@@ -13,6 +13,7 @@ import {
   undefinedSubjects,
   undefinedSubjectsFix,
 } from "@/lib/prompts";
+import { isFreshShot, storyboardInstructions, type GridFeed } from "@/lib/grid";
 import type { Character, Frame, PromptSegment } from "@/lib/types";
 
 export const maxDuration = 300;
@@ -28,6 +29,8 @@ type Target = {
   prompt: string;
   title: string;
   summary: string;
+  panel?: number;
+  join?: "cut" | "continuous";
 };
 
 function normalize(data: unknown, targets: Target[]): PromptSegment[] {
@@ -54,6 +57,8 @@ function normalize(data: unknown, targets: Target[]): PromptSegment[] {
       id: target.id,
       duration: clampDuration(record.duration, target.duration),
       prompt,
+      ...(target.panel ? { panel: target.panel } : {}),
+      ...(target.join ? { join: target.join } : {}),
     };
   });
 }
@@ -72,6 +77,7 @@ export async function POST(request: Request) {
       promptStyle?: string;
       tips?: boolean;
       model?: string;
+      grid?: { rows?: number; cols?: number; feed?: string };
     };
     // The story's OpenRouter model chain; blank = the .env default.
     const chain = parseModelChain(body.model);
@@ -97,6 +103,30 @@ export async function POST(request: Request) {
           : "prompts/h3-t2va-update.md",
       { tips: body.tips !== false },
     );
+    // Storyboard grid: keep each target's <Picture 1> storyboard lines and its cut / continue opening.
+    const grid =
+      body.reference === true && body.grid && Number(body.grid.rows) >= 1 && Number(body.grid.cols) >= 1
+        ? {
+            rows: Math.round(Number(body.grid.rows)),
+            cols: Math.round(Number(body.grid.cols)),
+            feed: (body.grid.feed === "panels" ? "panels" : "whole") as GridFeed,
+          }
+        : null;
+    const storyboard = grid
+      ? targets
+          .filter((target) => target.panel)
+          .flatMap((target) => [
+            "",
+            `TARGET ${target.number} (id ${target.id}) plays storyboard panel ${target.panel}. Keep these rules for it:`,
+            ...storyboardInstructions(
+              target.panel as number,
+              grid.rows,
+              grid.cols,
+              grid.feed,
+              isFreshShot(target.number - 1, target.join),
+            ),
+          ])
+      : [];
     const user = [
       "Apply this update to every listed target prompt in one pass.",
       "",
@@ -114,6 +144,7 @@ export async function POST(request: Request) {
       `FRAMES:\n${JSON.stringify(body.frames || [], null, 2)}`,
       "",
       `TARGET PROMPTS:\n${JSON.stringify(targets, null, 2)}`,
+      ...storyboard,
     ].join("\n");
 
     let segments = normalize(await chatJson(system, user, { maxTokens: 16000, models: chain.models }), targets);
@@ -137,7 +168,10 @@ ${fixes.join("\n\n")}`, { maxTokens: 16000, models: chain.models }), targets);
     }
     if (v2) {
       segments = segments.map((segment) =>
-        targets.find((target) => target.id === segment.id)?.number === 1
+        (() => {
+          const target = targets.find((item) => item.id === segment.id);
+          return !target || isFreshShot(target.number - 1, target.join);
+        })()
           ? segment
           : { ...segment, prompt: ensureContinuousOpener(segment.prompt) },
       );
