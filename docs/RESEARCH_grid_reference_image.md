@@ -1,6 +1,6 @@
 # Research: one uploaded image that is a grid of scenes (storyboard) as the H3 reference
 
-Date: 2026-10-25. Status: research only, nothing implemented. Question from the owner: if the uploaded reference picture is a
+Date: 2026-10-25. Status: research + one A/B render test (section 6); nothing implemented in the app yet. Question from the owner: if the uploaded reference picture is a
 **grid of scenes** (marked with a checkbox at upload), what else has to change in the later steps so MiniMax H3 follows it,
 scene by scene, when the prompts and the video are generated?
 
@@ -130,10 +130,43 @@ changes in section 4.
 4. If A shows borders: add the explicit "storyboard is planning only" sentence (4.4) and retest before falling back to B.
 5. One 3x3 grid run to see where panel size starts to hurt (sources: no verified panel limit).
 
-## 6. Not verified
-Nothing here was rendered. The community claims are third-party and unmeasured; the official guide defines the notation
-but not how strongly H3 follows a multi-panel image. Panel-order accuracy, behaviour with captions in panels, and the
-best per-panel duration are open until section 5 runs.
+## 6. A/B test result (2026-10-25, run on the owner's go-ahead)
+
+**Setup.** Grid built from four consecutive Flux.2 Klein 9B scenes of "The Last Coin" (story-scene-prompter render
+`2026-10-25T10-23-18-219Z`, scenes 2, 3, 7, 8: boy at the window / coin in his palm / old man gives him the cake / boy
+runs home): a clean 2x2 grid, 1344x768 (16:9) panels, 16 px white gutters and margin, no captions -> 2736x1584. Veda
+Turbo DEV (960x544, 4 steps), 16:9, seed 907327329980779, four 5 s segments, every join a **cut** (`continuity_mode:
+shot`), `ref_image_size: max`, hand-written six-section prompts identical in A and B except the `<Picture 1>` lines:
+- **A** = the whole grid as `<Picture 1>` on every segment (shared reference): `<Picture 1> is a storyboard reference
+  for [Shot 1]: its top-left panel defines this shot's viewpoint, framing, subject placement, light and setting.`
+  (top-right / bottom-left / bottom-right for segments 2-4), retention `partially_preserved - only the <pos> panel's
+  composition ... the video is one full-frame shot.`
+- **B** = segment k gets only panel k: `<Picture 1> is the storyboard frame for [Shot 1], defining its viewpoint,
+  framing, subject placement, light and setting.`
+No negative wording about borders or grids in either.
+
+**Result.** Both finished (A `easy_media/projects/gridab_a_dev/out/gridab_a_dev_00001_.mp4`, B `.../gridab_b_dev/...`,
+both 960x544, 20.7 s, with audio). Frames at the start, middle and end of every segment:
+- **A picked the right panel every time** from its position name; each segment opens on that panel's composition
+  (window left / boy right, coin close-up, boy + old man with the cake box, boy running down the street) and then plays
+  the written action.
+- **No grid artifacts** in A or B: no gutters, borders, neighbouring panels or white page in any frame; every shot is
+  full-frame. The explicit "never show the grid" sentence (ai-flow) was not needed.
+- Identity (boy's hair and denim jacket, the old man's cap and coat) stays consistent across the cuts in both.
+- A and B look almost the same (same seed). **B was faster: 431 s vs 671 s** (each segment encodes one 1344x768 panel
+  instead of the 2736x1584 grid).
+- Panels act close to a **first frame**: each segment starts on its panel, then moves. Good for "cut" joins; a
+  `continuous` join with a different panel would jump, so continuous joins should keep the previous panel or use none.
+
+**Decision.** Implement **option A** as the default (one upload, no cropping, the prompt names the panel by position) and
+keep **option B** as a speed option for large grids or slow renders (crop at upload; same prompts with the panel line).
+`ref_image_size: max` and per-segment **cut** joins are required either way. Not tested: audio/dialogue (not listened
+to), 3x3 grids, grids with captions, FULL mode, Story V2 (dual pass) with a grid, prompts written by the LLM instead of
+by hand. Test files: the grid and panels in ComfyUI `output/h3-story/gridab/`, the script in this session's scratchpad.
+
+## 7. Not verified
+Beyond section 6: the community claims are third-party and unmeasured; panel-order accuracy on bigger boards, behaviour
+with captions in panels, and the best per-panel duration are still open.
 
 ## Sources
 - MiniMax full-reference rewrite guide, in `ComfyUI/custom_nodes/comfyui-easy-media/utils/prompt_builder.py` (`MINIMAX_REF_PROMPT`) and `skills/minimax-h3-prompt-agentskill/references/ref2va-format.md`
