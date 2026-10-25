@@ -172,6 +172,14 @@ storyboard lines, **Generate video** clicked in the app: Veda Turbo DEV, whole-g
 coin close-up, old man with the cake box, boy running down the street), no grid artifacts, and the boy's denim jacket and
 the old man's cap and coat match the grid. Not checked: the spoken lines (audio not listened to).
 
+### 6c. Gujarati version (Language version, 2026-10-26)
+Prompt set 3 = set 2 with only the spoken line translated (`<d>[Gujarati] ખૂબ ખૂબ આભાર દાદા! મારી મમ્મી બહુ ખુશ થઈ જશે!</d>`),
+rendered from the app with the same seed and settings (751 s, `..._00002_.mp4`). Segments 1, 2 and 4 are pixel-identical to
+the English run (their prompts did not change); segment 3 keeps the scene but shifts pose and framing a little.
+faster-whisper large-v3 on the two segment-3 clips: English "Thank you, Grandpa. My mother will be so happy."; Gujarati
+(forced) "ખુબ ખુબ આભર દાદા મારી મમ્મી બહું ખુશ થઇ જશે", the same sentence. Auto-detect guessed Hindi (0.67) but wrote the
+same Gujarati words in Devanagari, so the detector, not the speech, is unsure.
+
 ## 7. Not verified
 Beyond section 6: the community claims are third-party and unmeasured; panel-order accuracy on bigger boards, behaviour
 with captions in panels, and the best per-panel duration are still open.
