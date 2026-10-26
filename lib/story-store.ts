@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, rm, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import type { Story, StoryStep, StorySummary } from "./types";
@@ -151,6 +151,25 @@ export async function createStory(): Promise<Story> {
   return story;
 }
 
+// A copy of a story under a new id: everything but its generated videos and comparisons (their files belong to
+// the original). Reference images are shared (same ComfyUI files), prompt sets and settings are copied.
+export async function duplicateStory(id: string): Promise<Story | null> {
+  const source = await readStory(id);
+  if (!source) return null;
+  const now = new Date().toISOString();
+  const copy: Story = {
+    ...source,
+    id: randomUUID(),
+    title: `${source.title} (copy)`,
+    videos: [],
+    comparisons: [],
+    archived: false,
+    createdAt: now,
+    updatedAt: now,
+  };
+  return writeStory(copy);
+}
+
 export async function writeStory(story: Story, options: { touch?: boolean } = {}): Promise<Story> {
   await ensureDir();
   const next = options.touch === false ? story : { ...story, updatedAt: new Date().toISOString() };
@@ -187,6 +206,8 @@ export async function setArchived(id: string, archived: boolean): Promise<Story 
 export async function deleteStory(id: string): Promise<boolean> {
   try {
     await unlink(storyFile(id));
+    // Its comparison videos (data/comparisons/<id>) belong to it alone; ComfyUI's files are left alone.
+    await rm(path.join(process.cwd(), "data", "comparisons", id), { recursive: true, force: true });
     return true;
   } catch {
     return false;

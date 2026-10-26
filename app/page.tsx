@@ -71,6 +71,18 @@ export default function Home() {
     setStories((current) => current.map((story) => (story.id === id ? { ...story, archived } : story)));
   }
 
+  // Copy without the generated videos; the copy shows up at the top of the list.
+  async function duplicate(id: string) {
+    setError("");
+    const response = await request(`/api/stories/${id}/duplicate`, { method: "POST" });
+    const data = await response.json();
+    if (!response.ok) {
+      setError(data.error || "Could not duplicate the story.");
+      return;
+    }
+    await refresh().catch((err) => setError(err instanceof Error ? err.message : "Could not load stories."));
+  }
+
   async function removeStory(id: string) {
     if (!window.confirm("Delete this story from this machine?")) return;
     const response = await request(`/api/stories/${id}`, { method: "DELETE" });
@@ -163,6 +175,9 @@ export default function Home() {
                 <IconLink href={storyPath(story.id, story.step)} label="Open in new tab" target="_blank">
                   {Icons.external}
                 </IconLink>
+                <IconButton label="Duplicate (without videos)" onClick={() => void duplicate(story.id)}>
+                  {Icons.copy}
+                </IconButton>
                 <IconButton
                   label={story.archived ? "Unarchive" : "Archive"}
                   onClick={() => setArchived(story.id, !story.archived)}

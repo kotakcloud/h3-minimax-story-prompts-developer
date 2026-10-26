@@ -32,6 +32,8 @@ On the Image tab you can also **upload your own picture** (Upload image, or drop
 
 ### Testing, LoRAs and rating (Video tab)
 
+- **Duplicate** (copy icon in the story list) makes a copy named "… (copy)" with everything except the generated
+  videos and comparisons: gist, analysis, cast, reference images, frames, all prompt sets and the video settings.
 - **Queue several videos**: *Generate video* stays available while others render (*Queue another video*); ComfyUI
   runs them one after another and each card shows its own place in the queue and progress.
 - **Skip segments after N**: tick it and set N to render only the first N segments of the prompt set, to try a look
