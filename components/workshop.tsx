@@ -15,6 +15,7 @@ import { UpdateCommentDialog } from "@/components/update-comment-dialog";
 import { TabStatus } from "@/lib/tab-status";
 import { buildExportPayload, buildMarkdownExport, downloadJson, downloadMarkdown } from "@/lib/export";
 import type {
+  Comparison,
   Character,
   Frame,
   PromptSegment,
@@ -40,7 +41,7 @@ import {
   storyRevisions,
 } from "@/lib/types";
 
-type Busy = "analyze" | "cast" | "imagePrompt" | "image" | "upload" | "translate" | "breakdown" | "prompts" | "update" | "video" | null;
+type Busy = "analyze" | "cast" | "imagePrompt" | "image" | "upload" | "translate" | "compare" | "breakdown" | "prompts" | "update" | "video" | null;
 
 const VIDEO_POLL_MS = 5000;
 
@@ -138,6 +139,7 @@ const BUSY_LABELS: Record<NonNullable<Busy>, string> = {
   image: "Reference image",
   upload: "Uploading image",
   translate: "Translating dialogue",
+  compare: "Building comparison",
   breakdown: "Frames",
   prompts: "H3 prompts",
   update: "Prompt update",
@@ -151,6 +153,35 @@ function formatDuration(ms: number) {
 
 function newFrameId(frames: Frame[]): string {
   return `f${Math.max(0, ...frames.map((frame) => Number(frame.id.replace(/\D/g, "")) || 0)) + 1}`;
+}
+
+// The lines that describe a generation in a comparison (burned into the video and listed under it).
+function runLabelLines(run: VideoRun, story: Story, letter: string): string[] {
+  const revisions = storyRevisions(story);
+  const setNumber = revisions.findIndex((revision) => revision.id === run.revisionId) + 1;
+  const revision = revisions[setNumber - 1];
+  const durations = run.durations || revision?.segments.map((segment) => segment.duration) || [];
+  const quality = [
+    run.devMode ? "DEV" : run.engine === "long-take" || !run.engine ? "Final" : "FULL",
+    run.width && run.height ? `${run.width}×${run.height}` : run.megapixels ? `${run.megapixels} MP` : "",
+    run.steps ? `${run.steps} steps` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  return [
+    `${letter} · ${engineInfo(run.engine).label.split(" (")[0]} · ${quality}`,
+    [
+      setNumber > 0 ? `set ${setNumber}${revision?.language ? ` (${revision.language})` : ""}` : "set deleted",
+      durations.length ? `${durations.reduce((sum, value) => sum + value, 0)} s` : "",
+      run.totalSegments && run.totalSegments > run.segmentCount ? `first ${run.segmentCount} of ${run.totalSegments}` : "",
+      `seed ${run.seed}`,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+    run.loras?.length
+      ? `LoRA: ${run.loras.map((lora) => `${lora.name.replace(/^minimax-h3[\\/]/i, "").replace(/\.safetensors$/i, "")} ${lora.strength}`).join(", ")}`
+      : "no LoRA",
+  ];
 }
 
 // Viewer slides for a reference image: the picture itself, then its storyboard panels if it is a grid.
@@ -204,6 +235,10 @@ export function Workshop({
   const [dialogueLanguage, setDialogueLanguage] = useState("Gujarati");
   const [loraOpen, setLoraOpen] = useState(false);
   const [viewer, setViewer] = useState<{ slides: Slide[]; index: number } | null>(null);
+  // Compare mode: the picked generations, in pick order (A, B, C, D), and whose audio the comparison keeps.
+  const [compareMode, setCompareMode] = useState(false);
+  const [comparePick, setComparePick] = useState<string[]>([]);
+  const [compareAudio, setCompareAudio] = useState(0);
   const [videoSort, setVideoSort] = useState<"newest" | "rating">("newest");
   const persistTail = useRef(Promise.resolve());
 
@@ -551,6 +586,80 @@ export function Workshop({
 The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` : "";
     if (!window.confirm(`Delete this generation from the story?${where}`)) return;
     patchStory({ videos: current.videos.filter((item) => item.id !== run.id) });
+  }
+
+  async function createComparison() {
+    const current = storyRef.current;
+    if (!current || comparePick.length < 2) return;
+    const runs = comparePick
+      .map((id) => current.videos.find((run) => run.id === id))
+      .filter((run): run is VideoRun => Boolean(run?.video));
+    if (runs.length < 2) return;
+    const id = crypto.randomUUID();
+    const items = runs.map((run, index) => ({
+      letter: "ABCD"[index],
+      runId: run.id,
+      lines: runLabelLines(run, current, "ABCD"[index]),
+    }));
+    setBusy("compare");
+    setError("");
+    try {
+      const response = await request("/api/compare", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storyId: current.id,
+          id,
+          tiles: runs.map((run, index) => ({ video: run.video, lines: items[index].lines })),
+          audioFrom: Math.min(compareAudio, runs.length - 1),
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not build the comparison.");
+      const comparison: Comparison = {
+        id,
+        createdAt: new Date().toISOString(),
+        items,
+        audioFrom: Math.min(compareAudio, runs.length - 1),
+        duration: data.duration,
+        width: data.width,
+        height: data.height,
+        note: "",
+      };
+      const latest = storyRef.current || current;
+      skipSave.current = true;
+      setStory(await persist({ ...latest, comparisons: [comparison, ...(latest.comparisons || [])] }));
+      setCompareMode(false);
+      setComparePick([]);
+      setCompareAudio(0);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not build the comparison.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function deleteComparison(comparison: Comparison) {
+    const current = storyRef.current;
+    if (!current) return;
+    if (!window.confirm("Delete this comparison and its video file?")) return;
+    const response = await request(
+      `/api/compare?${new URLSearchParams({ storyId: current.id, id: comparison.id })}`,
+      { method: "DELETE" },
+    );
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      setError(data.error || "Could not delete the comparison.");
+      return;
+    }
+    const latest = storyRef.current || current;
+    patchStory({ comparisons: (latest.comparisons || []).filter((item) => item.id !== comparison.id) });
+  }
+
+  function noteComparison(id: string, note: string) {
+    const current = storyRef.current;
+    if (!current) return;
+    patchStory({ comparisons: (current.comparisons || []).map((item) => (item.id === id ? { ...item, note } : item)) });
   }
 
   async function cancelVideo(run: VideoRun) {
@@ -2437,6 +2546,53 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                     </div>
 
                     <div>
+                      {story.videos.filter((run) => run.video).length > 1 && (
+                        <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCompareMode((on) => !on);
+                              setComparePick([]);
+                              setCompareAudio(0);
+                            }}
+                            className={`rounded-full px-3 py-1 ${compareMode ? "bg-accent text-accent-ink" : "border border-line"}`}
+                          >
+                            {compareMode ? "Cancel compare" : "Compare"}
+                          </button>
+                          {compareMode && (
+                            <>
+                              <span>
+                                {comparePick.length} of 2–4 picked
+                                {comparePick.length ? ` (${comparePick.map((_, index) => "ABCD"[index]).join(", ")})` : ""}
+                              </span>
+                              {comparePick.length > 1 && (
+                                <label className="flex items-center gap-1">
+                                  audio from
+                                  <select
+                                    value={Math.min(compareAudio, comparePick.length - 1)}
+                                    onChange={(event) => setCompareAudio(Number(event.target.value))}
+                                    className="rounded-md border border-line bg-background px-1 py-0.5 text-foreground"
+                                  >
+                                    {comparePick.map((_, index) => (
+                                      <option key={index} value={index}>
+                                        {"ABCD"[index]}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </label>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => void createComparison()}
+                                disabled={comparePick.length < 2 || busy !== null}
+                                className="rounded-full bg-foreground px-3 py-1 font-medium text-background"
+                              >
+                                {busy === "compare" ? "Stitching…" : "Create comparison"}
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
                       {story.videos.length > 1 && (
                         <div className="mb-3 flex items-center justify-end gap-2 text-xs text-muted">
                           Sort
@@ -2569,6 +2725,21 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                             return (
                               <li key={run.id} className={`rounded-2xl border border-line bg-card ${collapsed ? "px-4 py-3" : "p-4"}`}>
                                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+                                  {compareMode && run.video && !active && (
+                                    <label className="flex items-center gap-1.5 rounded-full border border-accent/50 px-2 py-0.5 text-accent">
+                                      <input
+                                        type="checkbox"
+                                        checked={comparePick.includes(run.id)}
+                                        disabled={!comparePick.includes(run.id) && comparePick.length >= 4}
+                                        onChange={(event) =>
+                                          setComparePick((picked) =>
+                                            event.target.checked ? [...picked, run.id] : picked.filter((id) => id !== run.id),
+                                          )
+                                        }
+                                      />
+                                      {comparePick.includes(run.id) ? "ABCD"[comparePick.indexOf(run.id)] : "pick"}
+                                    </label>
+                                  )}
                                   <button
                                     type="button"
                                     onClick={() => rateVideo(run.id, { collapsed: !collapsed })}
@@ -2695,6 +2866,67 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                       )}
                     </div>
                   </div>
+                  {(story.comparisons || []).length > 0 && (
+                    <div className="mb-6">
+                      <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-muted">Comparisons</h2>
+                      <ol className="space-y-4">
+                        {(story.comparisons || []).map((comparison) => (
+                          <li key={comparison.id} className="rounded-2xl border border-line bg-card p-4">
+                            <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+                              <span className="font-medium text-foreground">
+                                {comparison.items.map((item) => item.letter).join(" vs ")}
+                              </span>
+                              <span>
+                                {new Date(comparison.createdAt).toLocaleString()} · {Math.round(comparison.duration)} s · audio from{" "}
+                                {comparison.items[comparison.audioFrom]?.letter || "A"}
+                                <IconButton
+                                  label="Delete comparison"
+                                  onClick={() => void deleteComparison(comparison)}
+                                  className="ml-2 inline-flex h-6 w-6 items-center justify-center rounded-full text-muted hover:text-red-300"
+                                >
+                                  {Icons.trash}
+                                </IconButton>
+                              </span>
+                            </div>
+                            <video
+                              src={`/api/compare/file?${new URLSearchParams({ storyId: story.id, id: comparison.id })}`}
+                              controls
+                              preload="metadata"
+                              className="w-full rounded-xl border border-line bg-black"
+                            />
+                            <dl className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 text-xs">
+                              {comparison.items.map((item) => {
+                                const run = story.videos.find((candidate) => candidate.id === item.runId);
+                                return (
+                                  <Fragment key={item.letter}>
+                                    <dt className="font-medium text-accent">{item.letter}</dt>
+                                    <dd className="min-w-0 text-foreground/90">
+                                      {item.lines.map((line) => line.replace(/^[A-D] · /, "")).join(" · ")}
+                                      <span className="ml-2 text-muted">
+                                        {run
+                                          ? run.rating
+                                            ? `${"★".repeat(run.rating)} ${run.note || ""}`
+                                            : run.note || ""
+                                          : "(generation deleted)"}
+                                      </span>
+                                    </dd>
+                                  </Fragment>
+                                );
+                              })}
+                            </dl>
+                            <input
+                              defaultValue={comparison.note}
+                              onBlur={(event) => {
+                                if (event.target.value !== comparison.note) noteComparison(comparison.id, event.target.value);
+                              }}
+                              placeholder="note: which one wins and why"
+                              className="mt-3 w-full rounded-md border border-line bg-background px-2 py-1 text-xs text-foreground"
+                            />
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
                 </>
               );
             })()}

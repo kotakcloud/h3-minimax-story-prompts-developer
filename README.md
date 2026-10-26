@@ -43,6 +43,12 @@ On the Image tab you can also **upload your own picture** (Upload image, or drop
 - **Rating**: give each finished video 1-5 stars (click the same star again to clear) and a short note; **Best rated**
   sorts the list by stars. Rated videos collapse to a one-line summary (stars and note stay visible); the ▸ / ▾
   title button expands or collapses any card, and that choice is kept.
+- **Compare**: press *Compare*, tick 2-4 finished videos (they become A, B, C, D in pick order), choose whose audio to
+  keep and press *Create comparison*. ffmpeg stitches them side by side (2x2 for four), each under a header with its
+  workflow, quality, prompt set, length, seed and LoRAs; shorter clips hold their last frame. Comparisons get their own
+  section with the video, the full info of each side (with its stars and note), a note box and a delete button that
+  also removes the file. Files: `data/comparisons/<story id>/<id>.mp4`. With `COMFYUI_OUTPUT_DIR` in `.env.local` the
+  videos are read straight from ComfyUI's output folder (seconds instead of a minute through ComfyUI's /view).
 - **Full-screen view**: click a generation's reference thumbnail (or the big image on the Image tab) to open it full
   screen; ← / → step through the story's images and a storyboard grid's panels, Esc or a click outside closes.
 - **Delete** (bin icon on a finished, failed or cancelled video) removes it from the story after a confirmation; the

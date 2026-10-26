@@ -39,6 +39,7 @@ openrouter api.md
 
 # local story files
 /data/stories/*.json
+/data/comparisons/
 
 # vercel
 .vercel

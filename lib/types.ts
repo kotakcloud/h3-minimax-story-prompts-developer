@@ -164,6 +164,19 @@ export type VideoRun = {
   finishedAt: string;
 };
 
+// A side-by-side video of 2-4 generations (file in data/comparisons/<story id>/<id>.mp4). The labels are a
+// snapshot, so a comparison stays readable after a compared generation is deleted.
+export type Comparison = {
+  id: string;
+  createdAt: string;
+  items: { letter: string; runId: string; lines: string[] }[];
+  audioFrom: number;
+  duration: number;
+  width: number;
+  height: number;
+  note: string;
+};
+
 export type Frame = {
   id: string;
   title: string;
@@ -257,6 +270,7 @@ export type Story = {
   selectedImageId: string;
   videoSettings: VideoSettings;
   videos: VideoRun[];
+  comparisons: Comparison[];
   promptStyle: PromptStyle;
   // Include the optional H3 prompting tips (comedy, continuity, emotion…) when writing prompts.
   h3Tips: boolean;

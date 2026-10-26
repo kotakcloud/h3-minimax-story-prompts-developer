@@ -25,6 +25,7 @@ function emptyStory(id: string, now: string): Story {
     selectedImageId: "",
     videoSettings: { ...DEFAULT_VIDEO_SETTINGS },
     videos: [],
+    comparisons: [],
     promptStyle: "long-take",
     h3Tips: true,
     // New stories start on the recommended model; older ones without the field keep the .env default.
@@ -85,6 +86,7 @@ function asStory(value: unknown, fallbackId: string): Story {
         ? { ...base.videoSettings, ...(raw.videoSettings as Story["videoSettings"]) }
         : base.videoSettings,
     videos: Array.isArray(raw.videos) ? (raw.videos as Story["videos"]) : [],
+    comparisons: Array.isArray(raw.comparisons) ? (raw.comparisons as Story["comparisons"]) : [],
     promptStyle: isPromptStyle(raw.promptStyle) ? raw.promptStyle : base.promptStyle,
     h3Tips: raw.h3Tips !== false,
     aiModel: typeof raw.aiModel === "string" ? raw.aiModel : "",
