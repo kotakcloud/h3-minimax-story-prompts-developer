@@ -417,6 +417,7 @@ export async function queueStoryV2(options: StoryV2Options): Promise<{ promptId:
 
 const FAST_TEMPLATES: Record<FastStoryEngine, string> = {
   "veda-turbo": "h3-story-veda-turbo.json",
+  "singularity-veda": "h3-story-singularity-veda.json",
   "sage-sla": "h3-story-sage-sla.json",
 };
 

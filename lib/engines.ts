@@ -4,8 +4,13 @@ import type { VideoEngine } from "./types";
 export const VIDEO_ENGINES: { id: VideoEngine; label: string; detail: string }[] = [
   {
     id: "veda-turbo",
-    label: "Veda Turbo (ref2va mixed, 4 steps, fastest)",
+    label: "Veda Turbo (ref2va mixed, 4 steps)",
     detail: "Veda Turbo (ref2va w4a8 mixed + Taomate 3-step LoRA, Veda sparse attention, single pass)",
+  },
+  {
+    id: "singularity-veda",
+    label: "Singularity Veda (Singularity v2, 3 steps)",
+    detail: "Singularity Veda (Singularity v2 ref2va w4a8 + Taomate 3-step LoRA, Veda sparse attention, single pass)",
   },
   {
     id: "sage-sla",
@@ -25,13 +30,24 @@ export function isVideoEngine(value: unknown): value is VideoEngine {
 }
 
 // The two "Story Speed Tests" workflows: same graph layout, single pass, fixed steps.
-export type FastStoryEngine = "veda-turbo" | "sage-sla";
+export type FastStoryEngine = "veda-turbo" | "singularity-veda" | "sage-sla";
 
 export function isFastEngine(engine: unknown): engine is FastStoryEngine {
-  return engine === "veda-turbo" || engine === "sage-sla";
+  return engine === "veda-turbo" || engine === "singularity-veda" || engine === "sage-sla";
 }
 
-export const FAST_ENGINE_STEPS: Record<FastStoryEngine, number> = { "veda-turbo": 4, "sage-sla": 10 };
+export const FAST_ENGINE_STEPS: Record<FastStoryEngine, number> = {
+  "veda-turbo": 4,
+  "singularity-veda": 3,
+  "sage-sla": 10,
+};
+
+// Short tag in the ComfyUI project folder name (h3s_<id>_<tag>[_dev]).
+export const FAST_ENGINE_TAG: Record<FastStoryEngine, string> = {
+  "veda-turbo": "veda",
+  "singularity-veda": "sveda",
+  "sage-sla": "sage",
+};
 
 export type Size = { width: number; height: number };
 

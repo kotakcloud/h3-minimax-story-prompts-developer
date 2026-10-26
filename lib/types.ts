@@ -84,7 +84,7 @@ export type ReferenceImage = {
   };
 };
 
-export type VideoEngine = "long-take" | "story-v2" | "veda-turbo" | "sage-sla";
+export type VideoEngine = "long-take" | "story-v2" | "veda-turbo" | "singularity-veda" | "sage-sla";
 
 // How Ref2VA prompts are written: timestamped beats for the long take, or the
 // timestamp-free style the Story V2 workflow was proven with.

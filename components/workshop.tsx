@@ -2215,7 +2215,7 @@ export function Workshop({
                       </div>
                       {gridLongTake && (
                         <p className="text-xs text-amber-300">
-                          The reference is a storyboard grid: pick Veda Turbo, Sage SLA or Story V2. The long take cannot cut
+                          The reference is a storyboard grid: pick Veda Turbo, Singularity Veda, Sage SLA or Story V2. The long take cannot cut
                           between panels.
                         </p>
                       )}

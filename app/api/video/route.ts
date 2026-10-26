@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { queueFastStory, queueLongTake, queueStoryV2, type StorySegment } from "@/lib/comfyui";
-import { isFastEngine } from "@/lib/engines";
+import { FAST_ENGINE_TAG, isFastEngine } from "@/lib/engines";
 import { IMAGE_ASPECT_RATIOS } from "@/lib/types";
 
 function clampNumber(value: unknown, min: number, max: number, fallback: number): number {
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     const refImageSize = grid ? ("max" as const) : undefined;
     if (grid && body.engine !== "story-v2" && !isFastEngine(body.engine)) {
       return NextResponse.json(
-        { error: "Storyboard grids need a ref2va workflow (Veda Turbo, Sage SLA or Story V2), not the long take." },
+        { error: "Storyboard grids need a ref2va workflow (Veda Turbo, Singularity Veda, Sage SLA or Story V2), not the long take." },
         { status: 400 },
       );
     }
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
         devMode: body.devMode !== false,
         seed: Math.max(0, Math.floor(Number(body.seed) || 0)),
         aspectRatio,
-        projectBase: `h3s_${storyId.slice(0, 8)}_${body.engine === "veda-turbo" ? "veda" : "sage"}`,
+        projectBase: `h3s_${storyId.slice(0, 8)}_${FAST_ENGINE_TAG[body.engine]}`,
         refImageSize,
       });
       return NextResponse.json(queued);
