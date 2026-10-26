@@ -157,6 +157,8 @@ export type VideoRun = {
   // Set when the card was expanded or collapsed by hand (otherwise rated = collapsed).
   collapsed?: boolean;
   status: VideoRunStatus;
+  // When the app first saw it running (it may have waited in ComfyUI's queue behind others).
+  runningSince?: string;
   segmentsDone: number;
   error: string;
   video: { filename: string; subfolder: string; type: string } | null;

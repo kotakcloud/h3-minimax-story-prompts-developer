@@ -814,19 +814,25 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     patchStory({ videoSettings: { ...story.videoSettings, ...next } });
   }
 
-  const activeRunId = story?.videos.find((run) => run.status === "queued" || run.status === "running")?.id;
+  // Several videos can be queued at once (ComfyUI runs them one after another): poll every active run.
+  const activeRuns = (story?.videos || []).filter((run) => run.status === "queued" || run.status === "running");
+  const activeRunKey = activeRuns.map((run) => run.id).join(",");
+  // The one shown in the tab title: the running one, else the first queued.
+  const activeRunId = (activeRuns.find((run) => run.status === "running") || activeRuns[0])?.id;
 
   useEffect(() => {
-    if (!activeRunId) return;
+    if (!activeRunKey) return;
     let stopped = false;
-    async function tick() {
-      const run = storyRef.current?.videos.find((item) => item.id === activeRunId);
+    async function poll(runId: string) {
+      const run = storyRef.current?.videos.find((item) => item.id === runId);
       if (!run) return;
       const query = new URLSearchParams({
         promptId: run.promptId,
         project: run.project,
         segments: String(run.segmentCount),
-        startedAt: run.createdAt,
+        // Segment files count from when this run started running: a run queued behind another in the same
+        // project folder must not count the earlier run's clips as its own.
+        startedAt: run.runningSince || run.createdAt,
       });
       try {
         const response = await fetch(`/api/video/status?${query}`);
@@ -841,6 +847,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
           return;
         }
         const finished = data.status === "done" || data.status === "error" || data.status === "cancelled";
+        const startsRunning = data.status === "running" && !run.runningSince;
         setStory((current) =>
           current
             ? {
@@ -850,10 +857,12 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                     ? {
                         ...item,
                         status: data.status,
-                        segmentsDone: data.segmentsDone,
+                        // The first poll that sees it running counts nothing yet (its clock starts now).
+                        segmentsDone: startsRunning ? 0 : data.segmentsDone,
                         video: data.video || null,
                         error: data.error || "",
                         finishedAt: finished ? new Date().toISOString() : "",
+                        ...(startsRunning ? { runningSince: new Date().toISOString() } : {}),
                       }
                     : item,
                 ),
@@ -864,13 +873,16 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
         // ComfyUI or the app was briefly unreachable; try again on the next tick.
       }
     }
-    void tick();
-    const timer = window.setInterval(() => void tick(), VIDEO_POLL_MS);
+    const tick = () => {
+      for (const runId of activeRunKey.split(",")) void poll(runId);
+    };
+    tick();
+    const timer = window.setInterval(tick, VIDEO_POLL_MS);
     return () => {
       stopped = true;
       window.clearInterval(timer);
     };
-  }, [activeRunId]);
+  }, [activeRunKey]);
 
   // Tab title + favicon: progress while something runs, a quiet done/failed marker when it ends.
   // Only a running -> not running transition seen by this page fires the marker, never a finished state on load.
@@ -2526,10 +2538,10 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                         <button
                           type="button"
                           onClick={runVideo}
-                          disabled={busy !== null || running || !image || story.segments.length === 0 || gridLongTake}
+                          disabled={busy !== null || !image || story.segments.length === 0 || gridLongTake}
                           className="rounded-full bg-accent px-6 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50"
                         >
-                          {busy === "video" ? "Sending to ComfyUI…" : running ? "Video in progress…" : "Generate video"}
+                          {busy === "video" ? "Sending to ComfyUI…" : running ? "Queue another video" : "Generate video"}
                         </button>
                         <p className="text-xs text-muted">
                           {fastEngine

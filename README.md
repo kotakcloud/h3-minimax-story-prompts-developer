@@ -32,6 +32,8 @@ On the Image tab you can also **upload your own picture** (Upload image, or drop
 
 ### Testing, LoRAs and rating (Video tab)
 
+- **Queue several videos**: *Generate video* stays available while others render (*Queue another video*); ComfyUI
+  runs them one after another and each card shows its own place in the queue and progress.
 - **Skip segments after N**: tick it and set N to render only the first N segments of the prompt set, to try a look
   before rendering a long story. The run's details say "test: first N of M".
 - **LoRAs · edit** opens the enhancement-LoRA popup. It lists what ComfyUI has in `models/loras/minimax-h3`, scanned
