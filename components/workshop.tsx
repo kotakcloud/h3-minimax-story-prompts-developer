@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useLoggedFetch } from "@/components/debug-log";
 import { IconButton, Icons } from "@/components/icons";
+import { LoraDialog } from "@/components/lora-dialog";
 import { ModelPicker } from "@/components/model-picker";
 import { framesFromAnalysis } from "@/lib/beats";
 import { panelPosition, selectedGrid } from "@/lib/grid";
@@ -184,6 +185,8 @@ export function Workshop({
   const storyRef = useRef<Story | null>(null);
   const [gridUpload, setGridUpload] = useState({ on: false, rows: 2, cols: 2 });
   const [dialogueLanguage, setDialogueLanguage] = useState("Gujarati");
+  const [loraOpen, setLoraOpen] = useState(false);
+  const [videoSort, setVideoSort] = useState<"newest" | "rating">("newest");
   const persistTail = useRef(Promise.resolve());
 
   useEffect(() => {
@@ -513,6 +516,13 @@ export function Workshop({
     }
   }
 
+  // The owner's rating (1-5, 0 = none) and note on a finished video, saved with the story.
+  function rateVideo(runId: string, patch: { rating?: number; note?: string }) {
+    const current = storyRef.current;
+    if (!current) return;
+    patchStory({ videos: current.videos.map((item) => (item.id === runId ? { ...item, ...patch } : item)) });
+  }
+
   async function cancelVideo(run: VideoRun) {
     if (
       !window.confirm(
@@ -570,12 +580,18 @@ export function Workshop({
     setError("");
     try {
       const settings = current.videoSettings;
+      // Test mode: only the first N segments; enhancement LoRAs from the LoRA popup.
+      const limit = settings.onlyFirst > 0 ? Math.min(settings.onlyFirst, current.segments.length) : current.segments.length;
+      const renderSegments = current.segments.slice(0, limit);
+      const loras = (settings.loras || [])
+        .filter((lora) => lora.enabled)
+        .map((lora) => ({ name: lora.name, strength: lora.strength }));
       const response = await request("/api/video", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           storyId: current.id,
-          segments: current.segments.map((segment) => {
+          segments: renderSegments.map((segment) => {
             const frame = current.frames.find((item) => item.id === segment.id);
             return {
               duration: segment.duration,
@@ -587,6 +603,7 @@ export function Workshop({
           image: { filename: image.filename, subfolder: image.subfolder, type: image.type },
           // Storyboard grid: the video takes the panel's aspect ratio, not the grid's.
           grid: image.grid ? { feed: current.gridFeed, panels: image.grid.panels } : undefined,
+          loras,
           devMode: settings.devMode,
           seed: settings.seed,
           engine: settings.engine,
@@ -625,10 +642,12 @@ export function Workshop({
               steps: settings.devMode ? settings.v2DevSteps : settings.v2Steps,
             }
           : fast || longTake),
-        segmentCount: current.segments.length,
+        segmentCount: renderSegments.length,
+        totalSegments: current.segments.length,
+        ...(loras.length ? { loras } : {}),
         revisionId: current.activeRevisionId,
         promptStyle: activePromptStyle(current),
-        durations: current.segments.map((segment) => segment.duration),
+        durations: renderSegments.map((segment) => segment.duration),
         aspectRatio: image.grid?.panelAspectRatio ?? image.aspectRatio,
         imageId: image.id,
         ...(image.grid ? { gridFeed: current.gridFeed } : {}),
@@ -2292,6 +2311,51 @@ export function Workshop({
                           </>
                         )}
                         <label className="flex flex-col gap-1">
+                          LoRAs
+                          <button
+                            type="button"
+                            onClick={() => setLoraOpen(true)}
+                            title={
+                              settings.loras.filter((lora) => lora.enabled).map((lora) => `${lora.name} @ ${lora.strength}`).join("\n") ||
+                              "No enhancement LoRAs"
+                            }
+                            className="rounded-md border border-line bg-background px-2 py-1 text-sm text-foreground"
+                          >
+                            {settings.loras.filter((lora) => lora.enabled).length
+                              ? `${settings.loras.filter((lora) => lora.enabled).length} on`
+                              : "none"}{" "}
+                            · edit
+                          </button>
+                        </label>
+                        <label
+                          className="flex flex-col gap-1"
+                          title="Test mode: render only the first N segments of the prompt set (0 or off = all)."
+                        >
+                          <span className="flex items-center gap-1">
+                            <input
+                              type="checkbox"
+                              checked={settings.onlyFirst > 0}
+                              onChange={(event) =>
+                                updateVideoSettings({ onlyFirst: event.target.checked ? Math.min(2, story.segments.length || 2) : 0 })
+                              }
+                            />
+                            Skip segments after
+                          </span>
+                          <input
+                            type="number"
+                            min={1}
+                            max={Math.max(1, story.segments.length)}
+                            disabled={settings.onlyFirst === 0}
+                            value={settings.onlyFirst || ""}
+                            placeholder="all"
+                            onChange={(event) => {
+                              const next = Math.round(Number(event.target.value));
+                              if (Number.isFinite(next) && next >= 1) updateVideoSettings({ onlyFirst: next });
+                            }}
+                            className="w-20 rounded-md border border-line bg-background px-2 py-1 text-foreground disabled:opacity-50"
+                          />
+                        </label>
+                        <label className="flex flex-col gap-1">
                           Seed
                           <input
                             type="number"
@@ -2337,11 +2401,33 @@ export function Workshop({
                     </div>
 
                     <div>
+                      {story.videos.length > 1 && (
+                        <div className="mb-3 flex items-center justify-end gap-2 text-xs text-muted">
+                          Sort
+                          {(["newest", "rating"] as const).map((mode) => (
+                            <button
+                              key={mode}
+                              type="button"
+                              onClick={() => setVideoSort(mode)}
+                              className={`rounded-full px-3 py-1 ${
+                                videoSort === mode ? "bg-foreground text-background" : "border border-line"
+                              }`}
+                            >
+                              {mode === "newest" ? "Newest" : "Best rated"}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                       {story.videos.length === 0 ? (
                         <p className="text-sm text-muted">No videos yet.</p>
                       ) : (
                         <ol className="space-y-4">
-                          {story.videos.map((run) => {
+                          {(videoSort === "rating"
+                            ? [...story.videos].sort(
+                                (a, b) => (b.rating || 0) - (a.rating || 0) || b.createdAt.localeCompare(a.createdAt),
+                              )
+                            : story.videos
+                          ).map((run) => {
                             const started = Date.parse(run.createdAt);
                             const ended = run.finishedAt ? Date.parse(run.finishedAt) : clock || started;
                             const active = run.status === "queued" || run.status === "running";
@@ -2388,6 +2474,9 @@ export function Workshop({
                                   durations.length
                                     ? `${durations.length} segments (${durations.join(" + ")} = ${durations.reduce((sum, value) => sum + value, 0)} s)`
                                     : `${run.segmentCount} segments`,
+                                  run.totalSegments && run.totalSegments > run.segmentCount
+                                    ? `test: first ${run.segmentCount} of ${run.totalSegments}`
+                                    : "",
                                 ]
                                   .filter(Boolean)
                                   .join(" · "),
@@ -2416,6 +2505,14 @@ export function Workshop({
                                 <span key="comfy" className="break-all font-mono">
                                   {run.project} · {run.promptId.slice(0, 8)}
                                 </span>,
+                              ],
+                              [
+                                "LoRAs",
+                                run.loras?.length
+                                  ? run.loras
+                                      .map((lora) => `${lora.name.replace(/^minimax-h3[\\/]/i, "").replace(/\.safetensors$/i, "")} @ ${lora.strength}`)
+                                      .join(" · ")
+                                  : "none",
                               ],
                               [
                                 "Started",
@@ -2477,6 +2574,30 @@ export function Workshop({
                                     </Fragment>
                                   ))}
                                 </dl>
+                                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
+                                  <span>Rating</span>
+                                  {[1, 2, 3, 4, 5].map((stars) => (
+                                    <button
+                                      key={stars}
+                                      type="button"
+                                      aria-label={`${stars} star${stars > 1 ? "s" : ""}`}
+                                      onClick={() => rateVideo(run.id, { rating: run.rating === stars ? 0 : stars })}
+                                      className={`text-base leading-none ${
+                                        (run.rating || 0) >= stars ? "text-accent" : "text-muted/50 hover:text-muted"
+                                      }`}
+                                    >
+                                      ★
+                                    </button>
+                                  ))}
+                                  <input
+                                    defaultValue={run.note || ""}
+                                    onBlur={(event) => {
+                                      if (event.target.value !== (run.note || "")) rateVideo(run.id, { note: event.target.value });
+                                    }}
+                                    placeholder="note (what worked, what didn't)"
+                                    className="min-w-40 flex-1 rounded-md border border-line bg-background px-2 py-1 text-foreground"
+                                  />
+                                </div>
                                 {run.error && <p className="mt-2 text-xs text-red-200">{run.error}</p>}
                                 {run.video && (
                                   <>
@@ -2503,6 +2624,15 @@ export function Workshop({
           </section>
         )}
       </main>
+      <LoraDialog
+        open={loraOpen}
+        value={story.videoSettings.loras || []}
+        onClose={() => setLoraOpen(false)}
+        onSave={(loras) => {
+          updateVideoSettings({ loras });
+          setLoraOpen(false);
+        }}
+      />
       <UpdateCommentDialog
         open={updateOpen}
         segments={story.segments}

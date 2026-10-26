@@ -30,6 +30,18 @@ Image generation needs ComfyUI running with the Z-Image Turbo models from the te
 
 On the Image tab you can also **upload your own picture** (Upload image, or drop a file on the image area). The browser converts it to PNG (scaled down to at most 4 MP) and the app stores it in ComfyUI's output folder next to the generated ones (`h3-story/<story id>/upload_<time>.png`), so both video workflows use it the same way. Its aspect ratio is matched to the nearest supported one. The **Layout** box under the prompt (who stands where) feeds the H3 prompts: edit it to match an uploaded picture.
 
+### Testing, LoRAs and rating (Video tab)
+
+- **Skip segments after N**: tick it and set N to render only the first N segments of the prompt set, to try a look
+  before rendering a long story. The run's details say "test: first N of M".
+- **LoRAs · edit** opens the enhancement-LoRA popup. It lists what ComfyUI has in `models/loras/minimax-h3`, scanned
+  fresh every time it opens (new files show up without a restart). Tick a LoRA and set its strength (-2..2); speed
+  LoRAs are marked, since the fast workflows already carry their own. Enabled LoRAs are chained right after the
+  workflow's model loader (`LoraLoaderModelOnly`), in list order, for every workflow; the server rejects names ComfyUI
+  does not know. Each run's details list the LoRAs and strengths it used.
+- **Rating**: give each finished video 1-5 stars (click the same star again to clear) and a short note; **Best rated**
+  sorts the list by stars.
+
 ### Dialogue in another language
 
 On the Prompts tab, type a language (Gujarati, Hindi, ...) and press **Language version**: the app copies the current

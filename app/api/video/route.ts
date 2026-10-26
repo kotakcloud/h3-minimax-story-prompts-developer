@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { queueFastStory, queueLongTake, queueStoryV2, type StorySegment } from "@/lib/comfyui";
+import { listH3Loras, queueFastStory, queueLongTake, queueStoryV2, type LoraChoice, type StorySegment } from "@/lib/comfyui";
 import { FAST_ENGINE_TAG, isFastEngine } from "@/lib/engines";
 import { IMAGE_ASPECT_RATIOS } from "@/lib/types";
 
@@ -24,6 +24,7 @@ export async function POST(request: Request) {
       devSteps?: number;
       // Storyboard grid: "whole" = the grid on every segment, "panels" = each segment's own panel.
       grid?: { feed?: string; panels?: { filename?: string; subfolder?: string; type?: string }[] };
+      loras?: { name?: string; strength?: number }[];
     };
 
     const storyId = /^[a-zA-Z0-9_-]+$/.test(body.storyId || "") ? String(body.storyId) : "";
@@ -60,6 +61,20 @@ export async function POST(request: Request) {
       ? String(body.aspectRatio)
       : "16:9 (Widescreen)";
     const comfyImage = { filename: image.filename, subfolder: image.subfolder || "", type: image.type || "output" };
+    // Enhancement LoRAs: only names ComfyUI lists, strengths clamped to -2..2.
+    const requested = Array.isArray(body.loras) ? body.loras : [];
+    let loras: LoraChoice[] = [];
+    if (requested.length > 0) {
+      const available = new Set(await listH3Loras());
+      const unknown = requested.find((lora) => !available.has(String(lora.name)));
+      if (unknown) {
+        return NextResponse.json({ error: `ComfyUI has no LoRA named ${String(unknown.name).slice(0, 120)}.` }, { status: 400 });
+      }
+      loras = requested.map((lora) => ({
+        name: String(lora.name),
+        strength: Math.round(clampNumber(lora.strength, -2, 2, 1) * 100) / 100,
+      }));
+    }
     // Storyboard grids need "max" so each panel keeps its detail (render test, docs/RESEARCH_grid_reference_image.md).
     const refImageSize = grid ? ("max" as const) : undefined;
     if (grid && body.engine !== "story-v2" && !isFastEngine(body.engine)) {
@@ -80,6 +95,7 @@ export async function POST(request: Request) {
         aspectRatio,
         projectBase: `h3s_${storyId.slice(0, 8)}_${FAST_ENGINE_TAG[body.engine]}`,
         refImageSize,
+        loras,
       });
       return NextResponse.json(queued);
     }
@@ -100,6 +116,7 @@ export async function POST(request: Request) {
         aspectRatio,
         projectBase: `h3s_${storyId.slice(0, 8)}_v2`,
         refImageSize,
+        loras,
       });
       return NextResponse.json(queued);
     }
@@ -110,6 +127,7 @@ export async function POST(request: Request) {
       devMode: body.devMode !== false,
       seed: Math.max(0, Math.floor(Number(body.seed) || 0)),
       projectBase: `h3s_${storyId.slice(0, 8)}`,
+      loras,
     });
 
     return NextResponse.json({ promptId, project });

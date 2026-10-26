@@ -118,6 +118,10 @@ export type VideoSettings = {
   v2Steps: number;
   v2DevMegapixels: number;
   v2DevSteps: number;
+  // Enhancement LoRAs chosen in the LoRA popup (enabled or not, so strengths are remembered).
+  loras: { name: string; strength: number; enabled: boolean }[];
+  // Test mode: render only the first N segments (0 = all).
+  onlyFirst: number;
 };
 
 export type VideoRunStatus = "queued" | "running" | "done" | "error" | "cancelled";
@@ -144,6 +148,12 @@ export type VideoRun = {
   imageFilename?: string;
   // Set when the reference was a storyboard grid: what H3 got on each segment.
   gridFeed?: "whole" | "panels";
+  // Enhancement LoRAs used, and how many of the prompt set's segments were rendered.
+  loras?: { name: string; strength: number }[];
+  totalSegments?: number;
+  // The owner's own rating (1-5 stars) and note.
+  rating?: number;
+  note?: string;
   status: VideoRunStatus;
   segmentsDone: number;
   error: string;
@@ -215,6 +225,8 @@ export const DEFAULT_VIDEO_SETTINGS: VideoSettings = {
   v2Steps: 10,
   v2DevMegapixels: 0.3,
   v2DevSteps: 10,
+  loras: [],
+  onlyFirst: 0,
 };
 
 // Story V2 is proven with 3–8 s segments only (Themed Transformation Pipeline renders).

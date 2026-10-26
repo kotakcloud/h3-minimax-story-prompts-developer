@@ -157,6 +157,50 @@ function executionError(entry: HistoryEntry): string {
 }
 
 // ---------------------------------------------------------------------------
+// Enhancement LoRAs (models/loras/minimax-h3), chained right after the UNET loader of any workflow
+// ---------------------------------------------------------------------------
+
+export type LoraChoice = { name: string; strength: number };
+
+// The H3 LoRAs ComfyUI can load, fresh on every call (ComfyUI rescans the folder when it changes).
+export async function listH3Loras(): Promise<string[]> {
+  const info = (await comfyJson(`${COMFYUI_URL}/object_info/LoraLoaderModelOnly`)) as Record<
+    string,
+    { input?: { required?: { lora_name?: unknown[] } } }
+  >;
+  const spec = info.LoraLoaderModelOnly?.input?.required?.lora_name || [];
+  const options = Array.isArray(spec[0])
+    ? (spec[0] as unknown[])
+    : ((spec[1] as { options?: unknown[] } | undefined)?.options ?? []);
+  return options
+    .map(String)
+    .filter((name) => /^minimax-h3[\\/]/i.test(name))
+    .sort((a, b) => a.localeCompare(b));
+}
+
+// Inserts LoraLoaderModelOnly nodes between each UNET loader and whatever used it, in order.
+export function applyLoras(workflow: Record<string, ApiNode>, loras: LoraChoice[] | undefined): void {
+  if (!loras?.length) return;
+  for (const unetId of Object.keys(workflow).filter((id) => workflow[id].class_type === "UNETLoader")) {
+    const consumers = Object.values(workflow).flatMap((node) =>
+      Object.entries(node.inputs)
+        .filter(([, value]) => Array.isArray(value) && value[0] === unetId && value[1] === 0)
+        .map(([key]) => ({ node, key })),
+    );
+    let previous: [string, number] = [unetId, 0];
+    loras.forEach((lora, index) => {
+      const id = `workshop_lora_${unetId.replace(/[^A-Za-z0-9]/g, "_")}_${index + 1}`;
+      workflow[id] = {
+        class_type: "LoraLoaderModelOnly",
+        inputs: { lora_name: lora.name, strength_model: lora.strength, model: previous },
+      };
+      previous = [id, 0];
+    });
+    for (const { node, key } of consumers) node.inputs[key] = previous;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // H3 long take (comfy/h3-long-take-ref.json, ComfyUI API format)
 // ---------------------------------------------------------------------------
 
@@ -189,6 +233,7 @@ async function referenceImageSize(image: ComfyImage): Promise<{ width: number; h
 }
 
 export async function queueLongTake(options: {
+  loras?: LoraChoice[];
   segments: { duration: number; prompt: string }[];
   image: ComfyImage;
   devMode: boolean;
@@ -262,6 +307,7 @@ export async function queueLongTake(options: {
   trackData.frame_rate = FPS;
   workflow[LONG_TAKE.editor].inputs.track_data = JSON.stringify(trackData);
 
+  applyLoras(workflow, options.loras);
   const promptId = await queueWorkflow(workflow);
   return { promptId, project };
 }
@@ -305,6 +351,7 @@ export type StoryV2Options = {
   startSegment?: number;
   // Storyboard grids use "max" so the panels keep their detail.
   refImageSize?: "match" | "max";
+  loras?: LoraChoice[];
 };
 
 type TrackData = { tracks: { type: string; segments: unknown[] }[]; total_length: number; frame_rate: number };
@@ -403,6 +450,7 @@ export async function buildStoryV2(options: StoryV2Options): Promise<{ workflow:
 
 export async function queueStoryV2(options: StoryV2Options): Promise<{ promptId: string; project: string }> {
   const { workflow, project } = await buildStoryV2(options);
+  applyLoras(workflow, options.loras);
   const promptId = await queueWorkflow(workflow);
   return { promptId, project };
 }
@@ -442,6 +490,7 @@ export type FastStoryOptions = {
   aspectRatio: string;
   projectBase: string;
   refImageSize?: "match" | "max";
+  loras?: LoraChoice[];
 };
 
 export async function buildFastStory(
@@ -504,6 +553,7 @@ export async function queueFastStory(
   options: FastStoryOptions,
 ): Promise<{ promptId: string; project: string; steps: number; size: Size }> {
   const { workflow, project, steps, size } = await buildFastStory(options);
+  applyLoras(workflow, options.loras);
   const promptId = await queueWorkflow(workflow);
   return { promptId, project, steps, size };
 }
