@@ -43,6 +43,8 @@ On the Image tab you can also **upload your own picture** (Upload image, or drop
 - **Rating**: give each finished video 1-5 stars (click the same star again to clear) and a short note; **Best rated**
   sorts the list by stars. Rated videos collapse to a one-line summary (stars and note stay visible); the ▸ / ▾
   title button expands or collapses any card, and that choice is kept.
+- **Delete** (bin icon on a finished, failed or cancelled video) removes it from the story after a confirmation; the
+  video file stays in ComfyUI's output folder (ComfyUI has no delete call).
 
 ### Dialogue in another language
 

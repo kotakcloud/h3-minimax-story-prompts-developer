@@ -523,6 +523,18 @@ export function Workshop({
     patchStory({ videos: current.videos.map((item) => (item.id === runId ? { ...item, ...patch } : item)) });
   }
 
+  // Removes a finished (or failed / cancelled) generation from the story. The files stay in ComfyUI's
+  // output folder: ComfyUI has no delete call.
+  function deleteVideo(run: VideoRun) {
+    const current = storyRef.current;
+    if (!current) return;
+    const where = run.video ? `
+
+The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` : "";
+    if (!window.confirm(`Delete this generation from the story?${where}`)) return;
+    patchStory({ videos: current.videos.filter((item) => item.id !== run.id) });
+  }
+
   async function cancelVideo(run: VideoRun) {
     if (
       !window.confirm(
@@ -2564,6 +2576,15 @@ export function Workshop({
                                       >
                                         {run.status === "queued" ? "Remove" : "Stop"}
                                       </button>
+                                    )}
+                                    {!active && (
+                                      <IconButton
+                                        label="Delete generation"
+                                        onClick={() => deleteVideo(run)}
+                                        className="ml-2 inline-flex h-6 w-6 items-center justify-center rounded-full text-muted hover:text-red-300"
+                                      >
+                                        {Icons.trash}
+                                      </IconButton>
                                     )}
                                   </span>
                                 </div>
