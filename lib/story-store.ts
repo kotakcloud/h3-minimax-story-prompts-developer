@@ -174,9 +174,15 @@ export async function writeStory(story: Story, options: { touch?: boolean } = {}
   await ensureDir();
   const next = options.touch === false ? story : { ...story, updatedAt: new Date().toISOString() };
   const file = storyFile(next.id);
-  const temp = `${file}.${process.pid}.tmp`;
-  await writeFile(temp, JSON.stringify(next, null, 2), "utf8");
-  await rename(temp, file);
+  // A unique temp name per write: two overlapping saves of one story must not share (and leave behind) a file.
+  const temp = `${file}.${process.pid}.${randomUUID().slice(0, 8)}.tmp`;
+  try {
+    await writeFile(temp, JSON.stringify(next, null, 2), "utf8");
+    await rename(temp, file);
+  } catch (error) {
+    await unlink(temp).catch(() => {});
+    throw error;
+  }
   return next;
 }
 
