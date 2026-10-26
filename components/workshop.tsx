@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useLoggedFetch } from "@/components/debug-log";
 import { IconButton, Icons } from "@/components/icons";
+import { Lightbox, type Slide } from "@/components/lightbox";
 import { LoraDialog } from "@/components/lora-dialog";
 import { ModelPicker } from "@/components/model-picker";
 import { framesFromAnalysis } from "@/lib/beats";
@@ -152,6 +153,22 @@ function newFrameId(frames: Frame[]): string {
   return `f${Math.max(0, ...frames.map((frame) => Number(frame.id.replace(/\D/g, "")) || 0)) + 1}`;
 }
 
+// Viewer slides for a reference image: the picture itself, then its storyboard panels if it is a grid.
+function imageSlides(image: ReferenceImage): Slide[] {
+  const name = image.originalName || image.filename;
+  return [
+    {
+      src: imageSrc(image),
+      title: image.grid ? `${name} · storyboard ${image.grid.rows}×${image.grid.cols}` : name,
+      caption: image.prompt || undefined,
+    },
+    ...(image.grid?.panels || []).map((panel, index) => ({
+      src: imageSrc({ ...image, ...panel }),
+      title: `${name} · panel ${index + 1}`,
+    })),
+  ];
+}
+
 function imageSrc(image: ReferenceImage) {
   const query = new URLSearchParams({
     filename: image.filename,
@@ -186,6 +203,7 @@ export function Workshop({
   const [gridUpload, setGridUpload] = useState({ on: false, rows: 2, cols: 2 });
   const [dialogueLanguage, setDialogueLanguage] = useState("Gujarati");
   const [loraOpen, setLoraOpen] = useState(false);
+  const [viewer, setViewer] = useState<{ slides: Slide[]; index: number } | null>(null);
   const [videoSort, setVideoSort] = useState<"newest" | "rating">("newest");
   const persistTail = useRef(Promise.resolve());
 
@@ -1704,7 +1722,13 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                         <img
                           src={imageSrc(selected)}
                           alt="Selected reference image"
-                          className="w-full rounded-2xl border border-line"
+                          title="View full screen"
+                          onClick={() => {
+                            const slides = story.referenceImages.flatMap((image) => imageSlides(image));
+                            const index = slides.findIndex((slide) => slide.src === imageSrc(selected));
+                            setViewer({ slides, index: Math.max(0, index) });
+                          }}
+                          className="w-full cursor-zoom-in rounded-2xl border border-line"
                         />
                       );
                     })()}
@@ -2499,8 +2523,15 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                                 "Reference",
                                 runImage ? (
                                   <span className="inline-flex items-center gap-2">
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={imageSrc(runImage)} alt="" className="h-8 w-auto rounded border border-line" />
+                                    <button
+                                      type="button"
+                                      onClick={() => setViewer({ slides: imageSlides(runImage), index: 0 })}
+                                      title="View full screen"
+                                      className="cursor-zoom-in"
+                                    >
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img src={imageSrc(runImage)} alt="" className="h-8 w-auto rounded border border-line" />
+                                    </button>
                                     {runImage.filename}
                                     {runImage.id === story.selectedImageId ? " (selected)" : ""}
                                     {runImage.grid
@@ -2670,6 +2701,14 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
           </section>
         )}
       </main>
+      {viewer && (
+        <Lightbox
+          slides={viewer.slides}
+          index={viewer.index}
+          onIndex={(index) => setViewer((current) => (current ? { ...current, index } : current))}
+          onClose={() => setViewer(null)}
+        />
+      )}
       <LoraDialog
         open={loraOpen}
         value={story.videoSettings.loras || []}
