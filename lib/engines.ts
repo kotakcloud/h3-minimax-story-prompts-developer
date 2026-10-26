@@ -1,28 +1,43 @@
 import type { VideoEngine } from "./types";
 
-// Video workflows offered on the Video tab (client-safe; lib/comfyui.ts builds the graphs).
-export const VIDEO_ENGINES: { id: VideoEngine; label: string; detail: string }[] = [
+// Video workflows offered on the Video tab (client-safe; lib/comfyui.ts builds the graphs). `short` is the
+// name shown app-wide (titles, run details, comparisons) and always carries the model family (ref2va / fl2va).
+export const VIDEO_ENGINES: { id: VideoEngine; short: string; label: string; detail: string }[] = [
   {
     id: "veda-turbo",
-    label: "Veda Turbo (ref2va mixed, 4 steps)",
-    detail: "Veda Turbo (ref2va w4a8 mixed + Taomate 3-step LoRA, Veda sparse attention, single pass)",
+    short: "Veda Turbo · ref2va",
+    label: "Veda Turbo · ref2va (w4a8 mixed, 4 steps)",
+    detail: "Veda Turbo · ref2va (ref2va w4a8 mixed + Taomate 3-step LoRA, Veda sparse attention, single pass)",
   },
   {
     id: "singularity-veda",
-    label: "Singularity Veda (Singularity v2, 3 steps)",
-    detail: "Singularity Veda (Singularity v2 ref2va w4a8 + Taomate 3-step LoRA, Veda sparse attention, single pass)",
+    short: "Singularity Veda · ref2va",
+    label: "Singularity Veda · ref2va (Singularity v2, 3 steps)",
+    detail: "Singularity Veda · ref2va (Singularity v2 ref2va w4a8 + Taomate 3-step LoRA, Veda sparse attention, single pass)",
   },
   {
     id: "sage-sla",
-    label: "Sage SLA (ref2va mixed, 10 steps)",
-    detail: "Sage SLA (ref2va w4a8 mixed + ref2v turbo 8-step LoRA, Sage + H3 SLA 0.85, single pass)",
+    short: "Sage SLA · ref2va",
+    label: "Sage SLA · ref2va (w4a8 mixed, 10 steps)",
+    detail: "Sage SLA · ref2va (ref2va w4a8 mixed + ref2v turbo 8-step LoRA, Sage + H3 SLA 0.85, single pass)",
   },
-  { id: "story-v2", label: "Story V2 (ref2va, dual pass)", detail: "Story V2 (ref2va, dual pass, x1.25 refine)" },
-  { id: "long-take", label: "Long take (fl2va, single pass + VSR)", detail: "Long take (fl2va, single pass + RTX VSR)" },
+  {
+    id: "story-v2",
+    short: "Story V2 · ref2va",
+    label: "Story V2 · ref2va (dual pass)",
+    detail: "Story V2 · ref2va (dual pass, x1.25 refine)",
+  },
+  {
+    id: "long-take",
+    short: "Long take · fl2va",
+    label: "Long take · fl2va (single pass + VSR)",
+    detail: "Long take · fl2va (single pass + RTX VSR)",
+  },
 ];
 
 export function engineInfo(engine: VideoEngine | undefined) {
-  return VIDEO_ENGINES.find((item) => item.id === (engine || "long-take")) || VIDEO_ENGINES[3];
+  const id = engine || "long-take";
+  return VIDEO_ENGINES.find((item) => item.id === id) || VIDEO_ENGINES.find((item) => item.id === "long-take")!;
 }
 
 export function isVideoEngine(value: unknown): value is VideoEngine {

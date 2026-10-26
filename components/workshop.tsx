@@ -169,7 +169,7 @@ function runLabelLines(run: VideoRun, story: Story, letter: string): string[] {
     .filter(Boolean)
     .join(" · ");
   return [
-    `${letter} · ${engineInfo(run.engine).label.split(" (")[0]} · ${quality}`,
+    `${letter} · ${engineInfo(run.engine).short} · ${quality}`,
     [
       setNumber > 0 ? `set ${setNumber}${revision?.language ? ` (${revision.language})` : ""}` : "set deleted",
       durations.length ? `${durations.reduce((sum, value) => sum + value, 0)} s` : "",
@@ -2336,7 +2336,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                     <div>
                       <h2 className="text-sm font-medium uppercase tracking-wider text-muted">Video</h2>
                       <p className="mt-1 text-xs text-muted">
-                        Runs the H3 {engineInfo(settings.engine).label.split(" (")[0]} workflow in ComfyUI with the current prompt set ({story.segments.length}{" "}
+                        Runs the H3 {engineInfo(settings.engine).short} workflow in ComfyUI with the current prompt set ({story.segments.length}{" "}
                         segments · {totalVideoSeconds}s) and the selected reference image.
                       </p>
                     </div>
@@ -2748,7 +2748,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                                     className="flex items-center gap-1.5 font-medium text-foreground"
                                   >
                                     <span className="inline-block w-3 text-muted">{collapsed ? "▸" : "▾"}</span>
-                                    {engineInfo(run.engine).label.split(" (")[0]} · {run.devMode ? "DEV" : v2Run || fastRun ? "FULL" : "Final"}
+                                    {engineInfo(run.engine).short} · {run.devMode ? "DEV" : v2Run || fastRun ? "FULL" : "Final"}
                                   </button>
                                   <span
                                     className={
