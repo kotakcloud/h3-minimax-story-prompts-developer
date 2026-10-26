@@ -23,6 +23,8 @@ function LoraDialogBody({ value, onClose, onSave }: Props) {
   const [available, setAvailable] = useState<LoraInfo[] | null>(null);
   const [error, setError] = useState("");
   const [draft, setDraft] = useState<LoraSetting[]>(value);
+  // Speed LoRAs are hidden by default (the fast workflows carry their own); an enabled one stays visible.
+  const [hideSpeed, setHideSpeed] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,7 +57,16 @@ function LoraDialogBody({ value, onClose, onSave }: Props) {
         className="max-h-full w-full max-w-2xl overflow-y-auto overflow-x-hidden rounded-2xl border border-line bg-card p-5"
         onClick={(event) => event.stopPropagation()}
       >
-        <h2 className="text-sm font-medium uppercase tracking-wider text-muted">Enhancement LoRAs</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-medium uppercase tracking-wider text-muted">Enhancement LoRAs</h2>
+          <label className="flex items-center gap-2 text-xs text-muted">
+            <input type="checkbox" checked={hideSpeed} onChange={(event) => setHideSpeed(event.target.checked)} />
+            Hide speed LoRAs
+            {hideSpeed && available && (
+              <span>({available.filter((lora) => lora.speed && !settingOf(lora.name).enabled).length} hidden)</span>
+            )}
+          </label>
+        </div>
         <p className="mt-1 text-xs text-muted">
           From ComfyUI&apos;s models/loras/minimax-h3, scanned just now. Enabled LoRAs are added after the model of
           whichever workflow you render, in this order. Speed LoRAs are marked: the fast workflows already carry their
@@ -65,7 +76,7 @@ function LoraDialogBody({ value, onClose, onSave }: Props) {
         {!available && !error && <p className="mt-3 text-sm text-muted">Scanning…</p>}
         {available && (
           <ul className="mt-4 space-y-2">
-            {available.map((lora) => {
+            {available.filter((lora) => !hideSpeed || !lora.speed || settingOf(lora.name).enabled).map((lora) => {
               const setting = settingOf(lora.name);
               return (
                 <li

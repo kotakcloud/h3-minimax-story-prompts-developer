@@ -36,7 +36,8 @@ On the Image tab you can also **upload your own picture** (Upload image, or drop
   before rendering a long story. The run's details say "test: first N of M".
 - **LoRAs · edit** opens the enhancement-LoRA popup. It lists what ComfyUI has in `models/loras/minimax-h3`, scanned
   fresh every time it opens (new files show up without a restart). Tick a LoRA and set its strength (-2..2); speed
-  LoRAs are marked, since the fast workflows already carry their own. Enabled LoRAs are chained right after the
+  LoRAs are marked and hidden by default (*Hide speed LoRAs*; an enabled one stays visible), since the fast
+  workflows already carry their own. Enabled LoRAs are chained right after the
   workflow's model loader (`LoraLoaderModelOnly`), in list order, for every workflow; the server rejects names ComfyUI
   does not know. Each run's details list the LoRAs and strengths it used.
 - **Rating**: give each finished video 1-5 stars (click the same star again to clear) and a short note; **Best rated**
