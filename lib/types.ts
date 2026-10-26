@@ -154,6 +154,8 @@ export type VideoRun = {
   // The owner's own rating (1-5 stars) and note.
   rating?: number;
   note?: string;
+  // Set when the card was expanded or collapsed by hand (otherwise rated = collapsed).
+  collapsed?: boolean;
   status: VideoRunStatus;
   segmentsDone: number;
   error: string;

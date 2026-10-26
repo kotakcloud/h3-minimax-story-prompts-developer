@@ -517,7 +517,7 @@ export function Workshop({
   }
 
   // The owner's rating (1-5, 0 = none) and note on a finished video, saved with the story.
-  function rateVideo(runId: string, patch: { rating?: number; note?: string }) {
+  function rateVideo(runId: string, patch: { rating?: number; note?: string; collapsed?: boolean }) {
     const current = storyRef.current;
     if (!current) return;
     patchStory({ videos: current.videos.map((item) => (item.id === runId ? { ...item, ...patch } : item)) });
@@ -2433,6 +2433,8 @@ export function Workshop({
                             const active = run.status === "queued" || run.status === "running";
                             const v2Run = run.engine === "story-v2";
                             const fastRun = isFastEngine(run.engine);
+                            // Rated videos start collapsed; a manual expand/collapse sticks.
+                            const collapsed = run.collapsed ?? (Boolean(run.rating) && !active);
                             const revisionIndex = revisions.findIndex((revision) => revision.id === run.revisionId);
                             const revision = revisions[revisionIndex];
                             const durations = run.durations || revision?.segments.map((segment) => segment.duration) || [];
@@ -2522,11 +2524,18 @@ export function Workshop({
                               ],
                             ];
                             return (
-                              <li key={run.id} className="rounded-2xl border border-line bg-card p-4">
+                              <li key={run.id} className={`rounded-2xl border border-line bg-card ${collapsed ? "px-4 py-3" : "p-4"}`}>
                                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
-                                  <span className="font-medium text-foreground">
+                                  <button
+                                    type="button"
+                                    onClick={() => rateVideo(run.id, { collapsed: !collapsed })}
+                                    aria-expanded={!collapsed}
+                                    title={collapsed ? "Expand" : "Collapse"}
+                                    className="flex items-center gap-1.5 font-medium text-foreground"
+                                  >
+                                    <span className="inline-block w-3 text-muted">{collapsed ? "▸" : "▾"}</span>
                                     {engineInfo(run.engine).label.split(" (")[0]} · {run.devMode ? "DEV" : v2Run || fastRun ? "FULL" : "Final"}
-                                  </span>
+                                  </button>
                                   <span
                                     className={
                                       run.status === "done"
@@ -2566,6 +2575,19 @@ export function Workshop({
                                     />
                                   </div>
                                 )}
+                                {collapsed ? (
+                                  <p className="truncate text-xs text-muted">
+                                    {[
+                                      revisionIndex >= 0 ? `set ${revisionIndex + 1}` : "",
+                                      durations.length ? `${durations.length} seg · ${durations.reduce((a, b) => a + b, 0)} s` : "",
+                                      run.loras?.length ? `${run.loras.length} LoRA${run.loras.length > 1 ? "s" : ""}` : "",
+                                      `seed ${run.seed}`,
+                                      new Date(run.createdAt).toLocaleString(),
+                                    ]
+                                      .filter(Boolean)
+                                      .join(" · ")}
+                                  </p>
+                                ) : (
                                 <dl className="mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
                                   {details.map(([label, value]) => (
                                     <Fragment key={label}>
@@ -2574,6 +2596,7 @@ export function Workshop({
                                     </Fragment>
                                   ))}
                                 </dl>
+                                )}
                                 <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
                                   <span>Rating</span>
                                   {[1, 2, 3, 4, 5].map((stars) => (
@@ -2581,7 +2604,9 @@ export function Workshop({
                                       key={stars}
                                       type="button"
                                       aria-label={`${stars} star${stars > 1 ? "s" : ""}`}
-                                      onClick={() => rateVideo(run.id, { rating: run.rating === stars ? 0 : stars })}
+                                      onClick={() =>
+                                        rateVideo(run.id, { rating: run.rating === stars ? 0 : stars, collapsed: undefined })
+                                      }
                                       className={`text-base leading-none ${
                                         (run.rating || 0) >= stars ? "text-accent" : "text-muted/50 hover:text-muted"
                                       }`}
@@ -2598,8 +2623,8 @@ export function Workshop({
                                     className="min-w-40 flex-1 rounded-md border border-line bg-background px-2 py-1 text-foreground"
                                   />
                                 </div>
-                                {run.error && <p className="mt-2 text-xs text-red-200">{run.error}</p>}
-                                {run.video && (
+                                {!collapsed && run.error && <p className="mt-2 text-xs text-red-200">{run.error}</p>}
+                                {!collapsed && run.video && (
                                   <>
                                     <video
                                       src={imageSrc({ ...run.video, id: run.id } as ReferenceImage)}
