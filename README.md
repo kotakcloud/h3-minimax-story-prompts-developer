@@ -1,6 +1,18 @@
 # H3 Story Prompt Workshop
 
-Local workshop for turning a story gist into MiniMax H3 T2VA prompts.
+Local workshop for turning a story gist into MiniMax H3 prompts and rendering them as videos in ComfyUI.
+
+## What it looks like
+
+| | |
+|---|---|
+| ![Story list](docs/screenshots/stories.png) | ![Image tab with a storyboard grid](docs/screenshots/image-storyboard-grid.png) |
+| **Stories**: every story with its step, frames, prompts and dates; open, duplicate, archive or delete. | **Image**: generate a reference with Z-Image Turbo or upload one, here a 2x2 storyboard grid. |
+| ![Frames read from the grid](docs/screenshots/frames-from-grid.png) | ![Prompts](docs/screenshots/prompts.png) |
+| **Frames**: one frame per panel, with panel and cut/continue join; prompt style and H3 tips. | **Prompts**: paste-ready H3 prompts, prompt sets (1, 2, 3 = Gujarati), language versions and updates. |
+| ![Video tab](docs/screenshots/video.png) | ![Comparison](docs/screenshots/comparison.png) |
+| **Video**: workflow, DEV/FULL, LoRAs, test with the first N segments, and every generation with its details. | **Comparisons**: generations stitched side by side with their settings, here English vs Gujarati. |
+
 
 Stories are saved as JSON files under `data/stories/` on this machine. Each story has its own URL with an id and step:
 
