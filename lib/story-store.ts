@@ -31,6 +31,7 @@ function emptyStory(id: string, now: string): Story {
     // New stories start on the recommended model; older ones without the field keep the .env default.
     aiModel: RECOMMENDED_MODEL,
     archived: false,
+    imported: null,
     gridFeed: "whole",
     frames: [],
     segments: [],
@@ -91,6 +92,7 @@ function asStory(value: unknown, fallbackId: string): Story {
     h3Tips: raw.h3Tips !== false,
     aiModel: typeof raw.aiModel === "string" ? raw.aiModel : "",
     archived: raw.archived === true,
+    imported: raw.imported && typeof raw.imported === "object" ? (raw.imported as Story["imported"]) : null,
     gridFeed: raw.gridFeed === "panels" ? "panels" : "whole",
     frames: Array.isArray(raw.frames) ? (raw.frames as Story["frames"]) : [],
     segments: Array.isArray(raw.segments) ? (raw.segments as Story["segments"]) : [],
@@ -113,6 +115,7 @@ function toSummary(story: Story): StorySummary {
     frameCount: story.frames.length,
     segmentCount: story.segments.length,
     archived: story.archived,
+    imported: story.imported !== null,
   };
 }
 
@@ -151,6 +154,12 @@ export async function createStory(): Promise<Story> {
   return story;
 }
 
+// A story made from given fields (an imported video file).
+export async function addStory(id: string, fields: Partial<Story>): Promise<Story> {
+  await ensureDir();
+  return writeStory({ ...emptyStory(id, new Date().toISOString()), ...fields, id });
+}
+
 // A copy of a story under a new id: everything but its generated videos and comparisons (their files belong to
 // the original). Reference images are shared (same ComfyUI files), prompt sets and settings are copied.
 export async function duplicateStory(id: string): Promise<Story | null> {
@@ -170,15 +179,29 @@ export async function duplicateStory(id: string): Promise<Story | null> {
   return writeStory(copy);
 }
 
+// Windows refuses to replace a file while a reader has it open (a story list or load, for milliseconds).
+async function replaceFile(temp: string, file: string) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await rename(temp, file);
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (attempt >= 10 || (code !== "EPERM" && code !== "EBUSY" && code !== "EACCES")) throw error;
+      await new Promise((resolve) => setTimeout(resolve, attempt * 20));
+    }
+  }
+}
+
 export async function writeStory(story: Story, options: { touch?: boolean } = {}): Promise<Story> {
   await ensureDir();
   const next = options.touch === false ? story : { ...story, updatedAt: new Date().toISOString() };
   const file = storyFile(next.id);
-  // A unique temp name per write: two overlapping saves of one story must not share (and leave behind) a file.
+  // A unique temp name per write: overlapping saves of one story must not share a file.
   const temp = `${file}.${process.pid}.${randomUUID().slice(0, 8)}.tmp`;
   try {
     await writeFile(temp, JSON.stringify(next, null, 2), "utf8");
-    await rename(temp, file);
+    await replaceFile(temp, file);
   } catch (error) {
     await unlink(temp).catch(() => {});
     throw error;
