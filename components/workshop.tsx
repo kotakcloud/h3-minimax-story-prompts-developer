@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useLoggedFetch } from "@/components/debug-log";
 import { IconButton, Icons } from "@/components/icons";
+import { ImportVideoFile } from "@/components/import-video-file";
+import { ImportedDetails } from "@/components/imported-details";
 import { Lightbox, type Slide } from "@/components/lightbox";
 import { LoraDialog } from "@/components/lora-dialog";
 import { ModelPicker } from "@/components/model-picker";
@@ -41,7 +43,7 @@ import {
   storyRevisions,
 } from "@/lib/types";
 
-type Busy = "analyze" | "cast" | "imagePrompt" | "image" | "upload" | "translate" | "compare" | "breakdown" | "prompts" | "update" | "video" | null;
+type Busy = "analyze" | "cast" | "imagePrompt" | "image" | "upload" | "translate" | "compare" | "breakdown" | "prompts" | "update" | "export" | "video" | null;
 
 const VIDEO_POLL_MS = 5000;
 
@@ -143,6 +145,7 @@ const BUSY_LABELS: Record<NonNullable<Busy>, string> = {
   breakdown: "Frames",
   prompts: "H3 prompts",
   update: "Prompt update",
+  export: "Video file export",
   video: "Sending video",
 };
 
@@ -1256,6 +1259,25 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     return (story?.title || "story-prompts").toLowerCase().replace(/[^a-z0-9]+/g, "-") || "story-prompts";
   }
 
+  // The video file: saved story first, so the file has the latest edits.
+  async function exportVideoFile() {
+    const current = storyRef.current;
+    if (!current) return;
+    setBusy("export");
+    setError("");
+    try {
+      await persist(current);
+      const response = await request(`/api/stories/${current.id}/video-package`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not export the video file.");
+      downloadJson(`${exportSlug()}.video-package.json`, data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not export the video file.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   function exportJson() {
     if (!story) return;
     downloadJson(`${exportSlug()}.json`, buildExportPayload(story.title || "Untitled story", story.segments));
@@ -1359,7 +1381,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
           </header>
 
           <nav className="flex flex-wrap gap-2 pb-3">
-            {STORY_STEPS.map((item) => (
+            {(story.imported ? (["video"] as const) : STORY_STEPS).map((item) => (
               <button
                 key={item}
                 type="button"
@@ -2235,11 +2257,11 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                 )}
                 <button
                   type="button"
-                  onClick={() => goTo("video")}
+                  onClick={() => goTo("export")}
                   disabled={story.segments.length === 0}
                   className="rounded-full bg-foreground px-5 py-2 text-sm font-medium text-background"
                 >
-                  Progress: video
+                  Progress: export
                 </button>
               </div>
             </div>
@@ -2300,6 +2322,67 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
           </section>
         )}
 
+        {step === "export" && (
+          <section>
+            {(() => {
+              const image = story.referenceImages.find((item) => item.id === story.selectedImageId);
+              const settings = story.videoSettings;
+              const seconds = story.segments.reduce((sum, segment) => sum + segment.duration, 0);
+              const loras = settings.loras.filter((lora) => lora.enabled);
+              const setIndex = revisions.findIndex((item) => item.id === activeRevisionId);
+              const language = revisions[setIndex]?.language;
+              return (
+                <div className="space-y-4 rounded-2xl border border-line bg-card p-5">
+                  <div>
+                    <h2 className="text-sm font-medium uppercase tracking-wider text-muted">Export video file</h2>
+                    <p className="mt-1 text-xs text-muted">
+                      One file with everything a render needs, the reference image included. Import it to see the details and generate the
+                      video, here or on another machine.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={imageSrc(image)} alt="Reference image" className="h-20 w-auto rounded-lg border border-line" />
+                    ) : (
+                      <p className="text-sm text-red-200">No reference image selected. Pick one on the Image step.</p>
+                    )}
+                    <div className="text-xs leading-5 text-muted">
+                      <p>
+                        Prompt set {setIndex + 1}
+                        {language ? ` (${language})` : ""}: {story.segments.length} segments · {seconds}s
+                      </p>
+                      <p>
+                        {engineInfo(settings.engine).short} · {settings.devMode ? "DEV" : "FULL"} · seed {settings.seed}
+                      </p>
+                      <p>LoRAs: {loras.length ? loras.map((lora) => `${lora.name} @ ${lora.strength}`).join(", ") : "none"}</p>
+                      {image?.grid && <p>Storyboard grid with {image.grid.panels.length} panels, feed: {story.gridFeed}</p>}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={exportVideoFile}
+                      disabled={busy !== null || !image || story.segments.length === 0}
+                      className="rounded-full bg-accent px-6 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50"
+                    >
+                      {busy === "export" ? "Exporting…" : "Export video file"}
+                    </button>
+                    <ImportVideoFile onError={setError} />
+                    <button
+                      type="button"
+                      onClick={() => goTo("video")}
+                      className="rounded-full border border-line px-4 py-1.5 text-sm text-muted"
+                    >
+                      Open Video step
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+          </section>
+        )}
+
         {step === "video" && (
           <section>
             {(() => {
@@ -2352,7 +2435,10 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                         segments · {totalVideoSeconds}s) and the selected reference image.
                       </p>
                     </div>
+                    <ImportVideoFile onError={setError} />
                   </div>
+
+                  <ImportedDetails story={story} />
 
                   <div className="mb-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                     <div className="space-y-4 rounded-2xl border border-line bg-card p-4">

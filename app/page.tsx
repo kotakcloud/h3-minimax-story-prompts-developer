@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useLoggedFetch } from "@/components/debug-log";
 import { IconButton, IconLink, Icons } from "@/components/icons";
+import { ImportVideoFile } from "@/components/import-video-file";
 import type { StorySummary } from "@/lib/types";
 import { storyPath } from "@/lib/types";
 
@@ -13,6 +14,7 @@ function stepLabel(step: StorySummary["step"]) {
   if (step === "cast") return "Cast";
   if (step === "image") return "Image";
   if (step === "frames") return "Frames";
+  if (step === "export") return "Export";
   if (step === "video") return "Video";
   return "Prompts";
 }
@@ -108,14 +110,17 @@ export default function Home() {
             address from any device on the Wi-Fi to see the same list.
           </p>
         </div>
-        <IconButton
-          label={busy ? "Creating story" : "New story"}
-          onClick={createStory}
-          disabled={busy}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-accent text-accent-ink"
-        >
-          {Icons.plus}
-        </IconButton>
+        <div className="flex items-center gap-3">
+          <ImportVideoFile onError={setError} />
+          <IconButton
+            label={busy ? "Creating story" : "New story"}
+            onClick={createStory}
+            disabled={busy}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-accent text-accent-ink"
+          >
+            {Icons.plus}
+          </IconButton>
+        </div>
       </header>
 
       {error && (
@@ -156,7 +161,7 @@ export default function Home() {
                   {story.title}
                 </Link>
                 <p className="mt-1 font-mono text-xs text-muted">
-                  {story.id} · {stepLabel(story.step)} · {story.frameCount} frames · {story.segmentCount} prompts
+                  {story.id} · {story.imported ? "Imported" : stepLabel(story.step)} · {story.frameCount} frames · {story.segmentCount} prompts
                 </p>
                 <p className="mt-0.5 text-xs text-muted">
                   <span title={story.createdAt}>Created {formatDate(story.createdAt)}</span>

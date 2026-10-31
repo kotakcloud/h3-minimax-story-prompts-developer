@@ -15,5 +15,7 @@ export default async function StoryStepPage({
   }
   const story = await readStory(id);
   if (!story) notFound();
+  // Imported stories only have the Video step.
+  if (story.imported && step !== "video") redirect(storyPath(id, "video"));
   return <Workshop storyId={id} step={step} />;
 }

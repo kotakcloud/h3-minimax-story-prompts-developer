@@ -22,6 +22,8 @@ Stories are saved as JSON files under `data/stories/` on this machine. Each stor
 /stories/<id>/image
 /stories/<id>/frames
 /stories/<id>/prompts
+/stories/<id>/export
+/stories/<id>/video
 ```
 
 Open one story, or open several in new tabs. The home page lists all of them.
@@ -33,7 +35,8 @@ Open one story, or open several in new tabs. The home page lists all of them.
 5. **Progress: frames** breaks the story into editable clips (4–15s each), keeping the cast and location locked.
 6. **Progress: H3 prompts** writes one paste-ready prompt per frame.
 7. **Export** downloads `{ duration, prompt }` JSON for the other device.
-8. **Video** renders the prompt set with the selected reference image in ComfyUI. Pick a workflow:
+8. **Export** (step) writes the video file, see [Video files](#video-files-export-and-import).
+9. **Video** renders the prompt set with the selected reference image in ComfyUI. Pick a workflow:
    - **Veda Turbo** (default for new stories, `comfy/h3-story-veda-turbo.json`) and **Sage SLA** (`comfy/h3-story-sage-sla.json`): the fast "Story Speed Tests" workflows from ComfyUI (`user/default/workflows/MiniMax H3/Story Speed Tests`), converted to API format with ComfyUI's own frontend. Both use the ref2va w4a8 mixed model in a single pass, every segment a `ref` task (`ref_image_size: max`). Veda Turbo: Taomate 3-step LoRA, Veda sparse attention, 4 steps. **Singularity Veda** (`comfy/h3-story-singularity-veda.json`, same layout): the Singularity v2 ref2va w4a8 fine-tune with the Taomate 3-step LoRA and Veda sparse attention, 3 steps; project folders `h3s_<id>_sveda[_dev]`. Sage SLA: ref2v turbo 8-step LoRA, Sage + H3 SLA 0.85, 10 steps. DEV renders 544×960 (FULL 768×1344) for 9:16, 960×544 (1344×768) for 16:9, and a custom size with the same pixel count for other ratios. Project folders `h3s_<id>_veda[_dev]` / `h3s_<id>_sage[_dev]`. The time estimate comes from earlier finished runs of the same workflow in the story. If you change the ComfyUI files, re-export them to `comfy/` (same node ids).
    - **Long take** (`comfy/h3-long-take-ref.json`): fl2va model, single pass, RTX VSR. DEV = draft, off = final.
    - **Story V2** (`comfy/h3-story-v2-ref2va.json`, from the Themed Transformation Pipeline): ref2va model, every segment a `ref` task on the same image, dual pass with a x1.25 latent-upscale refine. DEV and FULL each have their own megapixels / steps (default 0.3 MP / 10 steps) and project folder (`h3s_<id>_v2_dev` / `h3s_<id>_v2`). Proven with segments of 8 s or less; the Workshop's timestamped prompts are not yet tested with it. Details: `docs/HANDOFF_h3_story_v2_for_workshop_app.md`.
@@ -41,6 +44,26 @@ Open one story, or open several in new tabs. The home page lists all of them.
 Image generation needs ComfyUI running with the Z-Image Turbo models from the template. Set `COMFYUI_URL` in `.env.local` if ComfyUI is not at `http://127.0.0.1:8188`.
 
 On the Image tab you can also **upload your own picture** (Upload image, or drop a file on the image area). The browser converts it to PNG (scaled down to at most 4 MP) and the app stores it in ComfyUI's output folder next to the generated ones (`h3-story/<story id>/upload_<time>.png`), so both video workflows use it the same way. Its aspect ratio is matched to the nearest supported one. The **Layout** box under the prompt (who stands where) feeds the H3 prompts: edit it to match an uploaded picture.
+
+### Video files (export and import)
+
+Rendering can be split in two: export what a video needs into one file, then import that file to see the details and
+generate.
+
+- **Export** step: *Export video file* downloads `<story>.video-package.json` with the current prompt set, the video
+  settings (workflow, DEV/FULL, seed, LoRAs, segment limit, grid feed), the gist, cast and location, and the reference
+  image embedded as a PNG (with its panels for a storyboard grid). A grid story makes a file of about 20 MB.
+- **Import video file** (story list, Export step or Video step): needs ComfyUI running, since the images are stored in its
+  output folder (`h3-story/<new id>/`). It creates a new story marked *Imported* and opens it. Nothing renders yet.
+- An imported story only has the **Video** step: the details from the file on top (segments open to show their prompts),
+  then the usual settings, *Generate video*, generations, rating and comparisons. Settings can be changed before
+  generating; the file stays as it was. LoRAs must exist in that ComfyUI, otherwise Generate names the missing one.
+- A normal story's Video step still generates directly, without a file.
+
+The format (`lib/video-package.ts`, `format: "h3-video-package"`, `version: 1`) is ready for merging files later: `sources`
+and `images` are lists, and every segment names its own `image` and `source`, so a merged file is the segments of several
+files in order, with all their images and sources. Importing a file whose segments use more than one image is refused for
+now, because a run takes a single reference image.
 
 ### Testing, LoRAs and rating (Video tab)
 

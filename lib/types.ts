@@ -1,3 +1,5 @@
+import type { ImportedFrom } from "./video-package";
+
 export type Character = {
   id: string;
   name: string;
@@ -214,7 +216,7 @@ export type PromptRevision = {
   language?: string;
 };
 
-export const STORY_STEPS = ["gist", "cast", "image", "frames", "prompts", "video"] as const;
+export const STORY_STEPS = ["gist", "cast", "image", "frames", "prompts", "export", "video"] as const;
 export type StoryStep = (typeof STORY_STEPS)[number];
 
 export function stepLabel(step: StoryStep): string {
@@ -223,6 +225,7 @@ export function stepLabel(step: StoryStep): string {
   if (step === "image") return "Image";
   if (step === "frames") return "Frames";
   if (step === "prompts") return "Prompts";
+  if (step === "export") return "Export";
   return "Video";
 }
 
@@ -282,6 +285,8 @@ export type Story = {
   gridFeed: "whole" | "panels";
   // Archived stories are hidden from the story lists until unarchived.
   archived: boolean;
+  // Set when the story came from a video file: it then only has the Video step.
+  imported: ImportedFrom | null;
   frames: Frame[];
   segments: PromptSegment[];
   promptRevisions: PromptRevision[];
@@ -311,6 +316,7 @@ export type StorySummary = {
   frameCount: number;
   segmentCount: number;
   archived: boolean;
+  imported: boolean;
 };
 
 export function isStoryStep(value: string): value is StoryStep {
