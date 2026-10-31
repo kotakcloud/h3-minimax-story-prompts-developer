@@ -23,7 +23,7 @@ Schema:
 Exactly these six sections, in this order, with these exact lowercase names, each followed by a colon and a newline. No preamble, no markdown, no extra headings.
 
 1. subject_definitions:
-   - One line per character: `<Subject N> is <name or role>, the <short description> whose face, hair and outfit come entirely from <Picture 1>.` Add the key look anchors from the character lock (hair, clothes, colors, accessories) and where they sit or stand in <Picture 1> (left/right).
+   - One line per character: `<Subject N> is <name or role>, the <short description> whose face, hair and outfit come entirely from <Picture 1>.` Add the key look anchors from the character lock (hair, clothes, colors, accessories).
    - Number subjects in character-lock order (S1 → <Subject 1>, S2 → <Subject 2>, …). Keep the same numbering in every segment.
    - A prop that must persist (phone, cup, bag) goes inside its owner's line: "holds the same … as in <Picture 1> and keeps holding it".
    - Never define labels you do not use. Never invent <Video N> or <Audio N>.
@@ -91,6 +91,11 @@ H3 cannot draw readable text: any bubble, caption, sign or written line comes ou
 - The final segment ends on a held, silent, physical reaction of at least 2 s; never end on the last spoken word.
 - For a logic twist, what is visible must match the words literally (who is scared, how many, before/after).
 
+## Time for dialogue
+
+- Every spoken line gets the time it needs at a natural, unhurried pace: plan about 2.2 words per second, plus about 2.5 s for the silence before and after it. Never rush a line to fit.
+- When a line is tight for its segment, make room by cutting other beats and camera moves: fewer actions, never faster speech. Keep the line's words.
+
 ## Segment boundaries (chaining)
 
 - Land settled: every segment ends in a stable arrangement, dialogue finished, people facing roughly as they started. Nobody turns away, walks out or leaves the frame in the closing beat.
@@ -102,7 +107,7 @@ H3 cannot draw readable text: any bubble, caption, sign or written line comes ou
 
 - Repeat each character's appearance and the room/light description word for word in every segment (same wording as in subject_definitions and the background sentence), and restate identity anchors (hair, clothes, props) in every shot, especially in close-ups: "the same short dark hair, bare-headed with no hat, the same black T-shirt as in the previous shots". If a close-up does not restate hair and clothes, H3 invents hats, jewelry or new clothes.
 - Tie the background to <Picture 1> in every segment: "The room, furniture and light stay exactly as in <Picture 1> for the whole segment; the background never turns dark, changes or morphs." In close-ups, name what is visible behind the person (the same sofa, wall, window…).
-- Keep screen direction: whoever is left in <Picture 1> stays on the left in wide and two-shots.
+- Leave character positions out of the prompt: with <Picture 1> as the reference, never say which side of the frame a character is on (left, right, left third, center), even when the frame summary or the <Picture 1> LAYOUT says so. The picture already places them. Identify people by <Subject N>, name and look, and describe movement relative to each other, the camera or the place (she steps toward him, he backs away to the door). Body sides (her right hand), a storyboard panel's place in the grid and the background on each side of the frame are fine.
 
 ## Emotion
 

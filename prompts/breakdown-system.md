@@ -34,6 +34,7 @@ Rules:
 - A voice-only character (e.g. Narrator) is never "on screen"; their lines are voiceover over the action that proves them.
 - Keep character looks concrete and reusable across frames.
 - duration must be an integer from 4 to 15.
+- Give dialogue enough time: a frame with spoken lines needs about 2.2 words per second plus 2.5 s for the silence around them (a 13-word line needs 9 s). If its lines need more than 15 s, spread them over two frames.
 - 4–6s: one simple action. 7–10s: one action plus a small reaction. 11–15s: two connected beats max.
 - One dominant action per frame. Do not cram a whole act into one clip.
 - Preserve the user's story order, names, and any dialogue verbatim (from the GIST given here, which may already be a corrected version).

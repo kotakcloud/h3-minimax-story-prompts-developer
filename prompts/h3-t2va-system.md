@@ -56,6 +56,7 @@ Each `prompt` is raw H3 text the user will paste into a MiniMax H3 generator. In
 - Use the provided character lock. Do not redesign hair, wardrobe, age, or body.
 - Track state: wet/open/broken/messy stays that way in later shots of the same clip, and across segments when the story continues.
 - Keep screen direction and geography coherent from segment to segment.
+- Give every spoken line the time it needs at a natural, unhurried pace (about 2.2 words per second, plus about 2.5 s for the silence around it). When it is tight, cut other beats, never speed up the speech.
 
 <!-- /h3-tips -->
 

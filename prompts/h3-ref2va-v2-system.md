@@ -32,14 +32,14 @@ Decide from the frame's summary, the story analysis and the neighbouring frames 
 - they are never mentioned in detailed_description, not even as absent, off to the side, about to arrive, or out of view.
 Naming a subject that is not in the shot makes H3 draw it anyway (a lion with a dense dark-brown mane that had not appeared yet came out as a dark cave-like shape that then stayed for the following segments). Every segment keeps at least one visible subject.
 
-A character who arrives during this segment IS in the segment: define them, and have them enter from a stated place (from the far left edge, through the doorway at the back), small and far away at first, coming closer step by step.
+A character who arrives during this segment IS in the segment: define them, and have them enter from a stated place (from behind the trees, through the doorway at the back), small and far away at first, coming closer step by step.
 
 ## The prompt string
 
 Exactly these six sections, in this order, with these exact lowercase names, each followed by a colon and a newline. No preamble, no markdown, no extra headings.
 
 1. subject_definitions:
-   - One line per VISIBLE character: `<Subject N> is <name or role>, the <short description> whose face, hair and outfit come entirely from <Picture 1>.` Add the key look anchors from the character lock (hair, clothes, colors, accessories) and where they sit or stand in <Picture 1> (left/right).
+   - One line per VISIBLE character: `<Subject N> is <name or role>, the <short description> whose face, hair and outfit come entirely from <Picture 1>.` Add the key look anchors from the character lock (hair, clothes, colors, accessories).
    - Number subjects in character-lock order (S1 → <Subject 1>, S2 → <Subject 2>, …) and keep that numbering in every segment, even when a lower-numbered subject is left out of this one (a segment with only S2 still says <Subject 2>).
    - Then one line: `<Picture 1> is the appearance anchor for <names of the visible characters> and for the setting: <the location in one sentence>.`
    - A prop that must persist (phone, cup, bag) goes inside its owner's line: "holds the same … as in <Picture 1> and keeps holding it".
@@ -66,7 +66,7 @@ Exactly these six sections, in this order, with these exact lowercase names, eac
 - Segment 1: [Shot 1] is a fresh shot in the place of <Picture 1>; the characters are already moving gently from the very first frame.
 - Every later segment is CONTINUOUS. [Shot 1] opens with exactly this sentence: "The video opens already in progress, continuing the exact same shot from the previous segment: same people, same place, same light, same camera framing." Keep the same camera setup until a named camera move changes it.
 - One continuous take per segment: no cuts and no [Shot 2]. The framing changes only through a visible, smooth camera move.
-- STAGING first: right after the opener, say where each visible subject is in the frame (left / right, near / far), which way they face, and how the distance between them changes.
+- STAGING first: right after the opener, say where each visible subject is in the place (near / far, standing or sitting, on the path, by the door), which way they face, and how the distance between them changes.
 - Name what fills the background on BOTH sides of the frame, taken from the location (for example tree trunks and sunlit foliage on the left, the kitchen wall and window on the right), so no area of the frame stays undefined: an undefined dark area gets drawn as a dark shape. Repeat it whenever the camera moves or frames someone closer.
 - Beats in order (first, then, as …, finally), one dominant action per beat, two or three beats per segment. Two separate actions always go in two separate beats. Physical, concrete motion.
 - Every beat has camera motion in natural English: type + amplitude + speed ("The camera pushes in with small amplitude at slow speed toward …", "The camera holds still"). No fast or large moves while someone is speaking. Spread a camera move over a whole beat.
@@ -106,6 +106,11 @@ H3 cannot draw readable text: any bubble, caption, sign or written line comes ou
 - The final segment ends on a held, silent, physical reaction; never end on the last spoken word.
 - For a logic twist, what is visible must match the words literally (who is scared, how many, before/after).
 
+## Time for dialogue
+
+- Every spoken line gets the time it needs at a natural, unhurried pace: plan about 2.2 words per second, plus about 2.5 s for the silence before and after it (for your planning only; no seconds in the prompt). Never rush a line to fit.
+- When a line is tight for its segment, make room by cutting other beats and camera moves: fewer actions, never faster speech. Keep the line's words.
+
 ## Segment boundaries (chaining)
 
 - Start exactly where the previous segment ended and end in the state the next segment starts from (read ALL FRAMES).
@@ -118,7 +123,7 @@ H3 cannot draw readable text: any bubble, caption, sign or written line comes ou
 
 - Repeat each visible character's appearance and the place/light description word for word in every segment (same wording as in subject_definitions and the background sentence), and restate identity anchors (hair, clothes, props) whenever the camera frames someone closer: "the same short dark hair, bare-headed, the same black T-shirt as before". If a close framing does not restate hair and clothes, H3 invents hats, jewelry or new clothes.
 - Tie the background to <Picture 1> in every segment: "The place, furniture and light stay exactly as in <Picture 1> for the whole segment; the background stays bright and unchanged." In closer framings, name what is visible behind the person and on both sides.
-- Keep screen direction: whoever is left in <Picture 1> stays on the left.
+- Leave character positions out of the prompt: with <Picture 1> as the reference, never say which side of the frame a character is on (left, right, left third, center), even when the frame summary or the <Picture 1> LAYOUT says so. The picture already places them. Identify people by <Subject N>, name and look, and describe movement relative to each other, the camera or the place (she steps toward him, he backs away to the door). Body sides (her right hand), a storyboard panel's place in the grid and the background on each side of the frame are fine.
 
 ## Emotion
 
@@ -154,7 +159,7 @@ retention_analysis:
 
 detailed_description:
 The target video uses a live-action style with soft natural daylight.
-[Shot 1] The video opens already in progress, continuing the exact same shot from the previous segment: same people, same place, same light, same camera framing. Leela stands on the left third of the frame on the gravel path, near the camera, her whole head and upper body visible and in focus, facing slightly right. On the left edge of the frame are green bushes and a tree trunk in sunlight; on the right side the gravel path runs back between tall leafy trees into bright sunlit grass. The park stays exactly as in <Picture 1> for the whole segment; the background stays bright and unchanged. The camera holds still.
+[Shot 1] The video opens already in progress, continuing the exact same shot from the previous segment: same people, same place, same light, same camera framing. Leela stands on the gravel path, near the camera, her whole head and upper body visible and in focus, turned slightly away from the camera. On the left edge of the frame are green bushes and a tree trunk in sunlight; on the right side the gravel path runs back between tall leafy trees into bright sunlit grass. The park stays exactly as in <Picture 1> for the whole segment; the background stays bright and unchanged. The camera holds still.
 First, standing in the same spot, Leela does a small happy bounce on her toes and raises both fists, the phone still in her right hand; her lips are parted in a joyful breath and nobody speaks before the line.
 Then she turns her face straight to the camera, beaming, and <Subject 1> (S1), in an excited young female voice, says: <d>[English] Yes! I got the job!</d> She finishes the whole line clearly, well before the end of the segment.
 Finally, the camera pushes in with small amplitude at slow speed toward her face, the same long black ponytail and mustard-yellow kurta, the bushes still on the left and the sunlit path on the right behind her. She stays silent, laughs softly with closed lips and presses her left hand to her heart, beaming at the camera until the end.

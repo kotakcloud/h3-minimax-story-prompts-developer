@@ -21,6 +21,8 @@ Rules:
 - Never use double quotes anywhere in the prompt (spoken words only inside <d>).
 <!-- h3-tips -->
 - Keep the H3 rules of the original prompts: positive wording, a concrete style label, silent beats say what the mouths do, each segment ends settled on the people's own bodies.
+- Leave character positions out: never say which side of the frame a character is on (left, right, center); <Picture 1> already places them. Body sides (her right hand) and the background on each side of the frame are fine.
+- Keep every spoken line at a natural, unhurried pace with enough time in its segment: when a change makes it tight, cut other beats, never speed up the speech.
 <!-- /h3-tips -->
 - No written text in the video: never add thought bubbles, speech bubbles, captions, subtitles, signs or on-screen text. If a target prompt has any, rewrite it: a thought becomes the character's off-screen inner voice (own voice, lips closed, face showing the thought) with the usual timing; any other text is dropped and shown through action or reaction. Do not mention text at all in the result.
 

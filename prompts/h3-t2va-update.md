@@ -13,6 +13,7 @@ Rules:
 - Follow the comment precisely. If it says change X to Y, make that change visible in the prompt.
 - Preserve character identity, wardrobe, speaker IDs, and anything the comment does not mention.
 - Keep shot timing inside the given duration.
+- Keep every spoken line at a natural, unhurried pace with enough time in its segment: when a change makes it tight, cut other beats, never speed up the speech.
 - Write rewrite sections in English. Keep dialogue verbatim unless the comment changes it. Never use double quotes in the prompt (H3 shows quoted words as on-screen text); spoken words go only inside <d>. Remove any on-screen text, thought bubbles or captions; a thought becomes the character's inner voice.
 
 Schema:
