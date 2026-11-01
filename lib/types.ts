@@ -126,7 +126,7 @@ export type VideoSettings = {
   loras: { name: string; strength: number; enabled: boolean }[];
   // Test mode: render only the first N segments (0 = all).
   onlyFirst: number;
-  // Play a chime when the videos in progress are done.
+  // New videos play a sound when they are done (each run keeps this as it was when queued).
   notifySound: boolean;
 };
 
@@ -138,6 +138,8 @@ export type VideoRun = {
   project: string;
   devMode: boolean;
   ultraFast?: boolean;
+  // Queued with "Play a sound when done".
+  notifySound?: boolean;
   seed: number;
   engine?: VideoEngine;
   megapixels?: number;

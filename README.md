@@ -75,8 +75,8 @@ now, because a run takes a single reference image.
   videos and comparisons: gist, analysis, cast, reference images, frames, all prompt sets and the video settings.
 - **Queue several videos**: *Generate video* stays available while others render (*Queue another video*); ComfyUI
   runs them one after another and each card shows its own place in the queue and progress.
-- **When done**: *Play a sound when done* plays `public/notify-2.mp3` when every video in progress in the story has ended (not when you
-  cancelled them all; the tick plays a sample and stays on for the story). *Hibernate this machine when done* then starts a
+- **When done**: *Play a sound when done* is a setting saved with the story: every video queued while it is ticked plays
+  `public/notify-2.mp3` when it ends, unless you cancelled it. Changing the tick does not affect videos already queued. *Hibernate this machine when done* then starts a
   60 s countdown with a Cancel button at the top of the page, and hibernates the computer running the app once ComfyUI has
   no jobs left, including jobs from other stories. It is used once and never saved, so tick it for each render. Keep the
   page open: the browser tab runs both, and a background tab can add up to a minute.

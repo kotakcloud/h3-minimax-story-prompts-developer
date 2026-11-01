@@ -814,6 +814,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
         project: data.project,
         devMode: settings.devMode,
         ...(ultra ? { ultraFast: true } : {}),
+        ...(settings.notifySound ? { notifySound: true } : {}),
         seed: settings.seed,
         engine: settings.engine,
         ...(v2
@@ -930,16 +931,20 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     writeHibernateTick(storyId, on);
   }
 
-  // Everything in progress has ended: the chosen actions run, unless every run was cancelled by hand.
+  // Runs that just ended: a sound if one was queued with it; when nothing is left in progress, hibernate if ticked.
+  // A run cancelled by hand does neither.
   useEffect(() => {
     const previous = lastActiveRuns.current;
     lastActiveRuns.current = activeRunKey;
-    if (!previous || activeRunKey) return;
-    const current = storyRef.current;
-    const ended = previous.split(",").map((id) => current?.videos.find((run) => run.id === id));
-    if (!ended.some((run) => run && run.status !== "cancelled")) return;
-    if (current?.videoSettings.notifySound) playDoneSound();
-    if (readHibernateTick(storyId)) {
+    if (!previous) return;
+    const active = activeRunKey.split(",");
+    const ended = previous
+      .split(",")
+      .filter((id) => !active.includes(id))
+      .map((id) => storyRef.current?.videos.find((run) => run.id === id))
+      .filter((run) => run && run.status !== "cancelled");
+    if (ended.some((run) => run?.notifySound)) playDoneSound();
+    if (!activeRunKey && ended.length > 0 && readHibernateTick(storyId)) {
       window.setTimeout(() => setHibernateAt(Date.now() + HIBERNATE_COUNTDOWN_MS), 0);
     }
   }, [activeRunKey, storyId]);
@@ -2813,10 +2818,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                           <input
                             type="checkbox"
                             checked={settings.notifySound}
-                            onChange={(event) => {
-                              updateVideoSettings({ notifySound: event.target.checked });
-                              if (event.target.checked) playDoneSound();
-                            }}
+                            onChange={(event) => updateVideoSettings({ notifySound: event.target.checked })}
                           />
                           Play a sound when done
                         </label>
