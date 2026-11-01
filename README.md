@@ -99,8 +99,8 @@ On the Prompts tab, tick **Dialogue view** to see only the spoken lines of the c
 who says what, or *No dialogue*. Nothing is sent to the AI: the lines are read from the `<d>` tags in the prompts
 (`lib/dialogue.ts`). Times are estimates at 2.2 words per second. A segment turns amber when its words need longer than
 the segment (speech plus about 2.5 s of silence). Long-take prompts also show the start and end times they give the line,
-amber when that slot is shorter than the estimate. Each line has a checkbox for internal debugging; ticks are not saved
-and clear on reload.
+amber when that slot is shorter than the estimate. Each line has a checkbox for internal debugging, and **Hide unselected** narrows the view to
+the ticked lines; ticks are not saved and clear on reload.
 
 ### Dialogue in another language
 
