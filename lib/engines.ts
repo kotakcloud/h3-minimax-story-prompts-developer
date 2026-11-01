@@ -57,10 +57,10 @@ export const FAST_ENGINE_STEPS: Record<FastStoryEngine, number> = {
   "sage-sla": 10,
 };
 
-// Ultra fast, for trying out a story: much smaller canvas and fewer steps. Rough look and lip-sync; DEV and FULL stay as
-// they are. Singularity Veda already runs at the 3 steps its LoRA is made for.
+// Ultra fast, for trying out a story: a much smaller canvas, and fewer steps on Sage SLA. Rough look and lip-sync; DEV and FULL stay as
+// they are. Veda Turbo and Singularity Veda keep their usual steps.
 export const ULTRA_STEPS: Record<FastStoryEngine, number> = {
-  "veda-turbo": 3,
+  "veda-turbo": 4,
   "singularity-veda": 3,
   "sage-sla": 6,
 };
