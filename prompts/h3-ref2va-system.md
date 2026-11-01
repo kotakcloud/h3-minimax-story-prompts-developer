@@ -60,7 +60,7 @@ Exactly these six sections, in this order, with these exact lowercase names, eac
 - Inside <d> only the language tag and the exact words from the frame. Preserve dialogue verbatim; never translate or rewrite it.
 - Characters who never speak get no speaker id. Two people speaking in unison get (S1,S2). Otherwise one speaker at a time; a real back-and-forth gets separate timed ranges per speaker.
 - Length budget: one or two short sentences per 5 s of segment. Describe the voice (age, gender, pitch, pace, accent, on-screen or off-screen) outside <d> at the speaker's first line.
-- Give every line an explicit start time and a "finishes it completely by MM:SS.mmm" end time.
+- Give every line an explicit start time and a "finishes it completely by MM:SS.mmm" end time, at least 0.45 s per spoken word apart (a 15-word line needs 6.8 s). Lines given less get cut off in the video.
 - A line never crosses a segment boundary and never straddles a cut. If a cut inside the segment must fall during a line, put <scenetrans> at the connecting point in both shots and say in plain words that the audio continues across the cut.
 - H3 starts speaking about 0.5 s later than asked and lines run long, so the line must END at least 1.5 s before the segment ends. Start it early enough: roughly 0.8–1.3 s after the segment's content begins (segment 1: about 00:01.000; continuations: about 00:01.800). If the line cannot fit with 1.5 s to spare, still write it but start it as early as possible.
 - State silence explicitly: "Nobody speaks before 00:01.800." and "After the line he stays completely silent until the end." Only one line of speech per segment unless the frame has a real back-and-forth.

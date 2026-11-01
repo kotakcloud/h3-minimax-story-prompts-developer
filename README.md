@@ -97,10 +97,18 @@ now, because a run takes a single reference image.
 
 On the Prompts tab, tick **Dialogue view** to see only the spoken lines of the current prompt set, segment by segment:
 who says what, or *No dialogue*. Nothing is sent to the AI: the lines are read from the `<d>` tags in the prompts
-(`lib/dialogue.ts`). Times are estimates at 2.2 words per second. A segment turns amber when its words need longer than
-the segment (speech plus about 2.5 s of silence). Long-take prompts also show the start and end times they give the line,
-amber when that slot is shorter than the estimate. Each line has a checkbox for internal debugging, and **Hide unselected** narrows the view to
+(`lib/dialogue.ts`). Times are estimates at 2.2 words per second. Long-take prompts also show the start and end times they
+give the line; a line and its segment turn amber when the line, spoken from its start, runs past the end of the clip, which
+is what gets cut off in the video. Prompts without times (Story V2) turn amber when the words need longer than the segment
+(speech plus about 2.5 s of silence). Each line has a checkbox for internal debugging, and **Hide unselected** narrows the view to
 the ticked lines; ticks are not saved and clear on reload.
+
+Long lines get the time they need, at three points. Frames are lengthened to fit the quoted lines in their summary (up to
+15 s) when they are created and again when prompts are written, so an edited frame counts too. After writing, a long-take
+prompt with a line that would run past the end of the clip is sent back to the AI once to re-time it. For prompts already
+written, **Fix timing** in Dialogue view makes a new prompt set: tight segments get longer and their lines are re-timed by
+the AI (Story V2 prompts have no times, so only the length changes). If a segment's words need more than 15 s it stays
+amber: split that frame on the Frames step.
 
 ### Dialogue in another language
 

@@ -16,7 +16,7 @@ Rules:
 - Follow the comment precisely. If it says change X to Y, make that change visible in the prompt.
 - Preserve <Subject N> numbering, <Picture 1> references, speaker ids, character looks, and anything the comment does not mention.
 - Keep the continuation rules: segments after the first open with "The video opens on the final moment of the previous shot…" and use timestamps shifted by +0.920 s (content runs 00:00.920 to duration + 0.920).
-- Keep every spoken line timed with an explicit start and "finishes it completely by …", ending at least 1.5 s before the segment ends, with silence stated before and after.
+- Keep every spoken line timed with an explicit start and "finishes it completely by …", at least 0.45 s per spoken word apart, ending at least 1.5 s before the segment ends, with silence stated before and after.
 - Write in English. Keep dialogue verbatim unless the comment changes it.
 - Never use double quotes anywhere in the prompt (spoken words only inside <d>).
 <!-- h3-tips -->

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { chatJson } from "@/lib/openrouter";
 import { parseModelChain } from "@/lib/models";
 import { clampDuration } from "@/lib/parse";
+import { fitDuration } from "@/lib/dialogue";
 import { analysisBlock, readPromptWithFormats } from "@/lib/prompts";
 import type { BreakdownResult, Character, Frame, StoryLocation } from "@/lib/types";
 
@@ -35,7 +36,7 @@ function normalize(data: unknown, lockedCharacters: Character[]): BreakdownResul
       id: asString(row.id, `f${index + 1}`),
       title: asString(row.title, `Frame ${index + 1}`),
       summary: asString(row.summary),
-      duration: clampDuration(row.duration),
+      duration: fitDuration(clampDuration(row.duration), asString(row.summary)),
     };
   });
 

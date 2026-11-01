@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { comfyViewUrl } from "@/lib/comfyui";
 import { parseModelChain } from "@/lib/models";
 import { chatJson } from "@/lib/openrouter";
+import { fitDuration } from "@/lib/dialogue";
 import { analysisBlock, readPrompt } from "@/lib/prompts";
 import type { Character, Frame, StoryLocation } from "@/lib/types";
 
@@ -78,7 +79,7 @@ export async function POST(request: Request) {
       const row = (rowsIn.find((item) => Number((item as { panel?: unknown })?.panel) === panel) ??
         rowsIn[index] ??
         {}) as Record<string, unknown>;
-      const duration = Math.min(15, Math.max(4, Math.round(Number(row.duration) || 5)));
+      const duration = fitDuration(Math.min(15, Math.max(4, Math.round(Number(row.duration) || 5))), asString(row.summary));
       return {
         id: `f${panel}`,
         title: asString(row.title) || `Panel ${panel}`,

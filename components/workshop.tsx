@@ -12,6 +12,7 @@ import { Lightbox, type Slide } from "@/components/lightbox";
 import { LoraDialog } from "@/components/lora-dialog";
 import { ModelPicker } from "@/components/model-picker";
 import { framesFromAnalysis } from "@/lib/beats";
+import { timingComment, timingFixes } from "@/lib/dialogue";
 import { panelPosition, selectedGrid } from "@/lib/grid";
 import { FAST_ENGINE_STEPS, VIDEO_ENGINES, engineInfo, fastStorySize, isFastEngine } from "@/lib/engines";
 import { UpdateCommentDialog } from "@/components/update-comment-dialog";
@@ -1123,6 +1124,13 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     const next: Story = {
       ...current,
       segments: activate ? segments : current.segments,
+      // Written prompts can be longer than their frames (long dialogue).
+      frames: activate
+        ? current.frames.map((frame) => ({
+            ...frame,
+            duration: segments.find((segment) => segment.id === frame.id)?.duration ?? frame.duration,
+          }))
+        : current.frames,
       promptRevisions: [...prior, revision],
       activeRevisionId: activate ? revision.id : current.activeRevisionId || prior[0]?.id || revision.id,
       step: "prompts",
@@ -1135,12 +1143,12 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     setStory(saved);
   }
 
-  async function previewUpdate(comment: string, ids: string[]) {
-    if (!story) throw new Error("Story is not loaded.");
+  async function previewUpdate(comment: string, ids: string[], source = story?.segments) {
+    if (!story || !source) throw new Error("Story is not loaded.");
     setBusy("update");
     setError("");
     try {
-      const targets = story.segments
+      const targets = source
         .map((segment, index) => {
           const frame = story.frames.find((item) => item.id === segment.id);
           return {
@@ -1164,7 +1172,10 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
           title: story.title,
           comment,
           characters: story.characters,
-          frames: story.frames,
+          frames: story.frames.map((frame) => ({
+            ...frame,
+            duration: source.find((segment) => segment.id === frame.id)?.duration ?? frame.duration,
+          })),
           targets,
           reference: Boolean(story.selectedImageId),
           analysis: story.analysis,
@@ -1181,6 +1192,28 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
       throw err;
     } finally {
       setBusy(null);
+    }
+  }
+
+  // New prompt set: segments whose dialogue does not fit get longer and their lines enough time. Story V2 prompts
+  // have no times to rewrite, so only the length changes there.
+  async function fixDialogueTiming() {
+    const current = storyRef.current;
+    if (!current) return;
+    const fixes = timingFixes(current.segments);
+    const resized = current.segments.map((segment) => ({
+      ...segment,
+      duration: fixes.find((fix) => fix.id === segment.id)?.duration ?? segment.duration,
+    }));
+    try {
+      if (current.selectedImageId && activePromptStyle(current) === "story-v2") {
+        await applyUpdate(resized);
+        return;
+      }
+      const ids = fixes.map((fix) => fix.id);
+      await applyUpdate(await previewUpdate(timingComment(resized.filter((segment) => ids.includes(segment.id))), ids, resized));
+    } catch {
+      // previewUpdate shows the error.
     }
   }
 
@@ -2307,6 +2340,8 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                   frames={story.frames}
                   characters={story.characters}
                   selected={selectedDialogue}
+                  onFixTiming={() => void fixDialogueTiming()}
+                  fixing={busy === "update"}
                   onToggle={(key) =>
                     setSelectedDialogue((keys) => (keys.includes(key) ? keys.filter((item) => item !== key) : [...keys, key]))
                   }

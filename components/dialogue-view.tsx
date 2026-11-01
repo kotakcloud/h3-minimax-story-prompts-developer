@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { clipSecondsNeeded, parseDialogue } from "@/lib/dialogue";
+import { MAX_CLIP_SECONDS, clipSecondsNeeded, cutOffLines, isTight, parseDialogue, timingFixes } from "@/lib/dialogue";
 import type { Character, Frame, PromptSegment } from "@/lib/types";
 
 function clock(value: number) {
@@ -14,15 +14,20 @@ export function DialogueView({
   characters,
   selected,
   onToggle,
+  onFixTiming,
+  fixing,
 }: {
   segments: PromptSegment[];
   frames: Frame[];
   characters: Character[];
   selected: string[];
   onToggle: (key: string) => void;
+  onFixTiming: () => void;
+  fixing: boolean;
 }) {
   const [hideUnselected, setHideUnselected] = useState(false);
   const rows = segments.map((segment) => ({ segment, lines: parseDialogue(segment.prompt) }));
+  const fixes = timingFixes(segments).length;
   const lineCount = rows.reduce((sum, row) => sum + row.lines.length, 0);
   const spoken = rows.reduce((sum, row) => sum + row.lines.reduce((total, line) => total + line.estimate, 0), 0);
   const keys = rows.flatMap(({ segment, lines }) => lines.map((line, index) => `${segment.id}:${index}:${line.text}`));
@@ -39,6 +44,18 @@ export function DialogueView({
         (estimated at a natural pace of 2.2 words per second)
         {selectedCount > 0 && ` · ${selectedCount} selected`}.
       </p>
+      <div className="flex flex-wrap gap-2">
+      {fixes > 0 && (
+        <button
+          type="button"
+          onClick={onFixTiming}
+          disabled={fixing}
+          title="New prompt set: tight segments get longer (up to 15 s) and their lines get enough time. The rest stays the same."
+          className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-ink disabled:opacity-50"
+        >
+          {fixing ? "Fixing timing…" : `Fix timing (${fixes} ${fixes === 1 ? "segment" : "segments"})`}
+        </button>
+      )}
       <button
         type="button"
         onClick={() => setHideUnselected(!onlySelected)}
@@ -48,9 +65,12 @@ export function DialogueView({
         {onlySelected ? "Show unselected" : "Hide unselected"}
       </button>
       </div>
+      </div>
       <ol className="space-y-3">
         {rows.map(({ segment, lines }, index) => {
           const needed = clipSecondsNeeded(lines);
+          const tight = isTight(segment);
+          const cutOff = cutOffLines(segment.prompt).map((line) => line.text);
           const visible = lines
             .map((line, lineIndex) => ({ line, lineIndex }))
             .filter(({ line, lineIndex }) => !onlySelected || selected.includes(`${segment.id}:${lineIndex}:${line.text}`));
@@ -61,9 +81,10 @@ export function DialogueView({
                 <p className="text-sm font-medium">
                   {index + 1}. {frames.find((item) => item.id === segment.id)?.title || segment.id}
                 </p>
-                <p className={`text-xs ${needed > segment.duration ? "text-amber-300" : "text-muted"}`}>
+                <p className={`text-xs ${tight ? "text-amber-300" : "text-muted"}`}>
                   {segment.duration}s
-                  {needed > segment.duration && ` · tight: these words need about ${needed}s`}
+                  {tight && ` · tight: these words need about ${needed}s`}
+                  {tight && needed > MAX_CLIP_SECONDS && `, more than one segment can hold: split this frame on the Frames step`}
                 </p>
               </div>
               {lines.length === 0 ? (
@@ -89,8 +110,9 @@ export function DialogueView({
                           about {line.estimate}s
                           {line.language && ` · ${line.language}`}
                           {written !== null && (
-                            <span className={written < line.estimate ? "text-amber-300" : ""}>
+                            <span className={cutOff.includes(line.text) ? "text-amber-300" : ""}>
                               {` · prompt gives ${clock(line.start!)}–${clock(line.end!)} (${written.toFixed(1)}s)`}
+                              {cutOff.includes(line.text) && " · runs past the end of the clip"}
                             </span>
                           )}
                         </p>

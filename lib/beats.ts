@@ -1,21 +1,13 @@
-import { clipSecondsForWords } from "./dialogue";
+import { clipSecondsForWords, quotedWords } from "./dialogue";
 import type { Frame, StoryAnalysis } from "./types";
 
 // H3 clips are 4–15 s.
 const MIN_SECONDS = 4;
 const MAX_SECONDS = 15;
 
-// Quoted lines in a beat ('…', "…", ‘…’, “…”), the outer quote only.
-const QUOTED = /(?:^|[\s:(])(['"‘“])(.+?)(?:\1|[’”])(?=[\s.,!?;)]|$)/g;
-
 // Seconds a beat's spoken words need.
 function speechSeconds(content: string): number {
-  const words = [...content.matchAll(QUOTED)]
-    .map((match) => match[2])
-    .join(" ")
-    .split(/\s+/)
-    .filter(Boolean).length;
-  return clipSecondsForWords(words);
+  return clipSecondsForWords(quotedWords(content));
 }
 
 type Group = { beats: StoryAnalysis["beats"]; seconds: number };

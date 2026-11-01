@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import type { DialogueLine } from "./dialogue";
 export { promptTimestamps } from "./types";
 
 // Sections between <!-- h3-tips --> and <!-- /h3-tips --> are the optional H3 prompting
@@ -57,6 +58,14 @@ export function onScreenTextFix(hits: string[]): string {
     "Rewrite it with no written words anywhere, no double quotes anywhere (spoken words only inside <d>), and without mentioning text, bubbles or captions at all.",
     "A thought becomes the character's off-screen inner voice in their own voice (lips closed, face showing the thought) with the usual timing rules; anything else meant to be read is shown through action, reaction or voiceover.",
   ].join(" ");
+}
+
+export function dialogueTimingFix(lines: (DialogueLine & { clipEnd: number })[]): string {
+  return [
+    "CORRECTION: these spoken lines start too late, so H3 would cut them off at the end of the clip:",
+    ...lines.map((line) => `- [${line.text}] starts at ${line.start} s and needs ${line.estimate} s, but the clip ends at ${line.clipEnd} s.`),
+    "Rewrite it so each line starts early enough to finish, with time to spare, before the clip ends. Start earlier by shortening or dropping the other beats; keep every word of the dialogue.",
+  ].join("\n");
 }
 
 export function timestampFix(hits: string[]): string {

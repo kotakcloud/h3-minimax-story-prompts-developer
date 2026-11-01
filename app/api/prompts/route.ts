@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { chatJson } from "@/lib/openrouter";
 import { parseModelChain } from "@/lib/models";
+import { fitDuration, cutOffLines } from "@/lib/dialogue";
 import { clampDuration } from "@/lib/parse";
 import {
   analysisBlock,
+  dialogueTimingFix,
   ensureContinuousOpener,
   onScreenTextFix,
   onScreenTextMentions,
@@ -99,7 +101,8 @@ function normalize(data: unknown, fallback: BreakdownResult): PromptSegment[] {
     }
     return {
       id: frame.id,
-      duration: clampDuration(record.duration, frame.duration),
+      // The frame's length, fitted to its lines; timestamps are written for it.
+      duration: frame.duration,
       prompt,
     };
   });
@@ -146,7 +149,8 @@ export async function POST(request: Request) {
         id: frame.id || `f${index + 1}`,
         title: frame.title?.trim() || `Frame ${index + 1}`,
         summary: frame.summary?.trim() || "",
-        duration: clampDuration(frame.duration),
+        // Long dialogue lengthens the frame, also when it was edited after the breakdown.
+        duration: fitDuration(clampDuration(frame.duration), frame.summary || ""),
         ...(frame.panel ? { panel: Math.round(Number(frame.panel)) } : {}),
         ...(frame.join === "cut" || frame.join === "continuous" ? { join: frame.join } : {}),
       })),
@@ -260,7 +264,10 @@ export async function POST(request: Request) {
         const ghosts = v2 ? [...new Set(segments.flatMap((segment) => undefinedSubjects(segment.prompt)))] : [];
         // Storyboard segments must name <Picture 1> as the storyboard.
         const noBoard = storyboard.length > 0 && segments.some((segment) => !/storyboard/i.test(segment.prompt));
-        if (hits.length === 0 && times.length === 0 && ghosts.length === 0 && !noBoard) return segments;
+        // Timed prompts: a line that starts too late gets cut off in the video.
+        const short = segments.flatMap((segment) => cutOffLines(segment.prompt));
+        if (hits.length === 0 && times.length === 0 && ghosts.length === 0 && !noBoard && short.length === 0) return segments;
+        if (short.length) console.log(`[prompts] frame ${frame.id}: ${short.length} spoken line(s) cut off; rewriting`);
         if (noBoard) console.log(`[prompts] frame ${frame.id}: storyboard line missing; rewriting`);
         if (hits.length) console.log(`[prompts] frame ${frame.id}: on-screen text (${hits.join(", ")}); rewriting`);
         if (times.length) console.log(`[prompts] frame ${frame.id}: timestamps in a V2 prompt (${times.join(", ")}); rewriting`);
@@ -270,6 +277,7 @@ export async function POST(request: Request) {
           times.length ? timestampFix(times) : "",
           ghosts.length ? undefinedSubjectsFix(ghosts) : "",
           noBoard ? `CORRECTION: the <Picture 1> line is missing. ${storyboard[1]}` : "",
+          short.length ? dialogueTimingFix(short) : "",
         ].filter(Boolean);
         return generate(`${user}
 

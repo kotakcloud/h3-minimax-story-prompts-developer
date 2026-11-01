@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { chatJson } from "@/lib/openrouter";
 import { parseModelChain } from "@/lib/models";
-import { clampDuration } from "@/lib/parse";
+import { cutOffLines } from "@/lib/dialogue";
 import {
   analysisBlock,
+  dialogueTimingFix,
   ensureContinuousOpener,
   onScreenTextFix,
   onScreenTextMentions,
@@ -55,7 +56,7 @@ function normalize(data: unknown, targets: Target[]): PromptSegment[] {
     }
     return {
       id: target.id,
-      duration: clampDuration(record.duration, target.duration),
+      duration: target.duration,
       prompt,
       ...(target.panel ? { panel: target.panel } : {}),
       ...(target.join ? { join: target.join } : {}),
@@ -153,7 +154,9 @@ export async function POST(request: Request) {
     const hits = segments.flatMap((segment) => onScreenTextMentions(segment.prompt));
     const times = v2 ? segments.flatMap((segment) => promptTimestamps(segment.prompt)) : [];
     const ghosts = v2 ? [...new Set(segments.flatMap((segment) => undefinedSubjects(segment.prompt)))] : [];
-    if (hits.length > 0 || times.length > 0 || ghosts.length > 0) {
+    const short = segments.flatMap((segment) => cutOffLines(segment.prompt));
+    if (hits.length > 0 || times.length > 0 || ghosts.length > 0 || short.length > 0) {
+      if (short.length) console.log(`[prompts/update] ${short.length} spoken line(s) cut off; rewriting`);
       if (hits.length) console.log(`[prompts/update] on-screen text (${hits.join(", ")}); rewriting`);
       if (times.length) console.log(`[prompts/update] timestamps in a V2 prompt (${times.join(", ")}); rewriting`);
       if (ghosts.length) console.log(`[prompts/update] undefined subjects in a V2 prompt (${ghosts.join(", ")}); rewriting`);
@@ -161,6 +164,7 @@ export async function POST(request: Request) {
         hits.length ? onScreenTextFix(hits) : "",
         times.length ? timestampFix(times) : "",
         ghosts.length ? undefinedSubjectsFix(ghosts) : "",
+        short.length ? dialogueTimingFix(short) : "",
       ].filter(Boolean);
       segments = normalize(await chatJson(system, `${user}
 
