@@ -1,3 +1,4 @@
+import { clipSecondsForWords } from "./dialogue";
 import type { Frame, StoryAnalysis } from "./types";
 
 // H3 clips are 4–15 s.
@@ -7,15 +8,14 @@ const MAX_SECONDS = 15;
 // Quoted lines in a beat ('…', "…", ‘…’, “…”), the outer quote only.
 const QUOTED = /(?:^|[\s:(])(['"‘“])(.+?)(?:\1|[’”])(?=[\s.,!?;)]|$)/g;
 
-// Seconds a beat's spoken words need: H3 starts about 0.5 s late, lines run long and must end
-// 1.5 s before the clip ends, so ~2.2 words per second plus 2.5 s.
+// Seconds a beat's spoken words need.
 function speechSeconds(content: string): number {
   const words = [...content.matchAll(QUOTED)]
     .map((match) => match[2])
     .join(" ")
     .split(/\s+/)
     .filter(Boolean).length;
-  return words > 0 ? Math.ceil(words / 2.2 + 2.5) : 0;
+  return clipSecondsForWords(words);
 }
 
 type Group = { beats: StoryAnalysis["beats"]; seconds: number };

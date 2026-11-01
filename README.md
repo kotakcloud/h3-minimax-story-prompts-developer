@@ -93,6 +93,14 @@ now, because a run takes a single reference image.
 - **Delete** (bin icon on a finished, failed or cancelled video) removes it from the story after a confirmation; the
   video file stays in ComfyUI's output folder (ComfyUI has no delete call).
 
+### Dialogue view
+
+On the Prompts tab, tick **Dialogue view** to see only the spoken lines of the current prompt set, segment by segment:
+who says what, or *No dialogue*. Nothing is sent to the AI: the lines are read from the `<d>` tags in the prompts
+(`lib/dialogue.ts`). Times are estimates at 2.2 words per second. A segment turns amber when its words need longer than
+the segment (speech plus about 2.5 s of silence). Long-take prompts also show the start and end times they give the line,
+amber when that slot is shorter than the estimate.
+
 ### Dialogue in another language
 
 On the Prompts tab, type a language (Gujarati, Hindi, ...) and press **Language version**: the app copies the current

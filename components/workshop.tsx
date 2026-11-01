@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useLoggedFetch } from "@/components/debug-log";
 import { IconButton, Icons } from "@/components/icons";
+import { DialogueView } from "@/components/dialogue-view";
 import { ImportVideoFile } from "@/components/import-video-file";
 import { ImportedDetails } from "@/components/imported-details";
 import { Lightbox, type Slide } from "@/components/lightbox";
@@ -236,6 +237,7 @@ export function Workshop({
   const storyRef = useRef<Story | null>(null);
   const [gridUpload, setGridUpload] = useState({ on: false, rows: 2, cols: 2 });
   const [dialogueLanguage, setDialogueLanguage] = useState("Gujarati");
+  const [dialogueView, setDialogueView] = useState(false);
   const [loraOpen, setLoraOpen] = useState(false);
   const [viewer, setViewer] = useState<{ slides: Slide[]; index: number } | null>(null);
   // Compare mode: the picked generations, in pick order (A, B, C, D), and whose audio the comparison keeps.
@@ -2292,6 +2294,15 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                 No prompts yet. Run Write H3 prompts above. Frames are optional: without them, each analysis beat becomes one segment.
               </p>
             ) : (
+              <>
+              <label className="mb-3 flex w-fit items-center gap-2 text-sm text-foreground">
+                <input type="checkbox" checked={dialogueView} onChange={(event) => setDialogueView(event.target.checked)} />
+                Dialogue view
+                <span className="text-xs text-muted">only the spoken lines, to review</span>
+              </label>
+              {dialogueView ? (
+                <DialogueView segments={story.segments} frames={story.frames} characters={story.characters} />
+              ) : (
               <ol className="space-y-5">
                 {story.segments.map((segment, index) => {
                   const frame = story.frames.find((item) => item.id === segment.id);
@@ -2318,6 +2329,8 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                   );
                 })}
               </ol>
+              )}
+              </>
             )}
           </section>
         )}
