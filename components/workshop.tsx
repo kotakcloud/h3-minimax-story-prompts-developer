@@ -13,6 +13,7 @@ import { LoraDialog } from "@/components/lora-dialog";
 import { ModelPicker } from "@/components/model-picker";
 import { framesFromAnalysis } from "@/lib/beats";
 import { timingComment, timingFixes } from "@/lib/dialogue";
+import { playDoneSound } from "@/lib/done-sound";
 import { panelPosition, selectedGrid } from "@/lib/grid";
 import { FAST_ENGINE_STEPS, ULTRA_STEPS, VIDEO_ENGINES, engineInfo, fastStorySize, isFastEngine } from "@/lib/engines";
 import { UpdateCommentDialog } from "@/components/update-comment-dialog";
@@ -151,6 +152,32 @@ const BUSY_LABELS: Record<NonNullable<Busy>, string> = {
   video: "Sending video",
 };
 
+// The hibernate tick lives in this browser tab only and never in the story, so a forgotten tick cannot hibernate
+// the machine after a later render.
+const HIBERNATE_COUNTDOWN_MS = 60_000;
+const HIBERNATE_RETRY_MS = 30_000;
+
+function hibernateKey(storyId: string) {
+  return `h3-hibernate-${storyId}`;
+}
+
+function readHibernateTick(storyId: string) {
+  try {
+    return window.sessionStorage.getItem(hibernateKey(storyId)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeHibernateTick(storyId: string, on: boolean) {
+  try {
+    if (on) window.sessionStorage.setItem(hibernateKey(storyId), "1");
+    else window.sessionStorage.removeItem(hibernateKey(storyId));
+  } catch {
+    // Storage blocked: the tick just lasts until this page changes.
+  }
+}
+
 function formatDuration(ms: number) {
   const total = Math.max(0, Math.round(ms / 1000));
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
@@ -240,6 +267,10 @@ export function Workshop({
   const [dialogueLanguage, setDialogueLanguage] = useState("Gujarati");
   const [dialogueView, setDialogueView] = useState(false);
   const [selectedDialogue, setSelectedDialogue] = useState<string[]>([]);
+  const [hibernateTick, setHibernateTick] = useState(() => typeof window !== "undefined" && readHibernateTick(storyId));
+  const [hibernateAt, setHibernateAt] = useState<number | null>(null);
+  const [hibernateLeft, setHibernateLeft] = useState(0);
+  const lastActiveRuns = useRef("");
   const [loraOpen, setLoraOpen] = useState(false);
   const [viewer, setViewer] = useState<{ slides: Slide[]; index: number } | null>(null);
   // Compare mode: the picked generations, in pick order (A, B, C, D), and whose audio the comparison keeps.
@@ -894,6 +925,48 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     };
   }, [activeRunKey]);
 
+  function tickHibernate(on: boolean) {
+    setHibernateTick(on);
+    writeHibernateTick(storyId, on);
+  }
+
+  // Everything in progress has ended: the chosen actions run, unless every run was cancelled by hand.
+  useEffect(() => {
+    const previous = lastActiveRuns.current;
+    lastActiveRuns.current = activeRunKey;
+    if (!previous || activeRunKey) return;
+    const current = storyRef.current;
+    const ended = previous.split(",").map((id) => current?.videos.find((run) => run.id === id));
+    if (!ended.some((run) => run && run.status !== "cancelled")) return;
+    if (current?.videoSettings.notifySound) playDoneSound();
+    if (readHibernateTick(storyId)) {
+      window.setTimeout(() => setHibernateAt(Date.now() + HIBERNATE_COUNTDOWN_MS), 0);
+    }
+  }, [activeRunKey, storyId]);
+
+  // Counts against the clock: timers in a background tab can run as little as once a minute.
+  useEffect(() => {
+    if (hibernateAt === null) return;
+    const timer = window.setInterval(() => {
+      const left = hibernateAt - Date.now();
+      setHibernateLeft(Math.max(0, Math.ceil(left / 1000)));
+      if (left > 0) return;
+      window.clearInterval(timer);
+      void (async () => {
+        const response = await fetch("/api/system/hibernate", { method: "POST" }).catch(() => null);
+        if (response?.status === 409) {
+          setHibernateAt(Date.now() + HIBERNATE_RETRY_MS);
+          return;
+        }
+        setHibernateAt(null);
+        tickHibernate(false);
+        if (!response?.ok) setError("Could not hibernate this machine.");
+      })();
+    }, 1000);
+    return () => window.clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hibernateAt]);
+
   // Tab title + favicon: progress while something runs, a quiet done/failed marker when it ends.
   // Only a running -> not running transition seen by this page fires the marker, never a finished state on load.
   const activeRun = story?.videos.find((run) => run.id === activeRunId);
@@ -1439,6 +1512,24 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
           <p className="mb-4 rounded-xl border border-red-900/60 bg-red-950/40 px-4 py-3 text-sm text-red-200">
             {error}
           </p>
+        )}
+
+        {hibernateAt !== null && (
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-2 text-sm text-amber-300">
+            <p>
+              Videos are done. This machine hibernates {hibernateLeft > 0 ? `in ${hibernateLeft}s` : "now"}, once ComfyUI has no jobs left.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setHibernateAt(null);
+                tickHibernate(false);
+              }}
+              className="rounded-full border border-amber-400/60 px-4 py-1 text-foreground"
+            >
+              Cancel
+            </button>
+          </div>
         )}
 
         {step === "gist" && (
@@ -2715,6 +2806,27 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                               ? "A draft takes about 11–14 min."
                               : "A final takes about 29 min."}
                         </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-foreground">
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={settings.notifySound}
+                            onChange={(event) => {
+                              updateVideoSettings({ notifySound: event.target.checked });
+                              if (event.target.checked) playDoneSound();
+                            }}
+                          />
+                          Play a sound when done
+                        </label>
+                        <label
+                          className="flex items-center gap-2"
+                          title="When every video in progress here has ended: a 60 s countdown you can cancel, then this computer hibernates. It waits while ComfyUI has other jobs. Keep this page open. The tick is used once."
+                        >
+                          <input type="checkbox" checked={hibernateTick} onChange={(event) => tickHibernate(event.target.checked)} />
+                          Hibernate this machine when done
+                        </label>
                       </div>
                     </div>
 

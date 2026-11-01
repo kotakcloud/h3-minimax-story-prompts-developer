@@ -166,6 +166,7 @@ function parseSettings(value: unknown): VideoPackage["settings"] {
       .filter((lora) => typeof lora?.name === "string")
       .map((lora) => ({ name: lora.name, strength: number(lora.strength, 1), enabled: lora.enabled !== false })),
     onlyFirst: Math.max(0, Math.floor(number(raw.onlyFirst, 0))),
+    notifySound: raw.notifySound === true,
     gridFeed: raw.gridFeed === "panels" ? "panels" : "whole",
   };
 }

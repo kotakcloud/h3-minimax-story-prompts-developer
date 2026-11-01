@@ -126,6 +126,8 @@ export type VideoSettings = {
   loras: { name: string; strength: number; enabled: boolean }[];
   // Test mode: render only the first N segments (0 = all).
   onlyFirst: number;
+  // Play a chime when the videos in progress are done.
+  notifySound: boolean;
 };
 
 export type VideoRunStatus = "queued" | "running" | "done" | "error" | "cancelled";
@@ -251,6 +253,7 @@ export const DEFAULT_VIDEO_SETTINGS: VideoSettings = {
   v2DevSteps: 10,
   loras: [],
   onlyFirst: 0,
+  notifySound: false,
 };
 
 // Story V2 is proven with 3–8 s segments only (Themed Transformation Pipeline renders).
