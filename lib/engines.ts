@@ -57,6 +57,14 @@ export const FAST_ENGINE_STEPS: Record<FastStoryEngine, number> = {
   "sage-sla": 10,
 };
 
+// Ultra fast, for trying out a story: much smaller canvas and fewer steps. Rough look and lip-sync; DEV and FULL stay as
+// they are. Singularity Veda already runs at the 3 steps its LoRA is made for.
+export const ULTRA_STEPS: Record<FastStoryEngine, number> = {
+  "veda-turbo": 3,
+  "singularity-veda": 3,
+  "sage-sla": 6,
+};
+
 // Short tag in the ComfyUI project folder name (h3s_<id>_<tag>[_dev]).
 export const FAST_ENGINE_TAG: Record<FastStoryEngine, string> = {
   "veda-turbo": "veda",
@@ -73,6 +81,7 @@ const FAST_PRESETS: Record<string, { size: string; devSize: string }> = {
 };
 const FULL_PIXELS = 768 * 1344;
 const DEV_PIXELS = 544 * 960;
+const ULTRA_PIXELS = 320 * 576;
 
 function customSize(aspectRatio: string, pixels: number): Size {
   const [w, h] = aspectRatio.split(" ")[0].split(":").map(Number);
@@ -83,7 +92,8 @@ function customSize(aspectRatio: string, pixels: number): Size {
 
 // The canvas for an aspect ratio: the editor preset when there is one, else a custom size with
 // the same pixel count.
-export function fastStorySize(aspectRatio: string, devMode: boolean): { preset: string | null; size: Size } {
+export function fastStorySize(aspectRatio: string, devMode: boolean, ultra = false): { preset: string | null; size: Size } {
+  if (ultra) return { preset: null, size: customSize(aspectRatio, ULTRA_PIXELS) };
   const preset = FAST_PRESETS[aspectRatio.split(" ")[0]];
   if (preset) {
     const name = devMode ? preset.devSize : preset.size;

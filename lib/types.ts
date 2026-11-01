@@ -113,6 +113,8 @@ export function activePromptStyle(story: Pick<Story, "segments" | "promptRevisio
 
 export type VideoSettings = {
   devMode: boolean;
+  // Fast workflows only, on top of DEV: a small preview canvas and fewer steps, for trying out a story.
+  ultraFast: boolean;
   seed: number;
   engine: VideoEngine;
   // Story V2 only: pass-1 megapixels and steps for FULL and DEV renders.
@@ -133,6 +135,7 @@ export type VideoRun = {
   promptId: string;
   project: string;
   devMode: boolean;
+  ultraFast?: boolean;
   seed: number;
   engine?: VideoEngine;
   megapixels?: number;
@@ -238,6 +241,7 @@ export function effectiveGist(story: Pick<Story, "gist" | "analysis" | "useOrigi
 
 export const DEFAULT_VIDEO_SETTINGS: VideoSettings = {
   devMode: true,
+  ultraFast: false,
   seed: 907327329980779,
   // Veda Turbo is the fastest workflow and the default for new stories.
   engine: "veda-turbo",

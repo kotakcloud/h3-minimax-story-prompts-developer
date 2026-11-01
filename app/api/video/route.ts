@@ -15,6 +15,7 @@ export async function POST(request: Request) {
       segments?: { duration?: number; prompt?: string; join?: string; panel?: number }[];
       image?: { filename?: string; subfolder?: string; type?: string };
       devMode?: boolean;
+      ultra?: boolean;
       seed?: number;
       engine?: string;
       aspectRatio?: string;
@@ -91,6 +92,7 @@ export async function POST(request: Request) {
         segments,
         image: comfyImage,
         devMode: body.devMode !== false,
+        ultra: body.ultra === true,
         seed: Math.max(0, Math.floor(Number(body.seed) || 0)),
         aspectRatio,
         projectBase: `h3s_${storyId.slice(0, 8)}_${FAST_ENGINE_TAG[body.engine]}`,

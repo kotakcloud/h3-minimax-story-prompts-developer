@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import { fastStorySize, type FastStoryEngine, type Size } from "./engines";
+import { ULTRA_STEPS, fastStorySize, type FastStoryEngine, type Size } from "./engines";
 
 export const COMFYUI_URL = (process.env.COMFYUI_URL || "http://127.0.0.1:8188").replace(/\/+$/, "");
 
@@ -486,6 +486,8 @@ export type FastStoryOptions = {
   segments: StorySegment[];
   image: ComfyImage;
   devMode: boolean;
+  // On top of DEV: the small preview canvas and fewer steps.
+  ultra?: boolean;
   seed: number;
   aspectRatio: string;
   projectBase: string;
@@ -512,8 +514,9 @@ export async function buildFastStory(
   );
 
   const full = fastStorySize(options.aspectRatio, false);
-  const dev = fastStorySize(options.aspectRatio, true);
-  const size = (options.devMode ? dev : full).size;
+  const dev = fastStorySize(options.aspectRatio, true, options.ultra);
+  const devMode = options.devMode || Boolean(options.ultra);
+  const size = (devMode ? dev : full).size;
   if (full.preset && dev.preset) {
     workflow[STORY_FAST.size].inputs.value = full.preset;
     workflow[STORY_FAST.devSize].inputs.value = dev.preset;
@@ -528,8 +531,8 @@ export async function buildFastStory(
   }
 
   const fullProject = options.projectBase;
-  const devProject = `${options.projectBase}_dev`;
-  workflow[STORY_FAST.devMode].inputs.value = options.devMode;
+  const devProject = `${options.projectBase}_${options.ultra ? "ultra" : "dev"}`;
+  workflow[STORY_FAST.devMode].inputs.value = devMode;
   workflow[STORY_FAST.projectName].inputs.value = fullProject;
   workflow[STORY_FAST.devProjectName].inputs.value = devProject;
 
@@ -539,12 +542,13 @@ export async function buildFastStory(
   project.segment_count = -1;
   project.seed = options.seed;
 
-  const activeProject = options.devMode ? devProject : fullProject;
+  const activeProject = devMode ? devProject : fullProject;
   workflow[STORY_FAST.combine].inputs.project_data = JSON.stringify({
     project_name: activeProject,
     clips: [],
     auto_combine: true,
   });
+  if (options.ultra) workflow[STORY_FAST.steps].inputs.steps = ULTRA_STEPS[options.engine];
   const steps = Number(workflow[STORY_FAST.steps]?.inputs.steps) || 0;
   return { workflow, project: activeProject, steps, size };
 }

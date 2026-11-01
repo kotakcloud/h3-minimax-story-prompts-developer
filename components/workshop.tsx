@@ -14,7 +14,7 @@ import { ModelPicker } from "@/components/model-picker";
 import { framesFromAnalysis } from "@/lib/beats";
 import { timingComment, timingFixes } from "@/lib/dialogue";
 import { panelPosition, selectedGrid } from "@/lib/grid";
-import { FAST_ENGINE_STEPS, VIDEO_ENGINES, engineInfo, fastStorySize, isFastEngine } from "@/lib/engines";
+import { FAST_ENGINE_STEPS, ULTRA_STEPS, VIDEO_ENGINES, engineInfo, fastStorySize, isFastEngine } from "@/lib/engines";
 import { UpdateCommentDialog } from "@/components/update-comment-dialog";
 import { TabStatus } from "@/lib/tab-status";
 import { buildExportPayload, buildMarkdownExport, downloadJson, downloadMarkdown } from "@/lib/export";
@@ -167,7 +167,7 @@ function runLabelLines(run: VideoRun, story: Story, letter: string): string[] {
   const revision = revisions[setNumber - 1];
   const durations = run.durations || revision?.segments.map((segment) => segment.duration) || [];
   const quality = [
-    run.devMode ? "DEV" : run.engine === "long-take" || !run.engine ? "Final" : "FULL",
+    run.ultraFast ? "ULTRA FAST" : run.devMode ? "DEV" : run.engine === "long-take" || !run.engine ? "Final" : "FULL",
     run.width && run.height ? `${run.width}×${run.height}` : run.megapixels ? `${run.megapixels} MP` : "",
     run.steps ? `${run.steps} steps` : "",
   ]
@@ -726,6 +726,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     setError("");
     try {
       const settings = current.videoSettings;
+      const ultra = settings.ultraFast && settings.devMode && isFastEngine(settings.engine);
       // Test mode: only the first N segments; enhancement LoRAs from the LoRA popup.
       const limit = settings.onlyFirst > 0 ? Math.min(settings.onlyFirst, current.segments.length) : current.segments.length;
       const renderSegments = current.segments.slice(0, limit);
@@ -751,6 +752,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
           grid: image.grid ? { feed: current.gridFeed, panels: image.grid.panels } : undefined,
           loras,
           devMode: settings.devMode,
+          ultra: ultra,
           seed: settings.seed,
           engine: settings.engine,
           aspectRatio: image.grid?.panelAspectRatio ?? image.aspectRatio,
@@ -780,6 +782,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
         promptId: data.promptId,
         project: data.project,
         devMode: settings.devMode,
+        ...(ultra ? { ultraFast: true } : {}),
         seed: settings.seed,
         engine: settings.engine,
         ...(v2
@@ -2410,7 +2413,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                         {language ? ` (${language})` : ""}: {story.segments.length} segments · {seconds}s
                       </p>
                       <p>
-                        {engineInfo(settings.engine).short} · {settings.devMode ? "DEV" : "FULL"} · seed {settings.seed}
+                        {engineInfo(settings.engine).short} · {settings.ultraFast && settings.devMode && isFastEngine(settings.engine) ? "ULTRA FAST" : settings.devMode ? "DEV" : "FULL"} · seed {settings.seed}
                       </p>
                       <p>LoRAs: {loras.length ? loras.map((lora) => `${lora.name} @ ${lora.strength}`).join(", ") : "none"}</p>
                       {image?.grid && <p>Storyboard grid with {image.grid.panels.length} panels, feed: {story.gridFeed}</p>}
@@ -2453,7 +2456,8 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
               const v2 = settings.engine === "story-v2";
               const fastEngine = isFastEngine(settings.engine) ? settings.engine : null;
               const videoAspect = image?.grid?.panelAspectRatio ?? image?.aspectRatio ?? "16:9";
-              const fastCanvas = fastStorySize(videoAspect, settings.devMode).size;
+              const ultra = Boolean(fastEngine) && settings.devMode && settings.ultraFast;
+              const fastCanvas = fastStorySize(videoAspect, settings.devMode, ultra).size;
               const gridLongTake = Boolean(image?.grid) && settings.engine === "long-take";
               // Fast workflows: learn the time from this story's finished runs (same workflow and mode).
               const fastRuns = story.videos.filter(
@@ -2461,6 +2465,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                   run.status === "done" &&
                   run.engine === settings.engine &&
                   run.devMode === settings.devMode &&
+                  Boolean(run.ultraFast) === ultra &&
                   run.finishedAt &&
                   (run.durations?.length || 0) > 0,
               );
@@ -2567,7 +2572,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                           DEV MODE
                           <span className="text-xs text-muted">
                             {fastEngine
-                              ? `${settings.devMode ? "draft" : "full"} · ${fastCanvas.width}×${fastCanvas.height} · ${FAST_ENGINE_STEPS[fastEngine]} steps · single pass`
+                              ? `${ultra ? "preview" : settings.devMode ? "draft" : "full"} · ${fastCanvas.width}×${fastCanvas.height} · ${ultra ? ULTRA_STEPS[fastEngine] : FAST_ENGINE_STEPS[fastEngine]} steps · single pass`
                               : v2
                               ? `${settings.devMode ? "draft" : "full"} · ${v2Mp} MP · ${v2Steps} steps · x1.25 refine`
                               : settings.devMode
@@ -2575,6 +2580,19 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                                 : "final · 0.8 MP · 16 steps · RTX VSR"}
                           </span>
                         </label>
+                        {fastEngine && settings.devMode && (
+                          <label
+                            className="flex items-center gap-2 text-sm text-foreground"
+                            title="For trying out a story: a much smaller picture and fewer steps. Rough look and lip-sync. Turn it off for the real render."
+                          >
+                            <input
+                              type="checkbox"
+                              checked={settings.ultraFast}
+                              onChange={(event) => updateVideoSettings({ ultraFast: event.target.checked })}
+                            />
+                            ULTRA FAST
+                          </label>
+                        )}
                         {v2 && (
                           <>
                             <label className="flex flex-col gap-1">

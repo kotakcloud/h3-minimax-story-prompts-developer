@@ -155,6 +155,7 @@ function parseSettings(value: unknown): VideoPackage["settings"] {
   const base = DEFAULT_VIDEO_SETTINGS;
   return {
     devMode: raw.devMode !== false,
+    ultraFast: raw.ultraFast === true,
     seed: Math.max(0, Math.floor(number(raw.seed, base.seed))),
     engine: isVideoEngine(raw.engine) ? raw.engine : base.engine,
     v2Megapixels: number(raw.v2Megapixels, base.v2Megapixels),
