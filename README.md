@@ -68,7 +68,7 @@ now, because a run takes a single reference image.
 ### Testing, LoRAs and rating (Video tab)
 
 - **Ultra fast** (next to DEV MODE, fast workflows only): for checking that a story works before a real render. It uses a
-  small canvas (320×576 at 9:16, about a third of DEV's pixels) and fewer steps (Veda Turbo 3 instead of 4, Sage SLA 6
+  small canvas (256×448 at 9:16, about a fifth of DEV's pixels) and fewer steps (Veda Turbo 3 instead of 4, Sage SLA 6
   instead of 10, Singularity Veda stays at 3). Expect a rough picture and weaker lip-sync. Files go to the project folder
   `h3s_<id>_<tag>_ultra`, and the run is marked ULTRA FAST.
 - **Duplicate** (copy icon in the story list) makes a copy named "… (copy)" with everything except the generated

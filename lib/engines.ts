@@ -81,7 +81,7 @@ const FAST_PRESETS: Record<string, { size: string; devSize: string }> = {
 };
 const FULL_PIXELS = 768 * 1344;
 const DEV_PIXELS = 544 * 960;
-const ULTRA_PIXELS = 320 * 576;
+const ULTRA_PIXELS = 256 * 448;
 
 function customSize(aspectRatio: string, pixels: number): Size {
   const [w, h] = aspectRatio.split(" ")[0].split(":").map(Number);
