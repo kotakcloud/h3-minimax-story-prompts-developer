@@ -238,6 +238,7 @@ export function Workshop({
   const [gridUpload, setGridUpload] = useState({ on: false, rows: 2, cols: 2 });
   const [dialogueLanguage, setDialogueLanguage] = useState("Gujarati");
   const [dialogueView, setDialogueView] = useState(false);
+  const [selectedDialogue, setSelectedDialogue] = useState<string[]>([]);
   const [loraOpen, setLoraOpen] = useState(false);
   const [viewer, setViewer] = useState<{ slides: Slide[]; index: number } | null>(null);
   // Compare mode: the picked generations, in pick order (A, B, C, D), and whose audio the comparison keeps.
@@ -2301,7 +2302,15 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                 <span className="text-xs text-muted">only the spoken lines, to review</span>
               </label>
               {dialogueView ? (
-                <DialogueView segments={story.segments} frames={story.frames} characters={story.characters} />
+                <DialogueView
+                  segments={story.segments}
+                  frames={story.frames}
+                  characters={story.characters}
+                  selected={selectedDialogue}
+                  onToggle={(key) =>
+                    setSelectedDialogue((keys) => (keys.includes(key) ? keys.filter((item) => item !== key) : [...keys, key]))
+                  }
+                />
               ) : (
               <ol className="space-y-5">
                 {story.segments.map((segment, index) => {
