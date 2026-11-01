@@ -36,7 +36,8 @@ import type {
 } from "@/lib/types";
 import {
   IMAGE_ASPECT_RATIOS,
-  STORY_STEPS,
+  aiTitle,
+  storySteps,
   STORY_V2_MAX_SEGMENT_SECONDS,
   activePromptStyle,
   effectiveGist,
@@ -447,7 +448,7 @@ export function Workshop({
       if (!response.ok) throw new Error(data.error || "Cast extraction failed.");
       const next: Story = {
         ...source,
-        title: data.title || source.title,
+        title: aiTitle(source, data.title),
         characters: data.characters || [],
         location: data.location || source.location,
         step: "cast",
@@ -478,6 +479,7 @@ export function Workshop({
           characters: story.characters,
           location: story.location,
           analysis: story.analysis,
+          noCast: story.storyType === "type-1",
         }),
       });
       const data = await response.json();
@@ -1087,7 +1089,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
       if (!response.ok) throw new Error(data.error || "Breakdown failed.");
       const next: Story = {
         ...story,
-        title: data.title || story.title,
+        title: aiTitle(story, data.title),
         characters: data.characters || [],
         frames: data.frames || [],
         segments: [],
@@ -1473,7 +1475,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
               </p>
               <input
                 value={story.title}
-                onChange={(event) => patchStory({ title: event.target.value })}
+                onChange={(event) => patchStory({ title: event.target.value, titleEdited: true })}
                 className="mt-1 w-full max-w-xl truncate bg-transparent text-2xl font-semibold tracking-tight outline-none"
               />
             </div>
@@ -1498,7 +1500,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
           </header>
 
           <nav className="flex flex-wrap gap-2 pb-3">
-            {(story.imported ? (["video"] as const) : STORY_STEPS).map((item) => (
+            {storySteps(story).map((item) => (
               <button
                 key={item}
                 type="button"
@@ -1552,10 +1554,10 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
             <div className="mt-4 flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={() => goTo("cast")}
+                onClick={() => goTo(storySteps(story).includes("cast") ? "cast" : "image")}
                 className="rounded-full bg-foreground px-5 py-2 text-sm font-medium text-background"
               >
-                Progress: cast & location
+                {storySteps(story).includes("cast") ? "Progress: cast & location" : "Progress: reference image"}
               </button>
             </div>
           </section>
@@ -1776,7 +1778,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                 <button
                   type="button"
                   onClick={runImagePrompt}
-                  disabled={busy !== null || story.characters.length === 0}
+                  disabled={busy !== null || (story.storyType === "type-1" ? !story.gist.trim() : story.characters.length === 0)}
                   className="rounded-full border border-line px-4 py-2 text-sm"
                 >
                   {busy === "imagePrompt"
@@ -2047,7 +2049,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                           <p className="text-foreground">
                             Storyboard grid {grid.rows}×{grid.cols} · {grid.rows * grid.cols} panels · panels{" "}
                             {grid.panelAspectRatio.split(" ")[0]}, so the video is {grid.panelAspectRatio.split(" ")[0]}.
-                            Make the frames with Frames from grid on the Frames tab.
+                            {story.storyType !== "type-1" && "Make the frames with Frames from grid on the Frames tab."}
                           </p>
                           <p>Give H3 on each segment:</p>
                           <label className="flex items-center gap-2">
@@ -2099,7 +2101,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                 <IconButton label="Add frame" onClick={addFrame}>
                   {Icons.plus}
                 </IconButton>
-                {selectedGrid(story) && (
+                {selectedGrid(story) && story.storyType !== "type-1" && (
                   <button
                     type="button"
                     onClick={() => {
@@ -2651,7 +2653,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                           continuation segments.
                         </p>
                       )}
-                      {v2 && longSegments.length > 0 && (
+                      {v2 && longSegments.length > 0 && story.storyType !== "type-1" && (
                         <p className="text-xs text-amber-300">
                           Story V2 is proven with segments of {STORY_V2_MAX_SEGMENT_SECONDS}s or less;{" "}
                           {longSegments.map((segment) => `${segment.id} (${segment.duration}s)`).join(", ")} may drift.

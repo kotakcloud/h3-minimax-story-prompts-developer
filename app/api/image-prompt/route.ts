@@ -20,6 +20,8 @@ export async function POST(request: Request) {
       location?: StoryLocation;
       analysis?: unknown;
       model?: string;
+      // type-1 stories have no Cast step: the gist is all there is.
+      noCast?: boolean;
     };
     // The story's OpenRouter model chain; blank = the .env default.
     const chain = parseModelChain(body.model);
@@ -29,16 +31,20 @@ export async function POST(request: Request) {
     const characters = (Array.isArray(body.characters) ? body.characters : []).filter(
       (character) => !character.voiceOnly,
     );
-    if (characters.length === 0) {
+    if (body.noCast === true) {
+      if (!body.gist?.trim()) {
+        return NextResponse.json({ error: "Write the gist first." }, { status: 400 });
+      }
+    } else if (characters.length === 0) {
       return NextResponse.json({ error: "Extract the cast first." }, { status: 400 });
-    }
-    if (!body.location?.description?.trim()) {
+    } else if (!body.location?.description?.trim()) {
       return NextResponse.json({ error: "Add a location description first." }, { status: 400 });
     }
 
     const system = await readPrompt("prompts/reference-image-system.md");
     const user = [
       "Write the reference image prompt for this story.",
+      ...(body.noCast === true ? ["There is no separate cast or location here: take the characters and the place from the GIST."] : []),
       "",
       `STORY TITLE: ${body.title?.trim() || "Untitled story"}`,
       "",

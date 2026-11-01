@@ -1,6 +1,6 @@
 import { isVideoEngine } from "./engines";
-import type { Character, Frame, PromptSegment, PromptStyle, ReferenceImage, Story, StoryLocation, VideoSettings } from "./types";
-import { DEFAULT_VIDEO_SETTINGS, activePromptStyle, isPromptStyle } from "./types";
+import type { Character, Frame, PromptSegment, PromptStyle, ReferenceImage, Story, StoryLocation, StoryType, VideoSettings } from "./types";
+import { DEFAULT_VIDEO_SETTINGS, activePromptStyle, isPromptStyle, isStoryType } from "./types";
 
 // The video file: everything a render needs, self-contained (images embedded), so it can be imported on another
 // machine. Built to be merged later: every segment names its own image and source story, so a combined file is the
@@ -33,6 +33,7 @@ export type PackageSource = {
   imageLayout: string;
   promptStyle: PromptStyle;
   language?: string;
+  storyType?: StoryType;
 };
 
 export type PackageSegment = {
@@ -93,6 +94,7 @@ export async function buildVideoPackage(
         imageLayout: story.imageLayout,
         promptStyle: activePromptStyle(story),
         ...(revision?.language ? { language: revision.language } : {}),
+        storyType: story.storyType,
       },
     ],
     images: [
@@ -211,6 +213,7 @@ export function parseVideoPackage(value: unknown): VideoPackage {
     imageLayout: text(source.imageLayout),
     promptStyle: isPromptStyle(source.promptStyle) ? source.promptStyle : "long-take",
     ...(source.language ? { language: text(source.language) } : {}),
+    ...(isStoryType(source.storyType) ? { storyType: source.storyType } : {}),
   }));
   const segments: PackageSegment[] = (Array.isArray(raw.segments) ? raw.segments : []).map((segment, index) => {
     const duration = Number(segment.duration);
@@ -299,6 +302,7 @@ export function storyFromPackage(pkg: VideoPackage, fileName: string, files: Ima
   }));
   return {
     title: `${pkg.title} (imported)`,
+    storyType: source.storyType || "regular",
     step: "video",
     gist: source.gist,
     characters: source.characters,

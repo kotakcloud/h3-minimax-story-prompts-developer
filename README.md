@@ -45,6 +45,15 @@ Image generation needs ComfyUI running with the Z-Image Turbo models from the te
 
 On the Image tab you can also **upload your own picture** (Upload image, or drop a file on the image area). The browser converts it to PNG (scaled down to at most 4 MP) and the app stores it in ComfyUI's output folder next to the generated ones (`h3-story/<story id>/upload_<time>.png`), so both video workflows use it the same way. Its aspect ratio is matched to the nearest supported one. The **Layout** box under the prompt (who stands where) feeds the H3 prompts: edit it to match an uploaded picture.
 
+### Story types
+
+Pick the type next to the New story button; it is set when the story is created and shown in the list (*type-1*).
+
+- **regular**: every step, as described above.
+- **type-1**: no Cast step, so the Gist step goes straight to the reference image, and *Write image prompt* and the frames
+  work from the gist. A title you type by hand is kept (AI steps may still set it until you do). *Frames from grid* is
+  hidden, and so is the note that Story V2 is proven only up to 8 s. A duplicate or an imported video file keeps the type.
+
 ### Video files (export and import)
 
 Rendering can be split in two: export what a video needs into one file, then import that file to see the details and

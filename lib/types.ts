@@ -226,6 +226,27 @@ export type PromptRevision = {
 export const STORY_STEPS = ["gist", "cast", "image", "frames", "prompts", "export", "video"] as const;
 export type StoryStep = (typeof STORY_STEPS)[number];
 
+// Chosen when a story is created. type-1 skips Cast, keeps a title typed by hand, has no Frames from grid and no
+// Story V2 length note.
+export const STORY_TYPES = ["regular", "type-1"] as const;
+export type StoryType = (typeof STORY_TYPES)[number];
+
+export function isStoryType(value: unknown): value is StoryType {
+  return STORY_TYPES.includes(value as StoryType);
+}
+
+// The steps a story shows.
+export function storySteps(story: Pick<Story, "imported" | "storyType">): readonly StoryStep[] {
+  if (story.imported) return ["video"];
+  return story.storyType === "type-1" ? STORY_STEPS.filter((step) => step !== "cast") : STORY_STEPS;
+}
+
+// The title after an AI step: type-1 keeps one typed by hand.
+export function aiTitle(story: Pick<Story, "title" | "titleEdited" | "storyType">, title: unknown): string {
+  if (story.storyType === "type-1" && story.titleEdited) return story.title;
+  return typeof title === "string" && title.trim() ? title : story.title;
+}
+
 export function stepLabel(step: StoryStep): string {
   if (step === "gist") return "Gist";
   if (step === "cast") return "Cast";
@@ -270,6 +291,9 @@ export const DEFAULT_IMAGE_SETTINGS: ImageSettings = {
 export type Story = {
   id: string;
   title: string;
+  // The title was typed by hand.
+  titleEdited: boolean;
+  storyType: StoryType;
   step: StoryStep;
   gist: string;
   analysis: StoryAnalysis | null;
@@ -326,6 +350,7 @@ export type StorySummary = {
   segmentCount: number;
   archived: boolean;
   imported: boolean;
+  storyType: StoryType;
 };
 
 export function isStoryStep(value: string): value is StoryStep {

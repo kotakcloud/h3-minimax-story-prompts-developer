@@ -1,9 +1,9 @@
 import { mkdir, readdir, readFile, rename, rm, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import type { Story, StoryStep, StorySummary } from "./types";
+import type { Story, StoryStep, StorySummary, StoryType } from "./types";
 import { RECOMMENDED_MODEL } from "./models";
-import { DEFAULT_IMAGE_SETTINGS, DEFAULT_VIDEO_SETTINGS, isPromptStyle, isStoryStep } from "./types";
+import { DEFAULT_IMAGE_SETTINGS, DEFAULT_VIDEO_SETTINGS, isPromptStyle, isStoryStep, isStoryType } from "./types";
 
 const storiesDir = path.join(process.cwd(), "data", "stories");
 
@@ -11,6 +11,8 @@ function emptyStory(id: string, now: string): Story {
   return {
     id,
     title: "Untitled story",
+    titleEdited: false,
+    storyType: "regular",
     step: "gist",
     gist: "",
     analysis: null,
@@ -62,6 +64,8 @@ function asStory(value: unknown, fallbackId: string): Story {
     ...raw,
     id: typeof raw.id === "string" ? raw.id : fallbackId,
     title: typeof raw.title === "string" && raw.title.trim() ? raw.title : base.title,
+    titleEdited: raw.titleEdited === true,
+    storyType: isStoryType(raw.storyType) ? raw.storyType : "regular",
     step: typeof raw.step === "string" && isStoryStep(raw.step) ? raw.step : "gist",
     gist: typeof raw.gist === "string" ? raw.gist : "",
     analysis: raw.analysis && typeof raw.analysis === "object" ? (raw.analysis as Story["analysis"]) : null,
@@ -116,6 +120,7 @@ function toSummary(story: Story): StorySummary {
     segmentCount: story.segments.length,
     archived: story.archived,
     imported: story.imported !== null,
+    storyType: story.storyType,
   };
 }
 
@@ -146,10 +151,10 @@ export async function readStory(id: string): Promise<Story | null> {
   }
 }
 
-export async function createStory(): Promise<Story> {
+export async function createStory(storyType: StoryType = "regular"): Promise<Story> {
   await ensureDir();
   const now = new Date().toISOString();
-  const story = emptyStory(randomUUID(), now);
+  const story = { ...emptyStory(randomUUID(), now), storyType };
   await writeStory(story);
   return story;
 }

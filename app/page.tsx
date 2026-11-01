@@ -6,8 +6,8 @@ import { useEffect, useState } from "react";
 import { useLoggedFetch } from "@/components/debug-log";
 import { IconButton, IconLink, Icons } from "@/components/icons";
 import { ImportVideoFile } from "@/components/import-video-file";
-import type { StorySummary } from "@/lib/types";
-import { storyPath } from "@/lib/types";
+import type { StorySummary, StoryType } from "@/lib/types";
+import { STORY_TYPES, storyPath } from "@/lib/types";
 
 function stepLabel(step: StorySummary["step"]) {
   if (step === "gist") return "Gist";
@@ -33,6 +33,7 @@ export default function Home() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [storyType, setStoryType] = useState<StoryType>("regular");
 
   async function refresh() {
     const response = await request("/api/stories");
@@ -49,7 +50,11 @@ export default function Home() {
     setBusy(true);
     setError("");
     try {
-      const response = await request("/api/stories", { method: "POST" });
+      const response = await request("/api/stories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storyType }),
+      });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not create a story.");
       router.push(storyPath(data.story.id, "gist"));
@@ -112,6 +117,20 @@ export default function Home() {
         </div>
         <div className="flex items-center gap-3">
           <ImportVideoFile onError={setError} />
+          <label className="flex items-center gap-2 text-xs text-muted">
+            New story type
+            <select
+              value={storyType}
+              onChange={(event) => setStoryType(event.target.value as StoryType)}
+              className="rounded-md border border-line bg-background px-2 py-1 text-sm text-foreground"
+            >
+              {STORY_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+          </label>
           <IconButton
             label={busy ? "Creating story" : "New story"}
             onClick={createStory}
@@ -161,7 +180,7 @@ export default function Home() {
                   {story.title}
                 </Link>
                 <p className="mt-1 font-mono text-xs text-muted">
-                  {story.id} · {story.imported ? "Imported" : stepLabel(story.step)} · {story.frameCount} frames · {story.segmentCount} prompts
+                  {story.id} · {story.imported ? "Imported" : stepLabel(story.step)} · {story.storyType === "type-1" ? "type-1 · " : ""}{story.frameCount} frames · {story.segmentCount} prompts
                 </p>
                 <p className="mt-0.5 text-xs text-muted">
                   <span title={story.createdAt}>Created {formatDate(story.createdAt)}</span>
