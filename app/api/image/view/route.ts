@@ -13,16 +13,24 @@ export async function GET(request: Request) {
   }
 
   try {
-    const upstream = await fetch(comfyViewUrl({ filename, subfolder, type }));
+    // Videos also come through here: the player seeks with Range requests, which ComfyUI answers.
+    const range = request.headers.get("range");
+    const upstream = await fetch(comfyViewUrl({ filename, subfolder, type }), range ? { headers: { Range: range } } : undefined);
+    if (upstream.status === 416) {
+      return new Response(null, { status: 416, headers: { "Content-Range": upstream.headers.get("Content-Range") || "" } });
+    }
     if (!upstream.ok || !upstream.body) {
       return Response.json({ error: `ComfyUI returned ${upstream.status}.` }, { status: 502 });
     }
-    return new Response(upstream.body, {
-      headers: {
-        "Content-Type": upstream.headers.get("Content-Type") || "image/png",
-        "Cache-Control": "private, max-age=31536000, immutable",
-      },
-    });
+    const headers: Record<string, string> = {
+      "Content-Type": upstream.headers.get("Content-Type") || "image/png",
+      "Cache-Control": "private, max-age=31536000, immutable",
+    };
+    for (const name of ["Accept-Ranges", "Content-Length", "Content-Range"]) {
+      const value = upstream.headers.get(name);
+      if (value) headers[name] = value;
+    }
+    return new Response(upstream.body, { status: upstream.status, headers });
   } catch {
     return Response.json({ error: "ComfyUI is not reachable." }, { status: 502 });
   }
