@@ -82,18 +82,34 @@ const FAST_PRESETS: Record<string, { size: string; devSize: string }> = {
 const FULL_PIXELS = 768 * 1344;
 const DEV_PIXELS = 544 * 960;
 const ULTRA_PIXELS = 256 * 448;
+// What 16 GB of VRAM holds, in pixels x seconds. Past this H3 spills into system RAM and sampling stalls: at 1344x768 a
+// 15 s clip showed no progress after 21 min (15.6 GB VRAM + 4.7 GB spilled); at 1152x640 it sampled in 4.5 min.
+const VRAM_PIXEL_SECONDS = 1152 * 640 * 16.5;
+// Every clip after the first also carries the overlap with the clip before it.
+const OVERLAP_SECONDS = 1.5;
 
 function customSize(aspectRatio: string, pixels: number): Size {
   const [w, h] = aspectRatio.split(" ")[0].split(":").map(Number);
   const ratio = w > 0 && h > 0 ? w / h : 9 / 16;
-  const snap = (value: number) => Math.max(64, Math.round(value / 16) * 16);
+  // The Easy-Media editor rounds to 32 (1136 rendered as 1152).
+  const snap = (value: number) => Math.max(64, Math.round(value / 32) * 32);
   return { width: snap(Math.sqrt(pixels * ratio)), height: snap(Math.sqrt(pixels / ratio)) };
 }
 
 // The canvas for an aspect ratio: the editor preset when there is one, else a custom size with
 // the same pixel count.
-export function fastStorySize(aspectRatio: string, devMode: boolean, ultra = false): { preset: string | null; size: Size } {
+// FULL shrinks when the longest segment would not fit in VRAM.
+export function fastStorySize(
+  aspectRatio: string,
+  devMode: boolean,
+  ultra = false,
+  longestSegment = 0,
+): { preset: string | null; size: Size; reduced?: boolean } {
   if (ultra) return { preset: null, size: customSize(aspectRatio, ULTRA_PIXELS) };
+  const fitting = VRAM_PIXEL_SECONDS / (longestSegment + OVERLAP_SECONDS);
+  if (!devMode && longestSegment > 0 && fitting < FULL_PIXELS) {
+    return { preset: null, size: customSize(aspectRatio, fitting), reduced: true };
+  }
   const preset = FAST_PRESETS[aspectRatio.split(" ")[0]];
   if (preset) {
     const name = devMode ? preset.devSize : preset.size;

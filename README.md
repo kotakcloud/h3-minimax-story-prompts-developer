@@ -76,6 +76,10 @@ now, because a run takes a single reference image.
 
 ### Testing, LoRAs and rating (Video tab)
 
+- **FULL size follows the longest segment**: picture size x clip length has to fit in the GPU's 16 GB. Past that H3 spills
+  into system RAM and sampling stalls (1344×768 with a 15 s clip made no progress in 21 minutes, 1152×640 sampled it in 4.5
+  minutes). So the fast workflows shrink FULL to fit the story's longest segment and say so on the Video tab: 15 s gives
+  1152×640 at 16:9, while segments of about 10 s keep 1344×768. DEV and Ultra fast are small enough already.
 - **Ultra fast** (next to DEV MODE, fast workflows only): for checking that a story works before a real render. It uses a
   small canvas (256×448 at 9:16, about a fifth of DEV's pixels) and Sage SLA runs 6 steps instead of 10 (Veda Turbo
   stays at 4 and Singularity Veda at 3). Expect a rough picture and weaker lip-sync. Files go to the project folder

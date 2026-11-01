@@ -513,7 +513,8 @@ export async function buildFastStory(
     options.refImageSize || refImageSize,
   );
 
-  const full = fastStorySize(options.aspectRatio, false);
+  const longest = Math.max(...options.segments.map((segment) => segment.duration));
+  const full = fastStorySize(options.aspectRatio, false, false, longest);
   const dev = fastStorySize(options.aspectRatio, true, options.ultra);
   const devMode = options.devMode || Boolean(options.ultra);
   const size = (devMode ? dev : full).size;

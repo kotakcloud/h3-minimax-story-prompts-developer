@@ -2555,7 +2555,9 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
               const fastEngine = isFastEngine(settings.engine) ? settings.engine : null;
               const videoAspect = image?.grid?.panelAspectRatio ?? image?.aspectRatio ?? "16:9";
               const ultra = Boolean(fastEngine) && settings.devMode && settings.ultraFast;
-              const fastCanvas = fastStorySize(videoAspect, settings.devMode, ultra).size;
+              const longestSegment = Math.max(0, ...story.segments.map((segment) => segment.duration));
+              const fastFit = fastStorySize(videoAspect, settings.devMode, ultra, longestSegment);
+              const fastCanvas = fastFit.size;
               const gridLongTake = Boolean(image?.grid) && settings.engine === "long-take";
               // Fast workflows: learn the time from this story's finished runs (same workflow and mode).
               const fastRuns = story.videos.filter(
@@ -2635,6 +2637,12 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                           </select>
                         </label>
                       </div>
+                      {fastEngine && fastFit.reduced && (
+                        <p className="text-xs text-amber-300">
+                          FULL renders at {fastCanvas.width}×{fastCanvas.height} instead of the usual 1.03 MP: the {longestSegment}s segment would
+                          not fit in the GPU&apos;s memory and the render would stall. Shorter segments allow a larger picture.
+                        </p>
+                      )}
                       {gridLongTake && (
                         <p className="text-xs text-amber-300">
                           The reference is a storyboard grid: pick Veda Turbo, Singularity Veda, Sage SLA or Story V2. The long take cannot cut
