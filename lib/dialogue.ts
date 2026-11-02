@@ -5,6 +5,7 @@ const WORDS_PER_SECOND = 2.2;
 const SILENCE_SECONDS = 2.5;
 // H3 clips are 4–15 s.
 export const MAX_CLIP_SECONDS = 15;
+const MIN_CLIP_SECONDS = 4;
 
 export type DialogueLine = {
   // Speaker ids as written, e.g. ["S1"] or ["S1", "S2"] for unison; empty when the prompt names none.
@@ -25,7 +26,7 @@ const FINISHED_BY = /\bby (\d{2}):(\d{2}(?:\.\d{1,3})?)\b/;
 // Quoted lines in a frame summary or beat ('…', "…", ‘…’, “…”), the outer quote only.
 const QUOTED = /(?:^|[\s:(])(['"‘“])(.+?)(?:\1|[’”])(?=[\s.,!?;)]|$)/g;
 
-function seconds(minutes: string, rest: string): number {
+function toSeconds(minutes: string, rest: string): number {
   return Number(minutes) * 60 + Number(rest);
 }
 
@@ -70,14 +71,14 @@ export function parseDialogue(prompt: string): DialogueLine[] {
     // Timing lives on the prompt line of the speech: "At 00:01.800: …" or "00:01.800-00:03.400: …".
     const times = [...before.slice(before.lastIndexOf("\n") + 1).matchAll(TIME)];
     const finished = after.match(FINISHED_BY);
-    const end = finished ? seconds(finished[1], finished[2]) : times[1] ? seconds(times[1][1], times[1][2]) : undefined;
+    const end = finished ? toSeconds(finished[1], finished[2]) : times[1] ? toSeconds(times[1][1], times[1][2]) : undefined;
     const text = match[2];
     lines.push({
       speakers: speaker ? speaker.split(",").map((id) => id.trim()) : [],
       language: match[1]?.trim() || "",
       text,
       estimate: spokenSeconds(text),
-      ...(times[0] ? { start: seconds(times[0][1], times[0][2]) } : {}),
+      ...(times[0] ? { start: toSeconds(times[0][1], times[0][2]) } : {}),
       ...(end !== undefined ? { end } : {}),
     });
   }
@@ -87,7 +88,7 @@ export function parseDialogue(prompt: string): DialogueLine[] {
 // Timed prompts: lines that, spoken at a natural pace from their start, run past the prompt's last timestamp. H3 cuts
 // these off (a slot shorter than the estimate alone is fine: H3 speaks on past it).
 export function cutOffLines(prompt: string): (DialogueLine & { clipEnd: number })[] {
-  const clipEnd = Math.max(0, ...[...prompt.matchAll(TIME)].map((match) => seconds(match[1], match[2])));
+  const clipEnd = Math.max(0, ...[...prompt.matchAll(TIME)].map((match) => toSeconds(match[1], match[2])));
   return parseDialogue(prompt)
     .filter((line) => line.start !== undefined && line.start + line.estimate > clipEnd)
     .map((line) => ({ ...line, clipEnd }));
@@ -99,6 +100,54 @@ export function isTight(segment: { duration: number; prompt: string }): boolean 
   return lines.some((line) => line.start !== undefined)
     ? cutOffLines(segment.prompt).length > 0
     : clipSecondsNeeded(lines) > segment.duration;
+}
+
+function formatTime(value: number): string {
+  const minutes = Math.floor(value / 60);
+  return `${String(minutes).padStart(2, "0")}:${(value - minutes * 60).toFixed(3).padStart(6, "0")}`;
+}
+
+export type LineDuration = { segmentId: string; lineIndex: number; seconds: number };
+
+// Gives a timed line a new length without AI: the line keeps its start, everything after it moves by the difference, and
+// the segment grows or shrinks to match. Throws when the result does not fit in one clip.
+export function retimeLine(segment: { id: string; duration: number; prompt: string }, lineIndex: number, seconds: number) {
+  const line = parseDialogue(segment.prompt)[lineIndex];
+  if (line?.start === undefined || line.end === undefined) throw new Error(`Segment ${segment.id}: this line has no times to change.`);
+  const { start, end } = line;
+  const close = (a: number, b: number) => Math.abs(a - b) < 0.0005;
+  const newEnd = start + seconds;
+  const delta = newEnd - end;
+  const times = [...segment.prompt.matchAll(TIME)].map((match) => toSeconds(match[1], match[2]));
+  const clipEnd = Math.max(...times);
+  // Continuation segments run from 0.92 s: the clip ends at duration + 0.92 in their timestamps.
+  const offset = clipEnd - segment.duration;
+  const duration = Math.max(MIN_CLIP_SECONDS, Math.ceil(clipEnd + delta - offset - 0.0005));
+  const fitted = Math.min(MAX_CLIP_SECONDS, duration);
+  const newClipEnd = offset + fitted;
+  const moved = (time: number) => {
+    if (close(time, end)) return newEnd;
+    if (close(time, clipEnd)) return newClipEnd;
+    return time < end ? time : time + delta;
+  };
+  const beats = times.filter((time) => !close(time, clipEnd)).map(moved);
+  if (newEnd > newClipEnd || Math.max(0, ...beats) >= newClipEnd) {
+    throw new Error(`Segment ${segment.id}: these lines need more than ${MAX_CLIP_SECONDS} s, so they do not fit in one clip.`);
+  }
+  return {
+    duration: fitted,
+    prompt: segment.prompt.replace(TIME, (_match, minutes: string, rest: string) => formatTime(moved(toSeconds(minutes, rest)))),
+  };
+}
+
+// Applies typed line lengths to a prompt set, later lines first so earlier ones still read their own times.
+export function applyLineDurations<T extends { id: string; duration: number; prompt: string }>(segments: T[], edits: LineDuration[]): T[] {
+  return segments.map((segment) =>
+    edits
+      .filter((edit) => edit.segmentId === segment.id)
+      .sort((a, b) => b.lineIndex - a.lineIndex)
+      .reduce((current, edit) => ({ ...current, ...retimeLine(current, edit.lineIndex, edit.seconds) }), segment),
+  );
 }
 
 // Segments whose dialogue does not fit, with the length they should have.

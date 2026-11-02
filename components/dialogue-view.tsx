@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MAX_CLIP_SECONDS, clipSecondsNeeded, cutOffLines, isTight, parseDialogue, timingFixes } from "@/lib/dialogue";
+import { MAX_CLIP_SECONDS, clipSecondsNeeded, cutOffLines, isTight, parseDialogue, timingFixes, type LineDuration } from "@/lib/dialogue";
 import type { Character, Frame, PromptSegment } from "@/lib/types";
 
 function clock(value: number) {
@@ -16,6 +16,7 @@ export function DialogueView({
   onToggle,
   onFixTiming,
   fixing,
+  onUpdateDurations,
 }: {
   segments: PromptSegment[];
   frames: Frame[];
@@ -24,14 +25,23 @@ export function DialogueView({
   onToggle: (key: string) => void;
   onFixTiming: () => void;
   fixing: boolean;
+  onUpdateDurations: (edits: LineDuration[]) => void;
 }) {
   const [hideUnselected, setHideUnselected] = useState(false);
+  // Typed line lengths, by the same key as `selected`.
+  const [durations, setDurations] = useState<Record<string, string>>({});
   const rows = segments.map((segment) => ({ segment, lines: parseDialogue(segment.prompt) }));
   const fixes = timingFixes(segments).length;
   const lineCount = rows.reduce((sum, row) => sum + row.lines.length, 0);
   const spoken = rows.reduce((sum, row) => sum + row.lines.reduce((total, line) => total + line.estimate, 0), 0);
   const keys = rows.flatMap(({ segment, lines }) => lines.map((line, index) => `${segment.id}:${index}:${line.text}`));
   const selectedCount = keys.filter((key) => selected.includes(key)).length;
+  const edits: LineDuration[] = rows.flatMap(({ segment, lines }) =>
+    lines.flatMap((line, lineIndex) => {
+      const seconds = Number(durations[`${segment.id}:${lineIndex}:${line.text}`]);
+      return seconds > 0 && line.start !== undefined && line.end !== undefined ? [{ segmentId: segment.id, lineIndex, seconds }] : [];
+    }),
+  );
   // With nothing ticked there is nothing to narrow down to, so every line shows.
   const onlySelected = hideUnselected && selectedCount > 0;
   const name = (id: string) => characters.find((character) => character.id === id)?.name || id;
@@ -45,6 +55,19 @@ export function DialogueView({
         {selectedCount > 0 && ` · ${selectedCount} selected`}.
       </p>
       <div className="flex flex-wrap gap-2">
+      {edits.length > 0 && (
+        <button
+          type="button"
+          onClick={() => {
+            onUpdateDurations(edits);
+            setDurations({});
+          }}
+          title="New prompt set: each line gets the seconds you typed, everything after it moves, and the segment length follows."
+          className="rounded-full bg-foreground px-3 py-1 text-xs font-semibold text-background"
+        >
+          Update in prompts ({edits.length})
+        </button>
+      )}
       {fixes > 0 && (
         <button
           type="button"
@@ -103,7 +126,7 @@ export function DialogueView({
                           onChange={() => onToggle(key)}
                           className="mt-1.5"
                         />
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                         <span className="font-medium text-accent">{line.speakers.map(name).join(" & ") || "Speaker"}: </span>
                         {line.text}
                         <p className="text-xs text-muted">
@@ -117,6 +140,20 @@ export function DialogueView({
                           )}
                         </p>
                         </div>
+                        {written !== null && (
+                          <input
+                            type="number"
+                            min={0.5}
+                            max={MAX_CLIP_SECONDS}
+                            step={0.1}
+                            value={durations[key] ?? ""}
+                            placeholder={written.toFixed(1)}
+                            aria-label={`Seconds for line ${lineIndex + 1} of segment ${index + 1}`}
+                            title="Seconds this line gets. Leave empty to keep it."
+                            onChange={(event) => setDurations((current) => ({ ...current, [key]: event.target.value }))}
+                            className="w-16 shrink-0 rounded-md border border-line bg-background px-2 py-1 text-xs text-foreground"
+                          />
+                        )}
                       </li>
                     );
                   })}

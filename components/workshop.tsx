@@ -12,7 +12,7 @@ import { Lightbox, type Slide } from "@/components/lightbox";
 import { LoraDialog } from "@/components/lora-dialog";
 import { ModelPicker } from "@/components/model-picker";
 import { framesFromAnalysis } from "@/lib/beats";
-import { timingComment, timingFixes } from "@/lib/dialogue";
+import { applyLineDurations, timingComment, timingFixes, type LineDuration } from "@/lib/dialogue";
 import { playDoneSound } from "@/lib/done-sound";
 import { panelPosition, selectedGrid } from "@/lib/grid";
 import { FAST_ENGINE_STEPS, ULTRA_STEPS, VIDEO_ENGINES, engineInfo, fastStorySize, isFastEngine } from "@/lib/engines";
@@ -1300,6 +1300,18 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     }
   }
 
+  // Typed line lengths: a new prompt set with the timestamps moved, no AI involved.
+  async function updateLineDurations(edits: LineDuration[]) {
+    const current = storyRef.current;
+    if (!current) return;
+    setError("");
+    try {
+      await saveRevision(applyLineDurations(current.segments, edits), true, activePromptStyle(current));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not update the prompts.");
+    }
+  }
+
   async function applyUpdate(updated: PromptSegment[]) {
     const current = storyRef.current;
     if (!current) return;
@@ -2442,6 +2454,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                   characters={story.characters}
                   selected={selectedDialogue}
                   onFixTiming={() => void fixDialogueTiming()}
+                  onUpdateDurations={(edits) => void updateLineDurations(edits)}
                   fixing={busy === "update"}
                   onToggle={(key) =>
                     setSelectedDialogue((keys) => (keys.includes(key) ? keys.filter((item) => item !== key) : [...keys, key]))

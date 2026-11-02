@@ -132,6 +132,10 @@ written, **Fix timing** in Dialogue view makes a new prompt set: tight segments 
 the AI (Story V2 prompts have no times, so only the length changes). If a segment's words need more than 15 s it stays
 amber: split that frame on the Frames step.
 
+On long-take prompts every line also has a seconds box (it shows the current slot). Type a value and press **Update in
+prompts** to make a new prompt set, with no AI: the line keeps its start, everything after it moves, and the segment length
+follows (up to 15 s, or an error if it no longer fits). H3 does not follow timestamps exactly, so listen to the result.
+
 ### Dialogue in another language
 
 On the Prompts tab, type a language (Gujarati, Hindi, ...) and press **Language version**: the app copies the current
