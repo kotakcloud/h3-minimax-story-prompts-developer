@@ -1,9 +1,9 @@
 import { execFile } from "node:child_process";
-import { access, copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
-import { comfyViewUrl } from "./comfyui";
+import { comfyViewUrl, localOutputFile } from "./comfyui";
 
 const run = promisify(execFile);
 const FFMPEG = process.env.FFMPEG_PATH || "ffmpeg";
@@ -25,17 +25,6 @@ export type CompareTile = {
   video: { filename: string; subfolder: string; type: string };
   lines: string[];
 };
-
-// COMFYUI_OUTPUT_DIR (optional): ComfyUI's output folder on this machine.
-async function localOutputFile(video: CompareTile["video"]): Promise<string | null> {
-  const root = process.env.COMFYUI_OUTPUT_DIR;
-  if (!root || video.type !== "output" || video.subfolder.includes("..") || /[\\/]/.test(video.filename)) return null;
-  const file = path.join(root, ...video.subfolder.split(/[\\/]+/).filter(Boolean), video.filename);
-  return access(file).then(
-    () => file,
-    () => null,
-  );
-}
 
 type Probe = { width: number; height: number; duration: number; audio: boolean };
 

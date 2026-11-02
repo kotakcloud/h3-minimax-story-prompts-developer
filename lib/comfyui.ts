@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { ULTRA_STEPS, fastStorySize, type FastStoryEngine, type Size } from "./engines";
@@ -635,6 +635,18 @@ export async function longTakeStatus(
     segmentsDone += 1;
   }
   return { status: "running", queuePosition: 0, segmentsDone, video: null, error: "" };
+}
+
+// COMFYUI_OUTPUT_DIR (optional): ComfyUI's output folder on this machine. Read from there when possible: faster than
+// ComfyUI's /view, and /view can stall (headers at once, then no bytes, for images and videos alike).
+export async function localOutputFile(image: ComfyImage): Promise<string | null> {
+  const root = process.env.COMFYUI_OUTPUT_DIR;
+  if (!root || image.type !== "output" || image.subfolder.includes("..") || /[\\/]/.test(image.filename)) return null;
+  const file = path.join(root, ...image.subfolder.split(/[\\/]+/).filter(Boolean), image.filename);
+  return access(file).then(
+    () => file,
+    () => null,
+  );
 }
 
 export function comfyViewUrl(image: ComfyImage): string {

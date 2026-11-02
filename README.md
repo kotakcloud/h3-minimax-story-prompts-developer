@@ -43,6 +43,8 @@ Open one story, or open several in new tabs. The home page lists all of them.
 
 Image generation needs ComfyUI running with the Z-Image Turbo models from the template. Set `COMFYUI_URL` in `.env.local` if ComfyUI is not at `http://127.0.0.1:8188`.
 
+Set `COMFYUI_OUTPUT_DIR` in `.env.local` to ComfyUI's output folder when the app runs on the same machine: images and videos are then served straight from disk. ComfyUI's own file serving can stall, and videos then spin forever in the player.
+
 On the Image tab you can also **upload your own picture** (Upload image, or drop a file on the image area). The browser converts it to PNG (scaled down to at most 4 MP) and the app stores it in ComfyUI's output folder next to the generated ones (`h3-story/<story id>/upload_<time>.png`), so both video workflows use it the same way. Its aspect ratio is matched to the nearest supported one. The **Layout** box under the prompt (who stands where) feeds the H3 prompts: edit it to match an uploaded picture.
 
 ### Story types

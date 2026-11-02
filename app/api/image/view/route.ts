@@ -1,4 +1,5 @@
-import { comfyViewUrl } from "@/lib/comfyui";
+import { comfyViewUrl, localOutputFile } from "@/lib/comfyui";
+import { serveFile } from "@/lib/serve-file";
 
 const TYPES = new Set(["output", "input", "temp"]);
 
@@ -13,6 +14,11 @@ export async function GET(request: Request) {
   }
 
   try {
+    // Straight from disk when the app knows ComfyUI's output folder.
+    const local = await localOutputFile({ filename, subfolder, type });
+    const served = local && (await serveFile(request, local, "private, max-age=31536000, immutable"));
+    if (served) return served;
+
     // Videos also come through here: the player seeks with Range requests, which ComfyUI answers.
     const range = request.headers.get("range");
     const upstream = await fetch(comfyViewUrl({ filename, subfolder, type }), range ? { headers: { Range: range } } : undefined);

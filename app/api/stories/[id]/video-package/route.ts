@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { comfyViewUrl } from "@/lib/comfyui";
+import { readFile } from "node:fs/promises";
+import { comfyViewUrl, localOutputFile } from "@/lib/comfyui";
 import { readStory } from "@/lib/story-store";
 import { buildVideoPackage } from "@/lib/video-package";
 
@@ -12,6 +13,8 @@ export async function GET(_request: Request, context: RouteContext) {
     const story = await readStory(id);
     if (!story) return NextResponse.json({ error: "Story not found." }, { status: 404 });
     const pkg = await buildVideoPackage(story, async (image) => {
+      const local = await localOutputFile(image);
+      if (local) return readFile(local);
       const response = await fetch(comfyViewUrl(image)).catch(() => null);
       if (!response?.ok) throw new Error(`Could not read ${image.filename} from ComfyUI. Is it running?`);
       return Buffer.from(await response.arrayBuffer());
