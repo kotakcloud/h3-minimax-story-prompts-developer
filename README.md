@@ -57,7 +57,8 @@ is read from the installed pack.
 
 The file follows what is selected on the Video tab: the workflow (Veda Turbo, Singularity Veda or Sage SLA, with its model, turbo
 LoRA, steps and sampler), DEV MODE and Ultra fast (picture size and steps), the seed, enhancement LoRAs and Skip segments, plus the
-reference image and aspect ratio. The workflow has one prompt box: segment 1 starts in
+reference image and aspect ratio. A **Quality** dropdown beside the prompt switches between the Ultra fast, DEV and FULL picture sizes
+inside ComfyUI, FULL sized for the longest clip. Sage SLA's steps stay in H3 Generation Engine Settings. The workflow has one prompt box: segment 1 starts in
 it, and every segment is on a Note beside it, titled with its seconds, to paste in turn. Veda sparse attention is not available
 there, so it runs with `vsa`, and results and speed differ from the app.
 

@@ -24,12 +24,21 @@ const NODE = {
   timeline: 1221,
   compatibility: 1520,
 } as const;
+// The input node's megapixels socket.
+const MEGAPIXELS_INPUT = 2;
 // Positions in the Timeline's saved widget values.
 const TIMELINE_AUTO_ADD = 5;
 const TIMELINE_DURATION = 17;
 
 type UiNode = { id: number; type: string; widgets_values?: unknown[]; [key: string]: unknown };
-type UiWorkflow = { id: string; nodes: UiNode[]; last_node_id: number; [key: string]: unknown };
+type UiWorkflow = {
+  id: string;
+  nodes: UiNode[];
+  links: unknown[][];
+  last_node_id: number;
+  last_link_id: number;
+  [key: string]: unknown;
+};
 type ApiGraph = Record<string, { class_type: string; inputs: Record<string, unknown> }>;
 
 function templatePath(): string {
@@ -66,6 +75,56 @@ async function engineSettings(engine: string) {
       shift_audio: Number(shift?.shift_audio) || 3,
     },
   };
+}
+
+// ResolutionSelector's megapixels: 1.0 is 1024x1024.
+function megapixels({ width, height }: { width: number; height: number }): number {
+  return Math.max(0.1, Math.round((width * height) / 10_485.76) / 100);
+}
+
+const QUALITY_SCHEMA = "megapixels: float 0.1..4 = 0.5 # Picture size: the app's Ultra fast, DEV and FULL. Keep FULL as exported: larger stalls on long clips.";
+
+// A Quality dropdown beside the prompt, wired to the input's megapixels through an Unbundle.
+function addQualityPicker(workflow: UiWorkflow, input: UiNode, sizes: Record<string, number>, selected: string) {
+  const quality = workflow.last_node_id + 1;
+  const unbundle = quality + 1;
+  const toUnbundle = workflow.last_link_id + 1;
+  const toInput = toUnbundle + 1;
+  const presets = Object.fromEntries(Object.entries(sizes).map(([name, value]) => [name, { megapixels: value }]));
+  workflow.nodes.push(
+    {
+      id: quality,
+      type: "ValuePresets (obvpm)",
+      title: "Quality: Ultra fast, DEV or FULL",
+      pos: [-1040, 5280],
+      size: [470, 150],
+      flags: {},
+      order: workflow.nodes.length,
+      mode: 0,
+      inputs: [{ localized_name: "preset", name: "preset", type: "STRING", widget: { name: "preset" }, link: null }],
+      outputs: [{ localized_name: "bundle", name: "bundle", type: "OBVPM_BUNDLE", links: [toUnbundle] }],
+      properties: { "Node name for S&R": "ValuePresets (obvpm)" },
+      widgets_values: [QUALITY_SCHEMA, selected, JSON.stringify({ megapixels: sizes[selected] }), JSON.stringify(presets), "megapixels", "", "", ""],
+    },
+    {
+      id: unbundle,
+      type: "Unbundle (obvpm)",
+      title: "Quality megapixels",
+      pos: [-540, 5280],
+      size: [210, 60],
+      flags: { collapsed: true },
+      order: workflow.nodes.length + 1,
+      mode: 0,
+      inputs: [{ localized_name: "in", name: "in", type: "OBVPM_BUNDLE", link: toUnbundle }],
+      outputs: [{ label: "megapixels", localized_name: "megapixels", name: "out_1", type: "*", links: [toInput] }],
+      properties: { "Node name for S&R": "Unbundle (obvpm)" },
+      widgets_values: ["megapixels", ""],
+    },
+  );
+  workflow.links.push([toUnbundle, quality, 0, unbundle, 0, "OBVPM_BUNDLE"], [toInput, unbundle, 0, input.id, MEGAPIXELS_INPUT, "FLOAT"]);
+  (input.inputs as { link: number | null }[])[MEGAPIXELS_INPUT].link = toInput;
+  workflow.last_node_id = unbundle;
+  workflow.last_link_id = toInput;
 }
 
 function noteNode(id: number, order: number, title: string, text: string, y: number): UiNode {
@@ -120,7 +179,7 @@ export async function buildTimelineWorkflow(story: Story): Promise<UiWorkflow> {
   const quality = `${engineInfo(settings.engine).short} · ${ultra ? "ULTRA FAST" : settings.devMode ? "DEV" : "FULL"} · ${width}×${height} · ${engine.values.steps} steps`;
   const project = story.title.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40) || "h3_story";
 
-  node(NODE.input).widgets_values = [first.prompt, aspectRatio, Math.max(0.1, Math.round((width * height) / 10_485.76) / 100), project];
+  node(NODE.input).widgets_values = [first.prompt, aspectRatio, megapixels({ width, height }), project];
   node(NODE.seed).widgets_values[0] = settings.seed;
   const subfolder = image.subfolder.split(/[\\/]+/).filter(Boolean).join("/");
   node(NODE.picture).widgets_values[0] = JSON.stringify([{ image: `${subfolder}/${image.filename} [${image.type}]` }]);
@@ -155,6 +214,17 @@ export async function buildTimelineWorkflow(story: Story): Promise<UiWorkflow> {
   const [start, header, ...rest] = node(NODE.loras).widgets_values;
   node(NODE.loras).widgets_values = [start, header, ...loras, ...rest];
 
+  addQualityPicker(
+    workflow,
+    node(NODE.input),
+    {
+      "Ultra fast": megapixels(fastStorySize(aspectRatio, true, true, longest).size),
+      DEV: megapixels(fastStorySize(aspectRatio, true, false, longest).size),
+      FULL: megapixels(fastStorySize(aspectRatio, false, false, longest).size),
+    },
+    ultra ? "Ultra fast" : settings.devMode ? "DEV" : "FULL",
+  );
+
   let id = workflow.last_node_id;
   let y = 3160;
   const notes = [
@@ -169,6 +239,8 @@ export async function buildTimelineWorkflow(story: Story): Promise<UiWorkflow> {
         "1. Segment 1 is already in the prompt box, with its length on the Timeline. Queue it. The take lands on the Timeline.",
         "2. Next segment: click the last clip on the Timeline and press extend clip. Paste the segment's prompt from the notes below over the old one, set the Timeline's duration_seconds to the seconds in the note's title, and queue.",
         "3. Not happy with a take? Remove it from the Timeline, change the seed, extend from the same clip again and queue.",
+        "",
+        "Quality (above the prompt) switches between Ultra fast, DEV and FULL picture sizes. Sage SLA steps stay in H3 Generation Engine Settings.",
         "",
         "Lengths and settings come from the app. Veda sparse attention is not available here: this runs with vsa, so results and speed differ from the app.",
       ].join("\n"),
