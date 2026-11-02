@@ -8,13 +8,13 @@ const SILENCE_SECONDS = 2.5;
 // H3 clips are 4–15 s.
 export const MAX_CLIP_SECONDS = 15;
 const MIN_CLIP_SECONDS = 4;
-// H3 spreads speech over the clip and leaves about a second between phrases (text between , . ! ?), so length comes from
-// phrases, not words. Measured: dialogue ran to the very end of 85% of 14-16 s clips, and of only 3 in 26 clips with 4 s or
-// more per phrase. Segment 4 of a test story was cut off at 15 s, timed or not, and split in two; three 12 s clips of about
-// 3 phrases each all ended 2-4 s early.
-const SECONDS_PER_PHRASE = 4;
-const MAX_PHRASES_PER_CLIP = 3;
-export const MAX_DIALOGUE_CLIP_SECONDS = SECONDS_PER_PHRASE * MAX_PHRASES_PER_CLIP + 1;
+// H3 spreads speech over the clip and leaves seconds between phrases (text between , . ! ?), so length comes from phrases,
+// not words. Measured on one test dialogue: cut off at 15 s, timed or not, and in 8 s + 10 s; cut off at 3 s per phrase
+// (9 s for 3 phrases); clean at 10 s for 3 phrases, 13 s for 4 and 8 s for 2, while 12 s each left 2-4 s of dead air.
+const LEAD_IN_SECONDS = 2;
+const SECONDS_PER_PHRASE = 2.75;
+const MAX_PHRASES_PER_CLIP = 4;
+export const MAX_DIALOGUE_CLIP_SECONDS = 13;
 
 export type DialogueLine = {
   // Speaker ids as written, e.g. ["S1"] or ["S1", "S2"] for unison; empty when the prompt names none.
@@ -57,7 +57,8 @@ function phraseCount(text: string): number {
 export function clipSecondsForText(texts: string[]): number {
   const phrases = texts.reduce((sum, text) => sum + phraseCount(text), 0);
   const words = texts.reduce((sum, text) => sum + wordCount(text), 0);
-  return words > 0 ? Math.max(phrases * SECONDS_PER_PHRASE, Math.ceil(words / WORDS_PER_SECOND + SILENCE_SECONDS)) : 0;
+  if (words === 0) return 0;
+  return Math.max(Math.round(LEAD_IN_SECONDS + phrases * SECONDS_PER_PHRASE), Math.ceil(words / WORDS_PER_SECOND + SILENCE_SECONDS));
 }
 
 // The text quoted in a frame summary or beat.

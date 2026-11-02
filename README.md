@@ -119,10 +119,11 @@ now, because a run takes a single reference image.
 
 ### Keeping dialogue from being cut off
 
-H3 spreads speech over the whole clip and leaves about a second between phrases (text between commas, full stops, `!` and
-`?`), so the budget is 4 s per phrase and at most 3 phrases in a clip of up to 13 s. Three 12 s clips of about 3 phrases each ended
-2-4 s early, where the same dialogue in one 15 s clip, timed or untimed, or in two clips, ran to the very end. Across earlier
-renders, dialogue reached the end of 85% of 14-16 s clips, and of only 3 in 26 clips with 4 s or more per phrase.
+H3 spreads speech over the whole clip and leaves seconds between phrases (text between commas, full stops, `!` and `?`), so
+clip length follows the phrases: 1 phrase 5 s, 2 phrases 8 s, 3 phrases 10 s, 4 phrases 13 s, at most 4 in a clip. Long-take
+prompts start speaking right away, with no silent lead-in. On one test dialogue, clips of 10, 13 and 8 s all finished
+cleanly. The same words cut off in one 15 s clip, timed or untimed, in two clips, and at 9 s for 3 phrases, while 12 s each
+left 2-4 s of dead air. Across earlier renders, dialogue reached the end of 85% of 14-16 s clips.
 
 New frames are split to this budget automatically. For existing stories, **Split dense frames** on the Frames tab splits
 at sentence ends, repeating who speaks, and clears the prompts so they can be written again. The story gets longer. A single

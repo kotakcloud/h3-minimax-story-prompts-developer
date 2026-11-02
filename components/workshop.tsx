@@ -2147,7 +2147,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                       }
                     }}
                     disabled={busy !== null}
-                    title="H3 needs about 4 s per phrase. A clip with more than 3 phrases usually gets cut off."
+                    title="H3 needs a clip of 10 s for 3 phrases and 13 s for 4. A clip with more usually gets cut off."
                     className="rounded-full border border-amber-400/60 px-4 py-2 text-sm text-amber-300"
                   >
                     Split dense frames ({story.frames.filter(isDenseFrame).length})

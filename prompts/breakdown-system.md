@@ -34,7 +34,7 @@ Rules:
 - A voice-only character (e.g. Narrator) is never "on screen"; their lines are voiceover over the action that proves them.
 - Keep character looks concrete and reusable across frames.
 - duration must be an integer from 4 to 15.
-- Give dialogue enough time: H3 leaves about a second between phrases (text between commas, full stops, exclamation and question marks), so a frame with spoken lines needs 4 s per phrase and holds at most 3 phrases (at most 13 s). Spread a longer exchange or a long line over several frames, breaking at the end of a sentence; a dense clip gets cut off.
+- Give dialogue enough time: H3 leaves about a second between phrases (text between commas, full stops, exclamation and question marks), so a frame with spoken lines holds at most 4 phrases, at these lengths: 1 phrase 5 s, 2 phrases 8 s, 3 phrases 10 s, 4 phrases 13 s. Spread a longer exchange or a long line over several frames, breaking at the end of a sentence; a dense clip gets cut off.
 - 4–6s: one simple action. 7–10s: one action plus a small reaction. 11–15s: two connected beats max.
 - One dominant action per frame. Do not cram a whole act into one clip.
 - Preserve the user's story order, names, and any dialogue verbatim (from the GIST given here, which may already be a corrected version).
