@@ -117,6 +117,12 @@ now, because a run takes a single reference image.
 - **Delete** (bin icon on a finished, failed or cancelled video) removes it from the story after a confirmation; the
   video file stays in ComfyUI's output folder (ComfyUI has no delete call).
 
+### What changed between prompt sets
+
+Each generation's *Prompts* row and the Prompts tab show a link like *vs set 5: 3 added · 2 removed · 4 updated*, comparing the
+set with the one before it. Click it for a side-by-side view, segment by segment, with the changed words highlighted and
+unchanged lines folded away (*Show unchanged lines* brings them back). Lines are compared by text, with no AI involved.
+
 ### Dialogue view
 
 On the Prompts tab, tick **Dialogue view** to see only the spoken lines of the current prompt set, segment by segment:

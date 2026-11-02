@@ -11,6 +11,7 @@ import { ImportedDetails } from "@/components/imported-details";
 import { Lightbox, type Slide } from "@/components/lightbox";
 import { LoraDialog } from "@/components/lora-dialog";
 import { ModelPicker } from "@/components/model-picker";
+import { PromptDiffLink } from "@/components/prompt-diff";
 import { framesFromAnalysis } from "@/lib/beats";
 import { applyLineDurations, timingComment, timingFixes, type LineDuration } from "@/lib/dialogue";
 import { playDoneSound } from "@/lib/done-sound";
@@ -2335,6 +2336,20 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                     </button>
                   );
                 })}
+                {(() => {
+                  const index = revisions.findIndex((revision) => revision.id === activeRevisionId);
+                  return index > 0 ? (
+                    <span className="text-xs">
+                      <PromptDiffLink
+                        older={revisions[index - 1].segments}
+                        newer={revisions[index].segments}
+                        olderLabel={`set ${index}`}
+                        newerLabel={`set ${index + 1}`}
+                        frames={story.frames}
+                      />
+                    </span>
+                  ) : null;
+                })()}
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <PromptStyleSelect
@@ -2970,20 +2985,34 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                               ],
                               [
                                 "Prompts",
-                                [
-                                  revisionIndex >= 0
-                                    ? `set ${revisionIndex + 1}${run.revisionId === activeRevisionId ? " (current)" : ""}`
-                                    : "set no longer exists",
-                                  style ? (style === "story-v2" ? "Story V2 style" : "long-take style") : "",
-                                  durations.length
-                                    ? `${durations.length} segments (${durations.join(" + ")} = ${durations.reduce((sum, value) => sum + value, 0)} s)`
-                                    : `${run.segmentCount} segments`,
-                                  run.totalSegments && run.totalSegments > run.segmentCount
-                                    ? `test: first ${run.segmentCount} of ${run.totalSegments}`
-                                    : "",
-                                ]
-                                  .filter(Boolean)
-                                  .join(" · "),
+                                <>
+                                  {[
+                                    revisionIndex >= 0
+                                      ? `set ${revisionIndex + 1}${run.revisionId === activeRevisionId ? " (current)" : ""}`
+                                      : "set no longer exists",
+                                    style ? (style === "story-v2" ? "Story V2 style" : "long-take style") : "",
+                                    durations.length
+                                      ? `${durations.length} segments (${durations.join(" + ")} = ${durations.reduce((sum, value) => sum + value, 0)} s)`
+                                      : `${run.segmentCount} segments`,
+                                    run.totalSegments && run.totalSegments > run.segmentCount
+                                      ? `test: first ${run.segmentCount} of ${run.totalSegments}`
+                                      : "",
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" · ")}
+                                  {revisionIndex > 0 && (
+                                    <>
+                                      {" · "}
+                                      <PromptDiffLink
+                                        older={revisions[revisionIndex - 1].segments}
+                                        newer={revisions[revisionIndex].segments}
+                                        olderLabel={`set ${revisionIndex}`}
+                                        newerLabel={`set ${revisionIndex + 1}`}
+                                        frames={story.frames}
+                                      />
+                                    </>
+                                  )}
+                                </>,
                               ],
                               [
                                 "Reference",
