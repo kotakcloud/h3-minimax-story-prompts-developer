@@ -68,6 +68,21 @@ export function dialogueTimingFix(lines: (DialogueLine & { clipEnd: number })[])
   ].join("\n");
 }
 
+export function missingLinesFix(lines: string[]): string {
+  return [
+    "CORRECTION: your previous answer left out these spoken lines of the frame:",
+    ...lines.map((line) => `- ${line}`),
+    "Rewrite it with every spoken line of the frame, word for word and in the frame's order, each inside its own <d> tag.",
+  ].join("\n");
+}
+
+export function speakerFix(problems: string[]): string {
+  return [
+    `CORRECTION: in your previous answer ${problems.join(", and ")}. H3 moves the mouth of whoever is on screen, so those lines would come out of the wrong mouth.`,
+    "Rewrite it as one continuous two-shot from the first frame to the last, with every speaker's face in frame the whole time: no [Shot 2], no cut, no close-up of one person, and nobody with a <Subject N> speaking off-screen. Every line keeps its speaker's label right before it, like <Subject 2> (S2). Keep every word of the dialogue.",
+  ].join(" ");
+}
+
 export function timestampFix(hits: string[]): string {
   return [
     `CORRECTION: your previous answer used timestamps (${hits.slice(0, 6).join(", ")}). Story V2 prompts have no timestamps at all.`,

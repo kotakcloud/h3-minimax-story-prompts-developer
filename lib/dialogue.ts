@@ -14,6 +14,8 @@ export type DialogueLine = {
   text: string;
   // What the line needs at a natural pace.
   estimate: number;
+  // The prompt has this voice come from off screen (an inner voice does not count: nobody's lips move).
+  offScreen: boolean;
   // Long-take prompts only: when the prompt says the line starts and finishes, in seconds.
   start?: number;
   end?: number;
@@ -43,6 +45,13 @@ export function quotedWords(text: string): number {
   return wordCount([...text.matchAll(QUOTED)].map((match) => match[2]).join(" "));
 }
 
+// Lines quoted in a frame summary that a written prompt left out.
+export function missingLines(summary: string, prompt: string): string[] {
+  const squeeze = (text: string) => text.replace(/\s+/g, " ").trim();
+  const written = parseDialogue(prompt).map((line) => squeeze(line.text));
+  return [...summary.matchAll(QUOTED)].map((match) => squeeze(match[2])).filter((line) => !written.includes(line));
+}
+
 // A frame's length, raised so the lines in its summary fit (the clip limit still applies).
 export function fitDuration(duration: number, summary: string): number {
   return Math.max(duration, Math.min(MAX_CLIP_SECONDS, clipSecondsForWords(quotedWords(summary))));
@@ -68,6 +77,7 @@ export function parseDialogue(prompt: string): DialogueLine[] {
     previousEnd = index + match[0].length;
 
     const speaker = [...before.slice(-300).matchAll(SPEAKERS)].at(-1)?.[1];
+    const lead = before.slice(-200);
     // Timing lives on the prompt line of the speech: "At 00:01.800: …" or "00:01.800-00:03.400: …".
     const times = [...before.slice(before.lastIndexOf("\n") + 1).matchAll(TIME)];
     const finished = after.match(FINISHED_BY);
@@ -75,6 +85,7 @@ export function parseDialogue(prompt: string): DialogueLine[] {
     const text = match[2];
     lines.push({
       speakers: speaker ? speaker.split(",").map((id) => id.trim()) : [],
+      offScreen: /off[- ]?screen/i.test(lead) && !/inner voice/i.test(lead),
       language: match[1]?.trim() || "",
       text,
       estimate: spokenSeconds(text),
@@ -100,6 +111,21 @@ export function isTight(segment: { duration: number; prompt: string }): boolean 
   return lines.some((line) => line.start !== undefined)
     ? cutOffLines(segment.prompt).length > 0
     : clipSecondsNeeded(lines) > segment.duration;
+}
+
+// Why a prompt would put a line in the wrong mouth: H3 moves the mouth of whoever is on screen. Voice-only characters are
+// meant to be unseen, and nobody's lips move for them.
+export function speakerProblems(prompt: string, voiceOnly: string[] = []): string[] {
+  const lines = parseDialogue(prompt);
+  const seen = lines.filter((line) => line.speakers.some((id) => !voiceOnly.includes(id)));
+  const speakers = new Set(seen.flatMap((line) => line.speakers));
+  const timeline = prompt.split(/detailed_description:/i)[1]?.split(/overall_soundscape:/i)[0] || "";
+  const problems: string[] = [];
+  if (speakers.size > 1 && /\[Shot [2-9]\]|camera cuts to/i.test(timeline)) problems.push("the camera cuts between speakers");
+  if (speakers.size > 1 && /close-?up/i.test(timeline)) problems.push("a close-up leaves a speaker out of frame");
+  if (seen.some((line) => line.offScreen)) problems.push("a character speaks off-screen");
+  if (lines.some((line) => line.speakers.length === 0)) problems.push("a line has no speaker label");
+  return problems;
 }
 
 function formatTime(value: number): string {

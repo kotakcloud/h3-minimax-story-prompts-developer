@@ -66,6 +66,19 @@ Exactly these six sections, in this order, with these exact lowercase names, eac
 - Segment 1: [Shot 1] is a fresh shot in the place of <Picture 1>; the characters are already moving gently from the very first frame.
 - Every later segment is CONTINUOUS. [Shot 1] opens with exactly this sentence: "The video opens already in progress, continuing the exact same shot from the previous segment: same people, same place, same light, same camera framing." Keep the same camera setup until a named camera move changes it.
 - One continuous take per segment: no cuts and no [Shot 2]. The framing changes only through a visible, smooth camera move.
+
+## Who is on screen when someone speaks (critical)
+
+H3 moves the mouth of whoever is on screen, whatever the label says, and speech often runs 1-3 s later than planned, past any cut. So a line spoken over the wrong person comes out of the wrong mouth. These rules overrule any close-up asked for in the frame summary, the format notes or the tips.
+
+- A segment with two or more on-screen speakers is one continuous two-shot from the first frame to the last, with every speaker's face in frame the whole time. It has no [Shot 2], no cut and no close-up of one person. The camera holds still or moves slowly, and the framing always keeps every speaker in it.
+- Whoever speaks is visible, face in frame, for their whole line and a moment after it. Nobody who has a <Subject N> speaks off-screen. The only unseen voices are a voice-only narrator and a character's inner voice.
+- A segment that continues the previous one keeps its framing: it never opens on a different person or a different framing than the previous segment ended on (read ALL FRAMES).
+- A segment ends in a framing that holds whoever speaks first in the next segment, so a closer framing of one speaker is only for a segment where nobody else speaks, and the next segment continues from that same framing.
+- Every spoken line names its speaker by look as well as by label, and says the listener stays quiet, for example: `<Subject 2> (S2), the white-bearded old man in saffron, says in a warm elderly voice: <d>[English] ...</d> <Subject 1>, the young man with the red cloth, listens with his lips closed.`
+
+## Beats
+
 - STAGING first: right after the opener, say where each visible subject is in the place (near / far, standing or sitting, on the path, by the door), which way they face, and how the distance between them changes.
 - Name what fills the background on BOTH sides of the frame, taken from the location (for example tree trunks and sunlit foliage on the left, the kitchen wall and window on the right), so no area of the frame stays undefined: an undefined dark area gets drawn as a dark shape. Repeat it whenever the camera moves or frames someone closer.
 - Beats in order (first, then, as …, finally), one dominant action per beat, two or three beats per segment. Two separate actions always go in two separate beats. Physical, concrete motion.
@@ -102,7 +115,7 @@ H3 cannot draw readable text: any bubble, caption, sign or written line comes ou
 
 - Follow the STORY ANALYSIS: its format, the beat this segment carries, the tone and any sensitivity note.
 - Setup and punchline never share one beat. Before a punchline or reveal: a short beat where nobody speaks.
-- Frame the punchline or the reveal closer on whoever it lands on, reached with a smooth camera push-in (no cut). A reveal that is a sound (a dry click, a buzz of silence) gets its own beat and is named in overall_soundscape.
+- Frame the punchline or the reveal closer on whoever it lands on, reached with a smooth camera push-in (no cut), unless two people speak in the segment: then keep both in frame. A reveal that is a sound (a dry click, a buzz of silence) gets its own beat and is named in overall_soundscape.
 - The final segment ends on a held, silent, physical reaction; never end on the last spoken word.
 - For a logic twist, what is visible must match the words literally (who is scared, how many, before/after).
 

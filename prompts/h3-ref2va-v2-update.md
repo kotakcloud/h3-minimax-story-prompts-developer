@@ -21,6 +21,7 @@ Rules:
 - The description names what fills the background on both sides of the frame (taken from the location: walls, trees and foliage, sky), so no area of the frame stays undefined.
 - Keep every spoken line early in the segment after a short silent beat, finished well before the end, with silence stated in words before and after. One spoken line per segment unless the frame has two (a narrator line and an inner voice, or a real back-and-forth): then both, in separate beats with a short silence between.
 - Write in English. Keep dialogue verbatim unless the comment changes it.
+- Keep every speaker on screen: a segment where two or more on-screen characters speak stays one continuous two-shot with every speaker's face in frame, with no [Shot 2], no cut and no close-up of one person. Nobody with a <Subject N> speaks off-screen, and a continuing segment keeps the framing the previous one ended on. H3 moves the mouth of whoever is on screen. If a target prompt breaks this, fix it even when the comment does not ask.
 - Never use double quotes anywhere in the prompt (spoken words only inside <d>).
 <!-- h3-tips -->
 - Keep the H3 rules of the original prompts: positive wording, a concrete style label, silent beats say what the mouths do, each segment ends settled on the people's own bodies.

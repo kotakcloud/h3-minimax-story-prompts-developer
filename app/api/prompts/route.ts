@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { chatJson } from "@/lib/openrouter";
 import { parseModelChain } from "@/lib/models";
-import { fitDuration, cutOffLines } from "@/lib/dialogue";
+import { cutOffLines, fitDuration, missingLines, speakerProblems } from "@/lib/dialogue";
 import { clampDuration } from "@/lib/parse";
 import {
   analysisBlock,
   dialogueTimingFix,
   ensureContinuousOpener,
+  missingLinesFix,
+  speakerFix,
   onScreenTextFix,
   onScreenTextMentions,
   promptTimestamps,
@@ -266,7 +268,14 @@ export async function POST(request: Request) {
         const noBoard = storyboard.length > 0 && segments.some((segment) => !/storyboard/i.test(segment.prompt));
         // Timed prompts: a line that starts too late gets cut off in the video.
         const short = segments.flatMap((segment) => cutOffLines(segment.prompt));
-        if (hits.length === 0 && times.length === 0 && ghosts.length === 0 && !noBoard && short.length === 0) return segments;
+        // The speaker has to be on screen: H3 moves the mouth of whoever is.
+        const voiceOnly = breakdown.characters.filter((character) => character.voiceOnly).map((character) => character.id);
+        const speakers = [...new Set(segments.flatMap((segment) => speakerProblems(segment.prompt, voiceOnly)))];
+        const missing = reference ? segments.flatMap((segment) => missingLines(frame.summary, segment.prompt)) : [];
+        const clean = hits.length === 0 && times.length === 0 && ghosts.length === 0 && !noBoard;
+        if (clean && short.length === 0 && speakers.length === 0 && missing.length === 0) return segments;
+        if (missing.length) console.log(`[prompts] frame ${frame.id}: ${missing.length} spoken line(s) left out; rewriting`);
+        if (speakers.length) console.log(`[prompts] frame ${frame.id}: ${speakers.join(", ")}; rewriting`);
         if (short.length) console.log(`[prompts] frame ${frame.id}: ${short.length} spoken line(s) cut off; rewriting`);
         if (noBoard) console.log(`[prompts] frame ${frame.id}: storyboard line missing; rewriting`);
         if (hits.length) console.log(`[prompts] frame ${frame.id}: on-screen text (${hits.join(", ")}); rewriting`);
@@ -278,6 +287,8 @@ export async function POST(request: Request) {
           ghosts.length ? undefinedSubjectsFix(ghosts) : "",
           noBoard ? `CORRECTION: the <Picture 1> line is missing. ${storyboard[1]}` : "",
           short.length ? dialogueTimingFix(short) : "",
+          speakers.length ? speakerFix(speakers) : "",
+          missing.length ? missingLinesFix(missing) : "",
         ].filter(Boolean);
         return generate(`${user}
 

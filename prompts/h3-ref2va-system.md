@@ -49,10 +49,20 @@ Exactly these six sections, in this order, with these exact lowercase names, eac
 - Every later segment is a CONTINUATION. The first 0.92 s are frames carried over from the previous segment, so:
   - [Shot 1] is exactly: "The video opens on the final moment of the previous shot, same people, same place, same light." (add the camera state if it matters).
   - All timestamps are shifted by +0.920 s: the segment's own content runs from 00:00.920 to (duration + 0.920). Example for a 6 s segment: 00:00.920 – 00:06.920.
-  - A new camera angle for this segment starts with "[Shot 2] At 00:00.920, the camera cuts to …".
+  - A new camera angle is only for a segment with one on-screen speaker who is already in frame, and starts with "[Shot 2] At 00:00.920, the camera cuts to …".
 - Write beats as time ranges (00:01.800-00:04.000: …) or At 00:02.600: …. One dominant action per beat; at most about two actions per 5 seconds. Two separate actions always go in two separate beats.
-- Shot cuts inside a segment use `[Shot N] At MM:SS.mmm, the camera cuts to …` with increasing times. A cut must add new information; otherwise use camera motion.
+- Shot cuts inside a segment use `[Shot N] At MM:SS.mmm, the camera cuts to …` with increasing times, and only in a segment with one on-screen speaker. A cut must add new information; otherwise use camera motion.
 - Every shot has camera motion in natural English: type + amplitude + speed ("The camera pushes in with small amplitude at slow speed toward …", "The camera holds still"). No fast or large moves while someone is speaking. Spread camera moves over a whole beat; never end a move exactly on a beat boundary.
+
+## Who is on screen when someone speaks (critical)
+
+H3 moves the mouth of whoever is on screen, whatever the label says, and speech often runs 1-3 s later than planned, past any cut. So a line spoken over the wrong person comes out of the wrong mouth. These rules overrule any close-up asked for in the frame summary, the format notes or the tips.
+
+- A segment with two or more on-screen speakers is one continuous two-shot from the first frame to the last, with every speaker's face in frame the whole time. It has no [Shot 2], no cut and no close-up of one person. The camera holds still or moves slowly, and the framing always keeps every speaker in it.
+- Whoever speaks is visible, face in frame, for their whole line and a moment after it. Nobody who has a <Subject N> speaks off-screen. The only unseen voices are a voice-only narrator and a character's inner voice.
+- A segment that continues the previous one keeps its framing: it never opens on a different person or a different framing than the previous segment ended on (read ALL FRAMES).
+- A segment ends in a framing that holds whoever speaks first in the next segment, so a closer framing of one speaker is only for a segment where nobody else speaks, and the next segment continues from that same framing.
+- Every spoken line names its speaker by look as well as by label, and says the listener stays quiet, for example: `<Subject 2> (S2), the white-bearded old man in saffron, says in a warm elderly voice: <d>[English] ...</d> <Subject 1>, the young man with the red cloth, listens with his lips closed.`
 
 ## Dialogue timing (critical)
 
@@ -63,7 +73,7 @@ Exactly these six sections, in this order, with these exact lowercase names, eac
 - Give every line an explicit start time and a "finishes it completely by MM:SS.mmm" end time, at least 0.45 s per spoken word apart (a 15-word line needs 6.8 s). Lines given less get cut off in the video.
 - A line never crosses a segment boundary and never straddles a cut. If a cut inside the segment must fall during a line, put <scenetrans> at the connecting point in both shots and say in plain words that the audio continues across the cut.
 - H3 starts speaking about 0.5 s later than asked and lines run long, so the line must END at least 1.5 s before the segment ends. Start it early enough: roughly 0.8–1.3 s after the segment's content begins (segment 1: about 00:01.000; continuations: about 00:01.800). If the line cannot fit with 1.5 s to spare, still write it but start it as early as possible.
-- State silence explicitly: "Nobody speaks before 00:01.800." and "After the line he stays completely silent until the end." Only one line of speech per segment unless the frame has a real back-and-forth.
+- State silence explicitly: "Nobody speaks before 00:01.800." and "After the line he stays completely silent until the end." Keep every spoken line of the frame, word for word and in order; never drop or merge one.
 - In every silent beat, say what the mouths are doing (his lips stay closed, he breathes slowly); otherwise H3 invents mumbling.
 - Leading laughs or interjections that are part of the dialogue stay inside <d> and count toward the line length.
 
@@ -87,7 +97,7 @@ H3 cannot draw readable text: any bubble, caption, sign or written line comes ou
 
 - Follow the STORY ANALYSIS: its format, the beat this segment carries, the tone and any sensitivity note.
 - Setup and punchline never share one beat. Before a punchline or reveal: 0.5–1 s where nobody speaks.
-- Put the punchline or the reveal in a close-up or medium close-up of whoever it lands on. A reveal that is a sound (a dry click, a buzz of silence) gets its own timed beat and is named in overall_soundscape.
+- Put the punchline or the reveal in a close-up or medium close-up of whoever it lands on, unless two people speak in the segment: then push in slowly and keep both in frame. A reveal that is a sound (a dry click, a buzz of silence) gets its own timed beat and is named in overall_soundscape.
 - The final segment ends on a held, silent, physical reaction of at least 2 s; never end on the last spoken word.
 - For a logic twist, what is visible must match the words literally (who is scared, how many, before/after).
 

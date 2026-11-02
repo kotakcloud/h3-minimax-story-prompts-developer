@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MAX_CLIP_SECONDS, clipSecondsNeeded, cutOffLines, isTight, parseDialogue, timingFixes, type LineDuration } from "@/lib/dialogue";
+import { MAX_CLIP_SECONDS, clipSecondsNeeded, cutOffLines, isTight, parseDialogue, speakerProblems, timingFixes, type LineDuration } from "@/lib/dialogue";
 import type { Character, Frame, PromptSegment } from "@/lib/types";
 
 function clock(value: number) {
@@ -45,6 +45,7 @@ export function DialogueView({
   // With nothing ticked there is nothing to narrow down to, so every line shows.
   const onlySelected = hideUnselected && selectedCount > 0;
   const name = (id: string) => characters.find((character) => character.id === id)?.name || id;
+  const voiceOnly = characters.filter((character) => character.voiceOnly).map((character) => character.id);
 
   return (
     <>
@@ -110,6 +111,11 @@ export function DialogueView({
                   {tight && needed > MAX_CLIP_SECONDS && `, more than one segment can hold: split this frame on the Frames step`}
                 </p>
               </div>
+              {speakerProblems(segment.prompt, voiceOnly).length > 0 && (
+                <p className="mt-1 text-xs text-amber-300">
+                  Wrong-speaker risk: {speakerProblems(segment.prompt, voiceOnly).join(", ")}. Regenerate the prompts to fix it.
+                </p>
+              )}
               {lines.length === 0 ? (
                 <p className="mt-2 text-xs text-muted">No dialogue</p>
               ) : (

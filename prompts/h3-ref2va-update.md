@@ -18,6 +18,7 @@ Rules:
 - Keep the continuation rules: segments after the first open with "The video opens on the final moment of the previous shot…" and use timestamps shifted by +0.920 s (content runs 00:00.920 to duration + 0.920).
 - Keep every spoken line timed with an explicit start and "finishes it completely by …", at least 0.45 s per spoken word apart, ending at least 1.5 s before the segment ends, with silence stated before and after.
 - Write in English. Keep dialogue verbatim unless the comment changes it.
+- Keep every speaker on screen: a segment where two or more on-screen characters speak stays one continuous two-shot with every speaker's face in frame, with no [Shot 2], no cut and no close-up of one person. Nobody with a <Subject N> speaks off-screen, and a continuing segment keeps the framing the previous one ended on. H3 moves the mouth of whoever is on screen. If a target prompt breaks this, fix it even when the comment does not ask.
 - Never use double quotes anywhere in the prompt (spoken words only inside <d>).
 <!-- h3-tips -->
 - Keep the H3 rules of the original prompts: positive wording, a concrete style label, silent beats say what the mouths do, each segment ends settled on the people's own bodies.

@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { chatJson } from "@/lib/openrouter";
 import { parseModelChain } from "@/lib/models";
-import { cutOffLines } from "@/lib/dialogue";
+import { cutOffLines, speakerProblems } from "@/lib/dialogue";
 import {
   analysisBlock,
   dialogueTimingFix,
+  speakerFix,
   ensureContinuousOpener,
   onScreenTextFix,
   onScreenTextMentions,
@@ -155,7 +156,10 @@ export async function POST(request: Request) {
     const times = v2 ? segments.flatMap((segment) => promptTimestamps(segment.prompt)) : [];
     const ghosts = v2 ? [...new Set(segments.flatMap((segment) => undefinedSubjects(segment.prompt)))] : [];
     const short = segments.flatMap((segment) => cutOffLines(segment.prompt));
-    if (hits.length > 0 || times.length > 0 || ghosts.length > 0 || short.length > 0) {
+    const voiceOnly = (body.characters || []).filter((character) => character.voiceOnly).map((character) => character.id);
+    const speakers = [...new Set(segments.flatMap((segment) => speakerProblems(segment.prompt, voiceOnly)))];
+    if (hits.length > 0 || times.length > 0 || ghosts.length > 0 || short.length > 0 || speakers.length > 0) {
+      if (speakers.length) console.log(`[prompts/update] ${speakers.join(", ")}; rewriting`);
       if (short.length) console.log(`[prompts/update] ${short.length} spoken line(s) cut off; rewriting`);
       if (hits.length) console.log(`[prompts/update] on-screen text (${hits.join(", ")}); rewriting`);
       if (times.length) console.log(`[prompts/update] timestamps in a V2 prompt (${times.join(", ")}); rewriting`);
@@ -165,6 +169,7 @@ export async function POST(request: Request) {
         times.length ? timestampFix(times) : "",
         ghosts.length ? undefinedSubjectsFix(ghosts) : "",
         short.length ? dialogueTimingFix(short) : "",
+        speakers.length ? speakerFix(speakers) : "",
       ].filter(Boolean);
       segments = normalize(await chatJson(system, `${user}
 

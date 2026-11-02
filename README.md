@@ -138,6 +138,14 @@ On long-take prompts every line also has a seconds box (it shows the current slo
 prompts** to make a new prompt set, with no AI: the line keeps its start, everything after it moves, and the segment length
 follows (up to 15 s, or an error if it no longer fits). H3 does not follow timestamps exactly, so listen to the result.
 
+### Who speaks on screen
+
+H3 moves the mouth of whoever is on screen, whatever the prompt's labels say, so a line spoken over the other person comes
+out of the wrong mouth. Cuts between speakers cause this, and so do off-screen lines and a segment opening on a different
+framing than the previous one ended on. Prompts therefore keep a conversation in one continuous two-shot with every
+speaker in frame, and a prompt that breaks this is sent back to the AI once. Dialogue view marks older prompts with a
+*Wrong-speaker risk* note: write the prompts again to fix them.
+
 ### Dialogue in another language
 
 On the Prompts tab, type a language (Gujarati, Hindi, ...) and press **Language version**: the app copies the current
