@@ -1455,7 +1455,9 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
       const response = await request(`/api/stories/${current.id}/timeline-workflow`);
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not export the timeline workflow.");
-      downloadJson(`${exportSlug()}.obvpm-timeline.json`, data);
+      const settings = current.videoSettings;
+      const mode = settings.ultraFast && settings.devMode ? "ultra" : settings.devMode ? "dev" : "full";
+      downloadJson(`${exportSlug()}.${settings.engine}.${mode}.obvpm-timeline.json`, data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not export the timeline workflow.");
     } finally {
@@ -2607,15 +2609,6 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                     >
                       {busy === "export" ? "Exporting…" : "Export video file"}
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => void exportTimelineWorkflow()}
-                      disabled={busy !== null || !image || story.segments.length === 0 || !isFastEngine(settings.engine)}
-                      title="A workflow for comfyui-obvpm-timeline: open it in ComfyUI and generate segment by segment. Needs Veda Turbo, Singularity Veda or Sage SLA."
-                      className="rounded-full border border-line px-4 py-1.5 text-sm text-foreground disabled:opacity-50"
-                    >
-                      Export for ComfyUI timeline
-                    </button>
                     <ImportVideoFile onError={setError} />
                     <button
                       type="button"
@@ -2899,6 +2892,19 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                           className="rounded-full bg-accent px-6 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50"
                         >
                           {busy === "video" ? "Sending to ComfyUI…" : running ? "Queue another video" : "Generate video"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void exportTimelineWorkflow()}
+                          disabled={busy !== null || !image || story.segments.length === 0 || !fastEngine}
+                          title={
+                            fastEngine
+                              ? "A workflow for comfyui-obvpm-timeline with the settings above: open it in ComfyUI and generate segment by segment."
+                              : "Pick Veda Turbo, Singularity Veda or Sage SLA to export."
+                          }
+                          className="rounded-full border border-line px-4 py-2 text-sm text-foreground disabled:opacity-50"
+                        >
+                          {busy === "export" ? "Exporting…" : "Export for ComfyUI timeline"}
                         </button>
                         <p className="text-xs text-muted">
                           {fastEngine

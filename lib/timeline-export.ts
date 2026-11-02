@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { fastStorySize, isFastEngine } from "./engines";
+import { ULTRA_STEPS, engineInfo, fastStorySize, isFastEngine } from "./engines";
 import type { Story } from "./types";
 
 // A filled-in copy of the comfyui-obvpm-timeline workflow, to try a story segment by segment in ComfyUI. The template is read
@@ -95,6 +95,8 @@ export async function buildTimelineWorkflow(story: Story): Promise<UiWorkflow> {
   const image = story.referenceImages.find((item) => item.id === story.selectedImageId);
   if (!image) throw new Error("Select a reference image on the Image step first.");
   if (story.segments.length === 0) throw new Error("Write the prompts first.");
+  // Same as the Video tab: "Skip segments after N" keeps the first N.
+  const segments = settings.onlyFirst > 0 ? story.segments.slice(0, settings.onlyFirst) : story.segments;
 
   const text = await readFile(templatePath(), "utf8").catch(() => {
     throw new Error("comfyui-obvpm-timeline's workflow was not found in ComfyUI's custom_nodes folder.");
@@ -109,14 +111,16 @@ export async function buildTimelineWorkflow(story: Story): Promise<UiWorkflow> {
   };
 
   const engine = await engineSettings(settings.engine);
-  const first = story.segments[0];
-  const longest = Math.max(...story.segments.map((segment) => segment.duration));
+  const first = segments[0];
+  const longest = Math.max(...segments.map((segment) => segment.duration));
   const aspectRatio = image.grid?.panelAspectRatio ?? image.aspectRatio;
   const ultra = settings.ultraFast && settings.devMode;
+  if (ultra) engine.values.steps = ULTRA_STEPS[settings.engine];
   const { width, height } = fastStorySize(aspectRatio, settings.devMode, ultra, longest).size;
+  const quality = `${engineInfo(settings.engine).short} · ${ultra ? "ULTRA FAST" : settings.devMode ? "DEV" : "FULL"} · ${width}×${height} · ${engine.values.steps} steps`;
   const project = story.title.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40) || "h3_story";
 
-  node(NODE.input).widgets_values = [first.prompt, aspectRatio, Math.max(0.1, Math.round((width * height) / 100_000) / 10), project];
+  node(NODE.input).widgets_values = [first.prompt, aspectRatio, Math.max(0.1, Math.round((width * height) / 10_485.76) / 100), project];
   node(NODE.seed).widgets_values[0] = settings.seed;
   const subfolder = image.subfolder.split(/[\\/]+/).filter(Boolean).join("/");
   node(NODE.picture).widgets_values[0] = JSON.stringify([{ image: `${subfolder}/${image.filename} [${image.type}]` }]);
@@ -159,7 +163,8 @@ export async function buildTimelineWorkflow(story: Story): Promise<UiWorkflow> {
       workflow.nodes.length,
       "How to use",
       [
-        `${story.title}: ${story.segments.length} segments.`,
+        `${story.title}: ${segments.length} segments.`,
+        quality,
         "",
         "1. Segment 1 is already in the prompt box, with its length on the Timeline. Queue it. The take lands on the Timeline.",
         "2. Next segment: click the last clip on the Timeline and press extend clip. Paste the segment's prompt from the notes below over the old one, set the Timeline's duration_seconds to the seconds in the note's title, and queue.",
@@ -170,7 +175,7 @@ export async function buildTimelineWorkflow(story: Story): Promise<UiWorkflow> {
       y,
     ),
   ];
-  story.segments.forEach((segment, index) => {
+  segments.forEach((segment, index) => {
     y += 440;
     const title = story.frames.find((frame) => frame.id === segment.id)?.title || segment.id;
     notes.push(noteNode(++id, workflow.nodes.length + index + 1, `Segment ${index + 1} · ${segment.duration}s · ${title}`, segment.prompt, y));
