@@ -13,7 +13,7 @@ import { LoraDialog } from "@/components/lora-dialog";
 import { ModelPicker } from "@/components/model-picker";
 import { PromptDiffLink } from "@/components/prompt-diff";
 import { framesFromAnalysis } from "@/lib/beats";
-import { applyLineDurations, timingComment, timingFixes, type LineDuration } from "@/lib/dialogue";
+import { applyLineDurations, isDenseFrame, splitDenseFrames, timingComment, timingFixes, type LineDuration } from "@/lib/dialogue";
 import { playDoneSound } from "@/lib/done-sound";
 import { panelPosition, selectedGrid } from "@/lib/grid";
 import { FAST_ENGINE_STEPS, ULTRA_STEPS, VIDEO_ENGINES, engineInfo, fastStorySize, isFastEngine } from "@/lib/engines";
@@ -2132,6 +2132,25 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                     className="rounded-full border border-accent px-4 py-2 text-sm text-accent"
                   >
                     {busy === "breakdown" ? "Reading the grid…" : "Frames from grid"}
+                  </button>
+                )}
+                {story.frames.some(isDenseFrame) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          "Split the dense frames at sentence ends so each clip can finish its speech? The story gets more segments, and this clears the prompts: write them again afterwards.",
+                        )
+                      ) {
+                        patchStory({ frames: splitDenseFrames(story.frames), segments: [] });
+                      }
+                    }}
+                    disabled={busy !== null}
+                    title="H3 needs about 4 s per phrase. A clip with more than 3 phrases usually gets cut off."
+                    className="rounded-full border border-amber-400/60 px-4 py-2 text-sm text-amber-300"
+                  >
+                    Split dense frames ({story.frames.filter(isDenseFrame).length})
                   </button>
                 )}
                 {story.analysis?.beats?.length ? (

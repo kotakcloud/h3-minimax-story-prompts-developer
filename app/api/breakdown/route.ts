@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { chatJson } from "@/lib/openrouter";
 import { parseModelChain } from "@/lib/models";
 import { clampDuration } from "@/lib/parse";
-import { fitDuration } from "@/lib/dialogue";
+import { fitDuration, splitDenseFrames } from "@/lib/dialogue";
 import { analysisBlock, readPromptWithFormats } from "@/lib/prompts";
 import type { BreakdownResult, Character, Frame, StoryLocation } from "@/lib/types";
 
@@ -47,7 +47,7 @@ function normalize(data: unknown, lockedCharacters: Character[]): BreakdownResul
   return {
     title: asString(raw.title, "Untitled story"),
     characters,
-    frames,
+    frames: splitDenseFrames(frames),
   };
 }
 

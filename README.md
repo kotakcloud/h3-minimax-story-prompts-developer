@@ -117,6 +117,17 @@ now, because a run takes a single reference image.
 - **Delete** (bin icon on a finished, failed or cancelled video) removes it from the story after a confirmation; the
   video file stays in ComfyUI's output folder (ComfyUI has no delete call).
 
+### Keeping dialogue from being cut off
+
+H3 spreads speech over the whole clip and leaves about a second between phrases (text between commas, full stops, `!` and
+`?`), so the budget is 4 s per phrase and at most 3 phrases in a clip of up to 13 s. Three 12 s clips of about 3 phrases each ended
+2-4 s early, where the same dialogue in one 15 s clip, timed or untimed, or in two clips, ran to the very end. Across earlier
+renders, dialogue reached the end of 85% of 14-16 s clips, and of only 3 in 26 clips with 4 s or more per phrase.
+
+New frames are split to this budget automatically. For existing stories, **Split dense frames** on the Frames tab splits
+at sentence ends, repeating who speaks, and clears the prompts so they can be written again. The story gets longer. A single
+long sentence is never cut, so it can stay dense. Grid stories keep one frame per panel unless you split them this way.
+
 ### What changed between prompt sets
 
 Each generation's *Prompts* row and the Prompts tab show a link like *vs set 5: 3 added · 2 removed · 4 updated*, comparing the

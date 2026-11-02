@@ -1,4 +1,4 @@
-import { clipSecondsForWords, quotedWords } from "./dialogue";
+import { clipSecondsForText, quotedLines, splitDenseFrames } from "./dialogue";
 import type { Frame, StoryAnalysis } from "./types";
 
 // H3 clips are 4–15 s.
@@ -7,7 +7,7 @@ const MAX_SECONDS = 15;
 
 // Seconds a beat's spoken words need.
 function speechSeconds(content: string): number {
-  return clipSecondsForWords(quotedWords(content));
+  return clipSecondsForText(quotedLines(content));
 }
 
 type Group = { beats: StoryAnalysis["beats"]; seconds: number };
@@ -34,12 +34,12 @@ export function framesFromAnalysis(analysis: StoryAnalysis | null | undefined): 
     groups.splice(0, 2, { beats: [...first.beats, ...second.beats], seconds: first.seconds + second.seconds });
   }
 
-  return groups.map((group, index) => ({
+  return splitDenseFrames(groups.map((group, index) => ({
     id: `f${index + 1}`,
     title: group.beats.map((beat) => beat.purpose || "beat").join(" + "),
     summary: group.beats
       .map((beat) => `${beat.delivery ? `[${beat.delivery}] ` : ""}${beat.content.trim()}`)
       .join(" Then: "),
     duration: Math.min(MAX_SECONDS, Math.max(MIN_SECONDS, group.seconds)),
-  }));
+  })));
 }

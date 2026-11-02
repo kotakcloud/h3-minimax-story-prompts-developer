@@ -34,8 +34,8 @@ Rules:
 - `join`: "cut" when the next panel is a new shot (another framing, angle, place or moment), which is the normal case
   for a storyboard; "continuous" only when this panel visibly continues the previous one's exact shot (same framing,
   same moment). The first frame's join is ignored.
-- `duration`: integer 4-15 seconds: 4-5 for a simple beat; with spoken lines, about 2.2 words per second plus 2.5 s, so
-  they are never rushed (a 13-word line needs 9 s).
+- `duration`: integer 4-13 seconds: 4-5 for a simple beat; with spoken lines, 4 s per phrase (text between commas, full
+  stops, exclamation and question marks), so they are never cut off. Keep each panel to at most 3 phrases.
 - No written text: never ask for captions, signs to read, bubbles or on-screen text. A thought is heard as the
   character's inner voice (own voice, lips closed). Ignore any text printed on the panels (numbers, captions).
 - Write in English except dialogue, which stays in its original language.
