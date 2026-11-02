@@ -1,20 +1,11 @@
 // Spoken lines read straight from a written H3 prompt (<d>[Language] words</d>), no AI involved.
 
-import type { Frame } from "./types";
-
 const WORDS_PER_SECOND = 2.2;
 // H3 starts about 0.5 s late, lines run long and must end 1.5 s before the clip ends, plus a short lead-in.
 const SILENCE_SECONDS = 2.5;
 // H3 clips are 4–15 s.
 export const MAX_CLIP_SECONDS = 15;
 const MIN_CLIP_SECONDS = 4;
-// H3 spreads speech over the clip and leaves seconds between phrases (text between , . ! ?), so length comes from phrases,
-// not words. Measured on one test dialogue: cut off at 15 s, timed or not, and in 8 s + 10 s; cut off at 3 s per phrase
-// (9 s for 3 phrases); clean at 10 s for 3 phrases, 13 s for 4 and 8 s for 2, while 12 s each left 2-4 s of dead air.
-const LEAD_IN_SECONDS = 2;
-const SECONDS_PER_PHRASE = 2.75;
-const MAX_PHRASES_PER_CLIP = 4;
-export const MAX_DIALOGUE_CLIP_SECONDS = 13;
 
 export type DialogueLine = {
   // Speaker ids as written, e.g. ["S1"] or ["S1", "S2"] for unison; empty when the prompt names none.
@@ -49,21 +40,9 @@ export function spokenSeconds(text: string): number {
   return Math.round((wordCount(text) / WORDS_PER_SECOND) * 10) / 10;
 }
 
-function phraseCount(text: string): number {
-  return text.split(/[,.!?।]+/).filter((part) => part.trim()).length;
-}
-
-// The clip length spoken text needs.
-export function clipSecondsForText(texts: string[]): number {
-  const phrases = texts.reduce((sum, text) => sum + phraseCount(text), 0);
-  const words = texts.reduce((sum, text) => sum + wordCount(text), 0);
-  if (words === 0) return 0;
-  return Math.max(Math.round(LEAD_IN_SECONDS + phrases * SECONDS_PER_PHRASE), Math.ceil(words / WORDS_PER_SECOND + SILENCE_SECONDS));
-}
-
-// The text quoted in a frame summary or beat.
-export function quotedLines(text: string): string[] {
-  return [...text.matchAll(QUOTED)].map((match) => match[2]);
+// Words spoken in a frame summary or beat.
+export function quotedWords(text: string): number {
+  return wordCount([...text.matchAll(QUOTED)].map((match) => match[2]).join(" "));
 }
 
 // Lines quoted in a frame summary that a written prompt left out.
@@ -75,75 +54,16 @@ export function missingLines(summary: string, prompt: string): string[] {
 
 // A frame's length, raised so the lines in its summary fit (the clip limit still applies).
 export function fitDuration(duration: number, summary: string): number {
-  return Math.max(duration, Math.min(MAX_DIALOGUE_CLIP_SECONDS, clipSecondsForText(quotedLines(summary))));
+  return Math.max(duration, Math.min(MAX_CLIP_SECONDS, clipSecondsForWords(quotedWords(summary))));
+}
+
+// The clip length spoken words need, silence included.
+export function clipSecondsForWords(words: number): number {
+  return words > 0 ? Math.ceil(words / WORDS_PER_SECOND + SILENCE_SECONDS) : 0;
 }
 
 export function clipSecondsNeeded(lines: DialogueLine[]): number {
-  return clipSecondsForText(lines.map((line) => line.text));
-}
-
-// Whether a frame holds more speech than one clip can finish.
-export function isDenseFrame(frame: Pick<Frame, "summary">): boolean {
-  return clipSecondsForText(quotedLines(frame.summary)) > MAX_DIALOGUE_CLIP_SECONDS;
-}
-
-function sentences(line: string): string[] {
-  return line.match(/[^.!?।]+[.!?।]*\s*/g)?.map((part) => part.trim()).filter(Boolean) || [line];
-}
-
-// One dense frame as several, in order, broken at sentence ends. Each part repeats the words that introduce its speaker,
-// so a line carried over still says who speaks. No AI involved.
-function splitDenseFrame(frame: Frame, nextId: () => string): Frame[] {
-  const quotes = [...frame.summary.matchAll(QUOTED)];
-  const parts: { text: string; phrases: number; lines: string[] }[] = [];
-  const add = (lead: string, spoken: string, phrases: number) => {
-    const last = parts[parts.length - 1];
-    const fresh = !last || last.phrases + phrases > MAX_PHRASES_PER_CLIP;
-    if (fresh) parts.push({ text: "", phrases: 0, lines: [] });
-    const part = parts[parts.length - 1];
-    part.text += `${part.text ? " " : ""}${lead}${lead ? " " : ""}'${spoken}'`;
-    part.phrases += phrases;
-    part.lines.push(spoken);
-  };
-  let position = 0;
-  for (const quote of quotes) {
-    const open = quote.index + quote[0].indexOf(quote[1]);
-    const lead = frame.summary.slice(position, open).trim();
-    position = open + quote[1].length + quote[2].length + 1;
-    // Only the sentence naming the speaker is repeated on a later part.
-    const speaker = lead.split(/(?<=[.!?])\s+/).at(-1) || "";
-    let first = true;
-    let group: string[] = [];
-    const flush = () => {
-      if (group.length === 0) return;
-      add(first ? lead : speaker, group.join(" "), phraseCount(group.join(" ")));
-      first = false;
-      group = [];
-    };
-    for (const sentence of sentences(quote[2])) {
-      if (group.length > 0 && phraseCount([...group, sentence].join(" ")) > MAX_PHRASES_PER_CLIP) flush();
-      group.push(sentence);
-    }
-    flush();
-  }
-  const closing = frame.summary.slice(position).trim();
-  if (parts.length < 2) return [frame];
-  if (closing) parts[parts.length - 1].text += ` ${closing}`;
-  return parts.map((part, index) => ({
-    ...frame,
-    id: index === 0 ? frame.id : nextId(),
-    title: `${frame.title} (${index + 1}/${parts.length})`,
-    summary: part.text,
-    duration: Math.max(frame.duration && parts.length === 1 ? frame.duration : MIN_CLIP_SECONDS, Math.min(MAX_DIALOGUE_CLIP_SECONDS, clipSecondsForText(part.lines))),
-    // Later parts continue the take, whatever joined the first one to the frame before.
-    ...(index > 0 ? { join: "continuous" as const } : {}),
-  }));
-}
-
-// Dense frames split so each clip can finish its speech. New frames get fresh ids, in order after the frame they came from.
-export function splitDenseFrames(frames: Frame[]): Frame[] {
-  let highest = Math.max(0, ...frames.map((frame) => Number(frame.id.replace(/\D/g, "")) || 0));
-  return frames.flatMap((frame) => (isDenseFrame(frame) ? splitDenseFrame(frame, () => `f${++highest}`) : [frame]));
+  return clipSecondsForWords(lines.reduce((sum, line) => sum + wordCount(line.text), 0));
 }
 
 export function parseDialogue(prompt: string): DialogueLine[] {
@@ -185,9 +105,12 @@ export function cutOffLines(prompt: string): (DialogueLine & { clipEnd: number }
     .map((line) => ({ ...line, clipEnd }));
 }
 
-// Whether a segment's dialogue does not fit. Times in the prompt are no guide: H3 hardly follows them.
+// Whether a segment's dialogue does not fit. Timed prompts say when lines start; otherwise only the word count is known.
 export function isTight(segment: { duration: number; prompt: string }): boolean {
-  return clipSecondsNeeded(parseDialogue(segment.prompt)) > segment.duration;
+  const lines = parseDialogue(segment.prompt);
+  return lines.some((line) => line.start !== undefined)
+    ? cutOffLines(segment.prompt).length > 0
+    : clipSecondsNeeded(lines) > segment.duration;
 }
 
 // Why a prompt would put a line in the wrong mouth: H3 moves the mouth of whoever is on screen. Voice-only characters are
@@ -257,10 +180,10 @@ export function applyLineDurations<T extends { id: string; duration: number; pro
 
 // Segments whose dialogue does not fit, with the length they should have.
 export function timingFixes(segments: { id: string; duration: number; prompt: string }[]): { id: string; duration: number }[] {
-  return segments.flatMap((segment) => {
-    const duration = Math.min(MAX_DIALOGUE_CLIP_SECONDS, clipSecondsNeeded(parseDialogue(segment.prompt)));
-    return duration > segment.duration ? [{ id: segment.id, duration }] : [];
-  });
+  return segments.filter(isTight).map((segment) => ({
+    id: segment.id,
+    duration: Math.max(segment.duration, Math.min(MAX_CLIP_SECONDS, clipSecondsNeeded(parseDialogue(segment.prompt)))),
+  }));
 }
 
 // The update comment for timed prompts: the lengths and each line's minimum, worked out here.

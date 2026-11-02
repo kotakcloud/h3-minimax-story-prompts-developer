@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MAX_DIALOGUE_CLIP_SECONDS, clipSecondsNeeded, cutOffLines, isTight, parseDialogue, speakerProblems, timingFixes, type LineDuration } from "@/lib/dialogue";
+import { MAX_CLIP_SECONDS, clipSecondsNeeded, cutOffLines, isTight, parseDialogue, speakerProblems, timingFixes, type LineDuration } from "@/lib/dialogue";
 import type { Character, Frame, PromptSegment } from "@/lib/types";
 
 function clock(value: number) {
@@ -74,7 +74,7 @@ export function DialogueView({
           type="button"
           onClick={onFixTiming}
           disabled={fixing}
-          title="New prompt set: tight segments get longer, up to 13 s. The rest stays the same."
+          title="New prompt set: tight segments get longer (up to 15 s) and their lines get enough time. The rest stays the same."
           className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-ink disabled:opacity-50"
         >
           {fixing ? "Fixing timing…" : `Fix timing (${fixes} ${fixes === 1 ? "segment" : "segments"})`}
@@ -108,7 +108,7 @@ export function DialogueView({
                 <p className={`text-xs ${tight ? "text-amber-300" : "text-muted"}`}>
                   {segment.duration}s
                   {tight && ` · tight: these words need about ${needed}s`}
-                  {tight && needed > MAX_DIALOGUE_CLIP_SECONDS && `, more than one clip can finish: use Split dense frames on the Frames step`}
+                  {tight && needed > MAX_CLIP_SECONDS && `, more than one segment can hold: split this frame on the Frames step`}
                 </p>
               </div>
               {speakerProblems(segment.prompt, voiceOnly).length > 0 && (
@@ -150,7 +150,7 @@ export function DialogueView({
                           <input
                             type="number"
                             min={0.5}
-                            max={15}
+                            max={MAX_CLIP_SECONDS}
                             step={0.1}
                             value={durations[key] ?? ""}
                             placeholder={written.toFixed(1)}

@@ -117,18 +117,6 @@ now, because a run takes a single reference image.
 - **Delete** (bin icon on a finished, failed or cancelled video) removes it from the story after a confirmation; the
   video file stays in ComfyUI's output folder (ComfyUI has no delete call).
 
-### Keeping dialogue from being cut off
-
-H3 spreads speech over the whole clip and leaves seconds between phrases (text between commas, full stops, `!` and `?`), so
-clip length follows the phrases: 1 phrase 5 s, 2 phrases 8 s, 3 phrases 10 s, 4 phrases 13 s, at most 4 in a clip. Long-take
-prompts start speaking right away, with no silent lead-in. On one test dialogue, clips of 10, 13 and 8 s all finished
-cleanly. The same words cut off in one 15 s clip, timed or untimed, in two clips, and at 9 s for 3 phrases, while 12 s each
-left 2-4 s of dead air. Across earlier renders, dialogue reached the end of 85% of 14-16 s clips.
-
-New frames are split to this budget automatically. For existing stories, **Split dense frames** on the Frames tab splits
-at sentence ends, repeating who speaks, and clears the prompts so they can be written again. The story gets longer. A single
-long sentence is never cut, so it can stay dense. Grid stories keep one frame per panel unless you split them this way.
-
 ### Tighten video
 
 H3 pads speech with silence: one 171 s video held 53 s of speech. **Tighten video** on a finished generation makes a shorter

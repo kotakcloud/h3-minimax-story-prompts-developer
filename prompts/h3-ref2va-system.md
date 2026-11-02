@@ -72,8 +72,8 @@ H3 moves the mouth of whoever is on screen, whatever the label says, and speech 
 - Length budget: one or two short sentences per 5 s of segment. Describe the voice (age, gender, pitch, pace, accent, on-screen or off-screen) outside <d> at the speaker's first line.
 - Give every line an explicit start time and a "finishes it completely by MM:SS.mmm" end time, at least 0.45 s per spoken word apart (a 15-word line needs 6.8 s). Lines given less get cut off in the video.
 - A line never crosses a segment boundary and never straddles a cut. If a cut inside the segment must fall during a line, put <scenetrans> at the connecting point in both shots and say in plain words that the audio continues across the cut.
-- H3 starts speaking about 0.5 s later than asked and lines run long, so the line must END at least 1.5 s before the segment ends. Speech starts right away, with no silent lead-in: the segment's first line starts at the very top of its content (segment 1: 00:00.300; continuations: 00:01.000), and the speaker's mouth is already opening as the shot begins. Lines follow each other closely.
-- State the silence at the end: "After the line he stays completely silent until the end." Keep every spoken line of the frame, word for word and in order; never drop or merge one.
+- H3 starts speaking about 0.5 s later than asked and lines run long, so the line must END at least 1.5 s before the segment ends. Start it early enough: roughly 0.8–1.3 s after the segment's content begins (segment 1: about 00:01.000; continuations: about 00:01.800). If the line cannot fit with 1.5 s to spare, still write it but start it as early as possible.
+- State silence explicitly: "Nobody speaks before 00:01.800." and "After the line he stays completely silent until the end." Keep every spoken line of the frame, word for word and in order; never drop or merge one.
 - In every silent beat, say what the mouths are doing (his lips stay closed, he breathes slowly); otherwise H3 invents mumbling.
 - Leading laughs or interjections that are part of the dialogue stay inside <d> and count toward the line length.
 
