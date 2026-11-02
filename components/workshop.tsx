@@ -1444,6 +1444,25 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     }
   }
 
+  // The story as a comfyui-obvpm-timeline workflow, to try segment by segment in ComfyUI.
+  async function exportTimelineWorkflow() {
+    const current = storyRef.current;
+    if (!current) return;
+    setBusy("export");
+    setError("");
+    try {
+      await persist(current);
+      const response = await request(`/api/stories/${current.id}/timeline-workflow`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not export the timeline workflow.");
+      downloadJson(`${exportSlug()}.obvpm-timeline.json`, data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not export the timeline workflow.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   function exportJson() {
     if (!story) return;
     downloadJson(`${exportSlug()}.json`, buildExportPayload(story.title || "Untitled story", story.segments));
@@ -2587,6 +2606,15 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                       className="rounded-full bg-accent px-6 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50"
                     >
                       {busy === "export" ? "Exporting…" : "Export video file"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void exportTimelineWorkflow()}
+                      disabled={busy !== null || !image || story.segments.length === 0 || !isFastEngine(settings.engine)}
+                      title="A workflow for comfyui-obvpm-timeline: open it in ComfyUI and generate segment by segment. Needs Veda Turbo, Singularity Veda or Sage SLA."
+                      className="rounded-full border border-line px-4 py-1.5 text-sm text-foreground disabled:opacity-50"
+                    >
+                      Export for ComfyUI timeline
                     </button>
                     <ImportVideoFile onError={setError} />
                     <button

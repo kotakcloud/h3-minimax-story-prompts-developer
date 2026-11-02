@@ -47,6 +47,19 @@ Set `COMFYUI_OUTPUT_DIR` in `.env.local` to ComfyUI's output folder when the app
 
 On the Image tab you can also **upload your own picture** (Upload image, or drop a file on the image area). The browser converts it to PNG (scaled down to at most 4 MP) and the app stores it in ComfyUI's output folder next to the generated ones (`h3-story/<story id>/upload_<time>.png`), so both video workflows use it the same way. Its aspect ratio is matched to the nearest supported one. The **Layout** box under the prompt (who stands where) feeds the H3 prompts: edit it to match an uploaded picture.
 
+### ComfyUI timeline export
+
+On the Export step, **Export for ComfyUI timeline** downloads `<story>.obvpm-timeline.json`, a filled-in copy of the
+[comfyui-obvpm-timeline](https://github.com/chanon/comfyui-obvpm-timeline) workflow. Drop it on ComfyUI to generate one segment
+at a time, extend from the clip before it and re-roll any segment alone. It needs that pack and
+[comfyui-obvpm](https://github.com/chanon/comfyui-obvpm) in ComfyUI, and `COMFYUI_OUTPUT_DIR` in `.env.local`, because the template
+is read from the installed pack.
+
+The file carries the reference image, seed, aspect ratio, picture size, enhancement LoRAs, and the model, turbo LoRA, steps and
+sampler of the story's Veda Turbo, Singularity Veda or Sage SLA workflow. The workflow has one prompt box: segment 1 starts in
+it, and every segment is on a Note beside it, titled with its seconds, to paste in turn. Veda sparse attention is not available
+there, so it runs with `vsa`, and results and speed differ from the app.
+
 ### Story types
 
 Pick the type next to the New story button; it is set when the story is created and shown in the list (*type-1*).
