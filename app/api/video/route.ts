@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { listH3Loras, queueFastStory, queueLongTake, queueStoryV2, type LoraChoice, type StorySegment } from "@/lib/comfyui";
 import { FAST_ENGINE_TAG, isFastEngine } from "@/lib/engines";
 import { IMAGE_ASPECT_RATIOS } from "@/lib/types";
-import { withVoiceReferences, type VoiceReference } from "@/lib/voice-references";
+import { voicesInSegment, withVoiceReferences, type VoiceReference } from "@/lib/voice-references";
 
 function clampNumber(value: unknown, min: number, max: number, fallback: number): number {
   const number = Number(value);
@@ -94,7 +94,10 @@ export async function POST(request: Request) {
       );
       // References garble the speech of a continuing segment (docs/RESEARCH_voice_references.md).
       const fastSegments = voices.length
-        ? segments.map((segment) => ({ ...segment, prompt: withVoiceReferences(segment.prompt, voices), join: "cut" as const }))
+        ? segments.map((segment) => {
+            const own = voicesInSegment(segment.prompt, voices);
+            return { ...segment, prompt: withVoiceReferences(segment.prompt, own), voices: own, join: "cut" as const };
+          })
         : segments;
       const queued = await queueFastStory({
         engine: body.engine,

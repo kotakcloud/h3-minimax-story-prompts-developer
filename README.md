@@ -104,8 +104,8 @@ now, because a run takes a single reference image.
 - **Voice references** (fast workflows only): keeps each character's voice the same across segments. Tick it, then give
   each character a sample: pick a finished video, enter the second where only that character speaks and press **Cut**, or
   **Upload** an audio file. Samples are cut to 1-4 s and stored in ComfyUI's input folder under `h3-voices/<story id>`; they
-  do not travel in exported video files. Generating adds them to the workflow and the prompts at queue time, so the saved
-  prompts do not change, and the run is marked `voice refs`. Every segment then starts fresh, so joins become cuts, and
+  do not travel in exported video files. Generating adds them to the workflow and the prompts at queue time, only for segments
+  where that character speaks, so silent segments get none and the saved prompts do not change, and the run is marked `voice refs`. Every segment then starts fresh, so joins become cuts, and
   some lines may still drop out. A character without a sample keeps a drifting voice. The ComfyUI timeline export ignores
   voice references. Findings are in `docs/RESEARCH_voice_references.md`.
 - **Duplicate** (copy icon in the story list) makes a copy named "… (copy)" with everything except the generated

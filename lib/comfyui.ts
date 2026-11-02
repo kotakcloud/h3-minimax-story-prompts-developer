@@ -350,7 +350,14 @@ const STORY_V2 = {
 
 // A segment of a ref2va story. join "cut" starts a fresh shot (continuity "shot"); image gives the
 // segment its own reference (a storyboard panel) instead of the story's shared picture.
-export type StorySegment = { duration: number; prompt: string; join?: "cut" | "continuous"; image?: ComfyImage };
+export type StorySegment = {
+  duration: number;
+  prompt: string;
+  join?: "cut" | "continuous";
+  image?: ComfyImage;
+  // The voice samples this segment gets, in <Audio N> order.
+  voices?: VoiceReference[];
+};
 
 export type StoryV2Options = {
   segments: StorySegment[];
@@ -430,10 +437,22 @@ export function storyV2TrackData(
   for (const track of trackData.tracks) {
     track.segments = track.type === "task" ? entries : [];
   }
-  // One audio track per voice, each holding one shared reference: Easy-Media allows one per track and sends the tracks
-  // to H3 in this order, which is the prompts' <Audio N>.
+  // One audio track per voice, with a clip at the start of each segment that uses it: Easy-Media hands a segment the
+  // clips under it, track by track, which is that prompt's <Audio N> order.
   voices.forEach((voice, index) => {
     const file = [voice.subfolder, voice.filename].filter(Boolean).join("/");
+    const clips = entries.flatMap((entry, segmentIndex) =>
+      segments[segmentIndex].voices?.some((item) => item.speaker === voice.speaker)
+        ? [
+            {
+              id: randomUUID(),
+              start_frame: entry.start_frame,
+              end_frame: entry.start_frame + Math.min(Math.round(voice.seconds * FPS), entry.end_frame - entry.start_frame),
+              content: { media_type: "audio", source_type: "input", file_path: file, file_name: voice.filename },
+            },
+          ]
+        : [],
+    );
     trackData.tracks.push({
       id: randomUUID(),
       name: `Voice ${index}`,
@@ -443,14 +462,7 @@ export function storyV2TrackData(
       solo: false,
       volume_db: 0,
       locked: false,
-      segments: [
-        {
-          id: randomUUID(),
-          start_frame: 0,
-          end_frame: Math.round(voice.seconds * FPS),
-          content: { media_type: "audio", source_type: "input", file_path: file, file_name: voice.filename, shared_reference: true },
-        },
-      ],
+      segments: clips,
     });
   });
   trackData.total_length = start;

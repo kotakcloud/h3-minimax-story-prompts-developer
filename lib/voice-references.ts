@@ -1,3 +1,4 @@
+import { parseDialogue } from "./dialogue";
 import type { Character } from "./types";
 
 // Render tests on one story (docs/RESEARCH_voice_references.md): long samples leak their words into the speech, and
@@ -24,6 +25,12 @@ export function voiceReferences(voices: VoiceSample[], characters: Character[]):
   });
 }
 
+// Only who speaks in this prompt: a silent segment given a sample speaks that sample's words.
+export function voicesInSegment(prompt: string, voices: VoiceReference[]): VoiceReference[] {
+  const speakers = new Set(parseDialogue(prompt).flatMap((line) => line.speakers));
+  return voices.filter((voice) => speakers.has(voice.speaker));
+}
+
 function subjectLabel(prompt: string, voice: VoiceReference): string {
   const speaker = `(${voice.speaker})`;
   const escapedName = voice.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -35,6 +42,7 @@ function subjectLabel(prompt: string, voice: VoiceReference): string {
 
 // Adds the references to a six-section prompt at queue time; the saved prompt stays as written.
 export function withVoiceReferences(prompt: string, voices: VoiceReference[]): string {
+  if (voices.length === 0) return prompt;
   const labels = voices.map((_, index) => `<Audio ${index + 1}>`);
   const defined = voices
     .map((voice, index) => {
