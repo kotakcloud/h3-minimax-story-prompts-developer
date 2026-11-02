@@ -136,7 +136,9 @@ function formatTime(value: number): string {
 export type LineDuration = { segmentId: string; lineIndex: number; seconds: number };
 
 // Gives a timed line a new length without AI: the line keeps its start, everything after it moves by the difference, and
-// the segment grows or shrinks to match. Throws when the result does not fit in one clip.
+// the segment grows or shrinks to match; at 15 s it cannot grow, so the quiet ending gives up the time. Throws when the
+// result does not fit in one clip. This only edits the prompt: renders of sets differing only in these times, same seed,
+// ended their speech at the same moment.
 export function retimeLine(segment: { id: string; duration: number; prompt: string }, lineIndex: number, seconds: number) {
   const line = parseDialogue(segment.prompt)[lineIndex];
   if (line?.start === undefined || line.end === undefined) throw new Error(`Segment ${segment.id}: this line has no times to change.`);

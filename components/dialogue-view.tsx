@@ -155,7 +155,7 @@ export function DialogueView({
                             value={durations[key] ?? ""}
                             placeholder={written.toFixed(1)}
                             aria-label={`Seconds for line ${lineIndex + 1} of segment ${index + 1}`}
-                            title="Seconds this line gets. Leave empty to keep it."
+                            title="Seconds this line gets in the prompt. Leave empty to keep it. A segment already at 15 s keeps its length: the time comes out of its quiet ending. H3 hardly follows these times, so this does not stop a line being cut off."
                             onChange={(event) => setDurations((current) => ({ ...current, [key]: event.target.value }))}
                             className="w-16 shrink-0 rounded-md border border-line bg-background px-2 py-1 text-xs text-foreground"
                           />

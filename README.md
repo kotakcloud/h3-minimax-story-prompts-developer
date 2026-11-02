@@ -142,7 +142,9 @@ amber: split that frame on the Frames step.
 
 On long-take prompts every line also has a seconds box (it shows the current slot). Type a value and press **Update in
 prompts** to make a new prompt set, with no AI: the line keeps its start, everything after it moves, and the segment length
-follows (up to 15 s, or an error if it no longer fits). H3 does not follow timestamps exactly, so listen to the result.
+follows, up to 15 s. A segment already at 15 s keeps its length and the time comes out of its quiet ending; if there is not
+enough, you get an error. This only edits the prompt: H3 hardly follows these times. Two renders with the same seed that
+differed only in line times ended their speech at the same moment, so it does not stop a line being cut off.
 
 ### Who speaks on screen
 
