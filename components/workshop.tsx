@@ -53,6 +53,7 @@ import {
 type Busy = "analyze" | "cast" | "imagePrompt" | "image" | "upload" | "translate" | "compare" | "breakdown" | "prompts" | "update" | "export" | "tighten" | "video" | null;
 
 const VIDEO_POLL_MS = 5000;
+const COMFY_SILENT_MS = 45_000;
 
 // What the prompt routes need to know about a storyboard grid reference (null otherwise).
 function gridForPrompts(story: Story) {
@@ -265,6 +266,8 @@ export function Workshop({
   const [castCommentOpen, setCastCommentOpen] = useState(false);
   const [castComment, setCastComment] = useState("");
   const [queuePositions, setQueuePositions] = useState<Record<string, number>>({});
+  const [comfySilent, setComfySilent] = useState(false);
+  const comfySilentSince = useRef<number | null>(null);
   const [clock, setClock] = useState(0);
   const [saveState, setSaveState] = useState("Saved");
   const skipSave = useRef(true);
@@ -923,7 +926,13 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
       try {
         const response = await fetch(`/api/video/status?${query}`);
         const data = await response.json();
-        if (stopped || !response.ok) return;
+        if (stopped) return;
+        if (!response.ok) {
+          noteComfySilence();
+          return;
+        }
+        comfySilentSince.current = null;
+        setComfySilent(false);
         setQueuePositions((positions) => ({ ...positions, [run.id]: data.queuePosition || 0 }));
         if (
           data.status === run.status &&
@@ -957,7 +966,13 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
         );
       } catch {
         // ComfyUI or the app was briefly unreachable; try again on the next tick.
+        noteComfySilence();
       }
+    }
+    // Only ComfyUI can say a run has ended, so a crash would otherwise leave the card on Running.
+    function noteComfySilence() {
+      comfySilentSince.current ??= Date.now();
+      if (Date.now() - comfySilentSince.current >= COMFY_SILENT_MS) setComfySilent(true);
     }
     const tick = () => {
       for (const runId of activeRunKey.split(",")) void poll(runId);
@@ -3193,6 +3208,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                                     {run.status === "done" && "Done"}
                                     {run.status === "error" && "Failed"}
                                     {run.status === "cancelled" && "Cancelled"}
+                                    {active && comfySilent && " · ComfyUI is not responding, it may have crashed. Check its window and restart it"}
                                     {" · "}
                                     {formatDuration(ended - started)}
                                     {active && (
