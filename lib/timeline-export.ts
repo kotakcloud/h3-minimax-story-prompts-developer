@@ -22,6 +22,7 @@ const NODE = {
   upscale: 1335,
   modelOverride: 1531,
   timeline: 1221,
+  compatibility: 1520,
 } as const;
 // Positions in the Timeline's saved widget values.
 const TIMELINE_AUTO_ADD = 5;
@@ -125,6 +126,14 @@ export async function buildTimelineWorkflow(story: Story): Promise<UiWorkflow> {
   node(NODE.timeline).widgets_values[TIMELINE_DURATION] = first.duration;
   // Each finished take lands on the Timeline, ready to extend.
   node(NODE.timeline).widgets_values[TIMELINE_AUTO_ADD] = true;
+
+  // The check stops every run when a listed pack is missing, and the latent upscaler is optional: only the upscale step,
+  // which is off, uses it.
+  const compatibility = node(NODE.compatibility).widgets_values;
+  compatibility[0] = String(compatibility[0])
+    .split("\n")
+    .filter((line) => !/MinimaxH3LatentUpscaler3D/.test(line))
+    .join("\n");
 
   // 'custom' runs the values held in the file; a preset name is only a label on them.
   const generation = node(NODE.generation).widgets_values;
