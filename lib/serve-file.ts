@@ -10,6 +10,7 @@ const TYPES: Record<string, string> = {
   ".mov": "video/quicktime",
   ".mp4": "video/mp4",
   ".png": "image/png",
+  ".wav": "audio/wav",
   ".webm": "video/webm",
   ".webp": "image/webp",
 };

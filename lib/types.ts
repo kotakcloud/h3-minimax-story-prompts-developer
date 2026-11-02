@@ -1,4 +1,5 @@
 import type { ImportedFrom } from "./video-package";
+import type { VoiceSample } from "./voice-references";
 
 export type Character = {
   id: string;
@@ -128,6 +129,9 @@ export type VideoSettings = {
   onlyFirst: number;
   // New videos play a sound when they are done (each run keeps this as it was when queued).
   notifySound: boolean;
+  // Fast workflows only: send each character's voice sample to H3. Every segment then starts fresh.
+  voiceRefs: boolean;
+  voices: VoiceSample[];
 };
 
 export type VideoRunStatus = "queued" | "running" | "done" | "error" | "cancelled";
@@ -140,6 +144,8 @@ export type VideoRun = {
   ultraFast?: boolean;
   // Queued with "Play a sound when done".
   notifySound?: boolean;
+  // Queued with voice references.
+  voiceRefs?: boolean;
   seed: number;
   engine?: VideoEngine;
   megapixels?: number;
@@ -279,6 +285,8 @@ export const DEFAULT_VIDEO_SETTINGS: VideoSettings = {
   loras: [],
   onlyFirst: 0,
   notifySound: false,
+  voiceRefs: false,
+  voices: [],
 };
 
 // Story V2 is proven with 3–8 s segments only (Themed Transformation Pipeline renders).

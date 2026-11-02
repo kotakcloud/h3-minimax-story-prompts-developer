@@ -2,6 +2,7 @@ import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { ULTRA_STEPS, fastStorySize, type FastStoryEngine, type Size } from "./engines";
+import type { VoiceReference } from "./voice-references";
 
 export const COMFYUI_URL = (process.env.COMFYUI_URL || "http://127.0.0.1:8188").replace(/\/+$/, "");
 
@@ -56,6 +57,20 @@ export async function uploadReferenceImage(png: Blob, subfolder: string, filenam
   };
   if (!uploaded.name) throw new Error("ComfyUI did not accept the image.");
   return { filename: uploaded.name, subfolder: uploaded.subfolder ?? subfolder, type: uploaded.type || "output" };
+}
+
+// Audio for a workflow to read: ComfyUI's upload stores any file, into its input folder here.
+export async function uploadInputFile(file: Blob, subfolder: string, filename: string): Promise<ComfyImage> {
+  const form = new FormData();
+  form.append("image", file, filename);
+  form.append("type", "input");
+  form.append("subfolder", subfolder);
+  const uploaded = (await comfyJson(`${COMFYUI_URL}/upload/image`, { method: "POST", body: form })) as {
+    name?: string;
+    subfolder?: string;
+  };
+  if (!uploaded.name) throw new Error("ComfyUI did not accept the file.");
+  return { filename: uploaded.name, subfolder: uploaded.subfolder ?? subfolder, type: "input" };
 }
 
 export async function generateReferenceImage(options: {
@@ -354,13 +369,18 @@ export type StoryV2Options = {
   loras?: LoraChoice[];
 };
 
-type TrackData = { tracks: { type: string; segments: unknown[] }[]; total_length: number; frame_rate: number };
+type TrackData = {
+  tracks: { type: string; segments: unknown[]; [key: string]: unknown }[];
+  total_length: number;
+  frame_rate: number;
+};
 
 export function storyV2TrackData(
   template: string,
   segments: StoryV2Options["segments"],
   image: ComfyImage,
   refImageSize = "match",
+  voices: VoiceReference[] = [],
 ): string {
   const trackData = JSON.parse(template) as TrackData;
   const pathOf = (item: ComfyImage) => [...item.subfolder.split(/[\\/]+/).filter(Boolean), item.filename].join("/");
@@ -410,6 +430,29 @@ export function storyV2TrackData(
   for (const track of trackData.tracks) {
     track.segments = track.type === "task" ? entries : [];
   }
+  // One audio track per voice, each holding one shared reference: Easy-Media allows one per track and sends the tracks
+  // to H3 in this order, which is the prompts' <Audio N>.
+  voices.forEach((voice, index) => {
+    const file = [voice.subfolder, voice.filename].filter(Boolean).join("/");
+    trackData.tracks.push({
+      id: randomUUID(),
+      name: `Voice ${index}`,
+      type: "audio",
+      color: "var(--primary)",
+      muted: false,
+      solo: false,
+      volume_db: 0,
+      locked: false,
+      segments: [
+        {
+          id: randomUUID(),
+          start_frame: 0,
+          end_frame: Math.round(voice.seconds * FPS),
+          content: { media_type: "audio", source_type: "input", file_path: file, file_name: voice.filename, shared_reference: true },
+        },
+      ],
+    });
+  });
   trackData.total_length = start;
   trackData.frame_rate = FPS;
   return JSON.stringify(trackData);
@@ -493,6 +536,7 @@ export type FastStoryOptions = {
   projectBase: string;
   refImageSize?: "match" | "max";
   loras?: LoraChoice[];
+  voices?: VoiceReference[];
 };
 
 export async function buildFastStory(
@@ -511,6 +555,7 @@ export async function buildFastStory(
     options.segments,
     options.image,
     options.refImageSize || refImageSize,
+    options.voices,
   );
 
   const longest = Math.max(...options.segments.map((segment) => segment.duration));

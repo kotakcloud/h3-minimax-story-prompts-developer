@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { listH3Loras, queueFastStory, queueLongTake, queueStoryV2, type LoraChoice, type StorySegment } from "@/lib/comfyui";
 import { FAST_ENGINE_TAG, isFastEngine } from "@/lib/engines";
 import { IMAGE_ASPECT_RATIOS } from "@/lib/types";
+import { withVoiceReferences, type VoiceReference } from "@/lib/voice-references";
 
 function clampNumber(value: unknown, min: number, max: number, fallback: number): number {
   const number = Number(value);
@@ -26,6 +27,7 @@ export async function POST(request: Request) {
       // Storyboard grid: "whole" = the grid on every segment, "panels" = each segment's own panel.
       grid?: { feed?: string; panels?: { filename?: string; subfolder?: string; type?: string }[] };
       loras?: { name?: string; strength?: number }[];
+      voices?: VoiceReference[];
     };
 
     const storyId = /^[a-zA-Z0-9_-]+$/.test(body.storyId || "") ? String(body.storyId) : "";
@@ -87,9 +89,17 @@ export async function POST(request: Request) {
 
     // Veda Turbo / Sage SLA: single pass with the workflow's own steps; DEV switches the canvas.
     if (isFastEngine(body.engine)) {
+      const voices = (Array.isArray(body.voices) ? body.voices : []).filter(
+        (voice) => voice?.filename && !/[\\/]/.test(voice.filename) && !String(voice.subfolder).includes(".."),
+      );
+      // References garble the speech of a continuing segment (docs/RESEARCH_voice_references.md).
+      const fastSegments = voices.length
+        ? segments.map((segment) => ({ ...segment, prompt: withVoiceReferences(segment.prompt, voices), join: "cut" as const }))
+        : segments;
       const queued = await queueFastStory({
         engine: body.engine,
-        segments,
+        segments: fastSegments,
+        voices,
         image: comfyImage,
         devMode: body.devMode !== false,
         ultra: body.ultra === true,

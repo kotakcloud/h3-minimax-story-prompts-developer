@@ -169,6 +169,9 @@ function parseSettings(value: unknown): VideoPackage["settings"] {
       .map((lora) => ({ name: lora.name, strength: number(lora.strength, 1), enabled: lora.enabled !== false })),
     onlyFirst: Math.max(0, Math.floor(number(raw.onlyFirst, 0))),
     notifySound: raw.notifySound === true,
+    // The samples live in this machine's ComfyUI input folder and do not travel with the file.
+    voiceRefs: false,
+    voices: [],
     gridFeed: raw.gridFeed === "panels" ? "panels" : "whole",
   };
 }

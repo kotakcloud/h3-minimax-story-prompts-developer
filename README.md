@@ -101,6 +101,13 @@ now, because a run takes a single reference image.
   small canvas (256×448 at 9:16, about a fifth of DEV's pixels) and Sage SLA runs 6 steps instead of 10 (Veda Turbo
   stays at 4 and Singularity Veda at 3). Expect a rough picture and weaker lip-sync. Files go to the project folder
   `h3s_<id>_<tag>_ultra`, and the run is marked ULTRA FAST.
+- **Voice references** (fast workflows only): keeps each character's voice the same across segments. Tick it, then give
+  each character a sample: pick a finished video, enter the second where only that character speaks and press **Cut**, or
+  **Upload** an audio file. Samples are cut to 1-4 s and stored in ComfyUI's input folder under `h3-voices/<story id>`; they
+  do not travel in exported video files. Generating adds them to the workflow and the prompts at queue time, so the saved
+  prompts do not change, and the run is marked `voice refs`. Every segment then starts fresh, so joins become cuts, and
+  some lines may still drop out. A character without a sample keeps a drifting voice. The ComfyUI timeline export ignores
+  voice references. Findings are in `docs/RESEARCH_voice_references.md`.
 - **Duplicate** (copy icon in the story list) makes a copy named "… (copy)" with everything except the generated
   videos and comparisons: gist, analysis, cast, reference images, frames, all prompt sets and the video settings.
 - **Queue several videos**: *Generate video* stays available while others render (*Queue another video*); ComfyUI

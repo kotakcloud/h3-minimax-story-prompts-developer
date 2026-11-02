@@ -18,6 +18,8 @@ import { playDoneSound } from "@/lib/done-sound";
 import { panelPosition, selectedGrid } from "@/lib/grid";
 import { FAST_ENGINE_STEPS, ULTRA_STEPS, VIDEO_ENGINES, engineInfo, fastStorySize, isFastEngine } from "@/lib/engines";
 import { UpdateCommentDialog } from "@/components/update-comment-dialog";
+import { VoiceSamples } from "@/components/voice-samples";
+import { voiceReferences } from "@/lib/voice-references";
 import { TabStatus } from "@/lib/tab-status";
 import { buildExportPayload, buildMarkdownExport, downloadJson, downloadMarkdown } from "@/lib/export";
 import type {
@@ -200,6 +202,7 @@ function runLabelLines(run: VideoRun, story: Story, letter: string): string[] {
     run.ultraFast ? "ULTRA FAST" : run.devMode ? "DEV" : run.engine === "long-take" || !run.engine ? "Final" : "FULL",
     run.width && run.height ? `${run.width}×${run.height}` : run.megapixels ? `${run.megapixels} MP` : "",
     run.steps ? `${run.steps} steps` : "",
+    run.voiceRefs ? "voice refs" : "",
   ]
     .filter(Boolean)
     .join(" · ");
@@ -801,6 +804,8 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
       const loras = (settings.loras || [])
         .filter((lora) => lora.enabled)
         .map((lora) => ({ name: lora.name, strength: lora.strength }));
+      const voices =
+        settings.voiceRefs && isFastEngine(settings.engine) ? voiceReferences(settings.voices, current.characters) : [];
       const response = await request("/api/video", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -819,6 +824,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
           // Storyboard grid: the video takes the panel's aspect ratio, not the grid's.
           grid: image.grid ? { feed: current.gridFeed, panels: image.grid.panels } : undefined,
           loras,
+          voices,
           devMode: settings.devMode,
           ultra: ultra,
           seed: settings.seed,
@@ -852,6 +858,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
         devMode: settings.devMode,
         ...(ultra ? { ultraFast: true } : {}),
         ...(settings.notifySound ? { notifySound: true } : {}),
+        ...(voices.length ? { voiceRefs: true } : {}),
         seed: settings.seed,
         engine: settings.engine,
         ...(v2
@@ -2883,6 +2890,17 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                           New seed
                         </button>
                       </div>
+
+                      {fastEngine && (
+                        <VoiceSamples
+                          storyId={story.id}
+                          characters={story.characters}
+                          videos={story.videos}
+                          settings={settings}
+                          onChange={updateVideoSettings}
+                          onError={setError}
+                        />
+                      )}
 
                       <div className="flex flex-wrap items-center gap-3">
                         <button
