@@ -1,16 +1,8 @@
 import { NextResponse } from "next/server";
 import { unlink } from "node:fs/promises";
-import { comparisonFile, stitchComparison, type CompareTile } from "@/lib/compare";
+import { comparisonFile, safeVideo, stitchComparison, type CompareTile } from "@/lib/compare";
 
 export const maxDuration = 600;
-
-const safeVideo = (item: unknown) => {
-  const video = (item && typeof item === "object" ? item : {}) as { filename?: unknown; subfolder?: unknown; type?: unknown };
-  const filename = String(video.filename || "");
-  const subfolder = String(video.subfolder || "");
-  if (!filename || /[\/]/.test(filename) || subfolder.includes("..")) return null;
-  return { filename, subfolder, type: video.type === "input" || video.type === "temp" ? String(video.type) : "output" };
-};
 
 // POST { storyId, id, tiles: [{ video, lines }], audioFrom } — stitches the comparison video.
 export async function POST(request: Request) {

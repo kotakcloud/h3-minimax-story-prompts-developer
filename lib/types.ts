@@ -165,6 +165,8 @@ export type VideoRun = {
   note?: string;
   // Set when the card was expanded or collapsed by hand (otherwise rated = collapsed).
   collapsed?: boolean;
+  // A copy without the dead air exists (data/comparisons/<story id>/tight-<run id>.mp4).
+  tightened?: { duration: number; originalDuration: number; cuts: number };
   status: VideoRunStatus;
   // When the app first saw it running (it may have waited in ComfyUI's queue behind others).
   runningSince?: string;

@@ -48,7 +48,7 @@ import {
   storyRevisions,
 } from "@/lib/types";
 
-type Busy = "analyze" | "cast" | "imagePrompt" | "image" | "upload" | "translate" | "compare" | "breakdown" | "prompts" | "update" | "export" | "video" | null;
+type Busy = "analyze" | "cast" | "imagePrompt" | "image" | "upload" | "translate" | "compare" | "breakdown" | "prompts" | "update" | "export" | "tighten" | "video" | null;
 
 const VIDEO_POLL_MS = 5000;
 
@@ -151,6 +151,7 @@ const BUSY_LABELS: Record<NonNullable<Busy>, string> = {
   prompts: "H3 prompts",
   update: "Prompt update",
   export: "Video file export",
+  tighten: "Tightening video",
   video: "Sending video",
 };
 
@@ -626,7 +627,40 @@ export function Workshop({
 
 The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` : "";
     if (!window.confirm(`Delete this generation from the story?${where}`)) return;
+    if (run.tightened) void removeTightenedFile(run);
     patchStory({ videos: current.videos.filter((item) => item.id !== run.id) });
+  }
+
+  function removeTightenedFile(run: VideoRun) {
+    return request(`/api/compare?${new URLSearchParams({ storyId, id: `tight-${run.id}` })}`, { method: "DELETE" });
+  }
+
+  // A copy of the finished video without its dead air, no GPU.
+  async function tightenVideo(run: VideoRun) {
+    setBusy("tighten");
+    setError("");
+    try {
+      const response = await request("/api/video/tighten", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storyId, runId: run.id, video: run.video }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not tighten the video.");
+      const latest = storyRef.current;
+      if (latest) patchStory({ videos: latest.videos.map((item) => (item.id === run.id ? { ...item, tightened: data } : item)) });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not tighten the video.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function removeTightened(run: VideoRun) {
+    if (!window.confirm("Delete the tightened copy? The original video stays.")) return;
+    await removeTightenedFile(run);
+    const latest = storyRef.current;
+    if (latest) patchStory({ videos: latest.videos.map((item) => (item.id === run.id ? { ...item, tightened: undefined } : item)) });
   }
 
   async function createComparison() {
@@ -3215,6 +3249,39 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                                     <p className="mt-2 break-all text-xs text-muted">
                                       ComfyUI output: {run.video.subfolder}\{run.video.filename}
                                     </p>
+                                    {run.tightened ? (
+                                      <div className="mt-3">
+                                        <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+                                          <span>
+                                            Tightened: {Math.round(run.tightened.duration)}s of {Math.round(run.tightened.originalDuration)}s · {run.tightened.cuts}{" "}
+                                            {run.tightened.cuts === 1 ? "cut" : "cuts"}
+                                          </span>
+                                          <button
+                                            type="button"
+                                            onClick={() => void removeTightened(run)}
+                                            className="rounded-full border border-line px-3 py-1 hover:text-red-300"
+                                          >
+                                            Delete tightened copy
+                                          </button>
+                                        </div>
+                                        <video
+                                          src={`/api/compare/file?${new URLSearchParams({ storyId: story.id, id: `tight-${run.id}` })}`}
+                                          controls
+                                          preload="metadata"
+                                          className="w-full rounded-xl border border-line bg-black"
+                                        />
+                                      </div>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => void tightenVideo(run)}
+                                        disabled={busy !== null}
+                                        title="Makes a shorter copy without the silence before, between and after the speech. No GPU; the original stays."
+                                        className="mt-2 rounded-full border border-line px-4 py-1.5 text-sm disabled:opacity-50"
+                                      >
+                                        {busy === "tighten" ? "Tightening…" : "Tighten video"}
+                                      </button>
+                                    )}
                                   </>
                                 )}
                               </li>

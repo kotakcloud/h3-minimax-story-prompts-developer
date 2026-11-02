@@ -129,6 +129,16 @@ New frames are split to this budget automatically. For existing stories, **Split
 at sentence ends, repeating who speaks, and clears the prompts so they can be written again. The story gets longer. A single
 long sentence is never cut, so it can stay dense. Grid stories keep one frame per panel unless you split them this way.
 
+### Tighten video
+
+H3 pads speech with silence: one 171 s video held 53 s of speech. **Tighten video** on a finished generation makes a shorter
+copy without the silence before, between and after the speech, in seconds to a minute and with no GPU. That video came down to 112 s.
+Pauses longer than 0.7 s shrink to that, and everything louder than -34 dB in the speech band stays. The copy plays under the
+original with its length and number of cuts, and the original is not touched. Files:
+`data/comparisons/<story id>/tight-<run id>.mp4`.
+
+The cuts are jump cuts: the framing stays, but a head or hand can snap to a new position. The background music jumps at the cuts too.
+
 ### What changed between prompt sets
 
 Each generation's *Prompts* row and the Prompts tab show a link like *vs set 5: 3 added · 2 removed · 4 updated*, comparing the

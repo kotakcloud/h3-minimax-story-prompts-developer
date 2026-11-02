@@ -21,6 +21,14 @@ export function comparisonFile(storyId: string, id: string): string {
   return path.join(comparisonDir(storyId), `${id}.mp4`);
 }
 
+export function safeVideo(item: unknown): CompareTile["video"] | null {
+  const video = (item && typeof item === "object" ? item : {}) as { filename?: unknown; subfolder?: unknown; type?: unknown };
+  const filename = String(video.filename || "");
+  const subfolder = String(video.subfolder || "");
+  if (!filename || /[\\/]/.test(filename) || subfolder.includes("..")) return null;
+  return { filename, subfolder, type: video.type === "input" || video.type === "temp" ? String(video.type) : "output" };
+}
+
 export type CompareTile = {
   video: { filename: string; subfolder: string; type: string };
   lines: string[];
