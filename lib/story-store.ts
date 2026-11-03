@@ -124,6 +124,14 @@ function toSummary(story: Story): StorySummary {
     imported: story.imported !== null,
     storyType: story.storyType,
     projectId: story.projectId,
+    latestVideo: (() => {
+      const run = story.videos
+        .filter((item) => item.status === "done" && item.video)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+      return run?.video
+        ? { ...run.video, createdAt: run.createdAt, devMode: run.devMode, ultraFast: Boolean(run.ultraFast) }
+        : null;
+    })(),
   };
 }
 

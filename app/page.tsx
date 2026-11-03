@@ -6,10 +6,15 @@ import { useEffect, useState } from "react";
 import { useLoggedFetch } from "@/components/debug-log";
 import { IconButton, IconLink, Icons } from "@/components/icons";
 import { ImportVideoFile } from "@/components/import-video-file";
+import { VideoPlayer } from "@/components/video-player";
 import type { Project, StorySummary, StoryType } from "@/lib/types";
 import { DEFAULT_PROJECT_ID, STORY_TYPES, storyPath } from "@/lib/types";
 
 const LAST_PROJECT_KEY = "h3-last-project";
+
+function videoUrl(video: { filename: string; subfolder: string; type: string }) {
+  return `/api/image/view?${new URLSearchParams({ filename: video.filename, subfolder: video.subfolder, type: video.type })}`;
+}
 
 // The project to show first: the one in the address (?project=), else the last one opened here.
 function startingProject(): string {
@@ -53,6 +58,8 @@ export default function Home() {
   // "new" while naming a new project, a project id while renaming it.
   const [editing, setEditing] = useState<string | null>(null);
   const [draftName, setDraftName] = useState("");
+  // Stories whose latest video file is gone from ComfyUI's output folder.
+  const [missingVideos, setMissingVideos] = useState<string[]>([]);
 
   async function refresh() {
     const [storyResponse, projectResponse] = await Promise.all([request("/api/stories"), request("/api/projects")]);
@@ -317,8 +324,9 @@ export default function Home() {
           {visible.map((story) => (
             <li
               key={story.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-card px-4 py-4"
+              className="flex flex-col gap-4 rounded-2xl border border-line bg-card px-4 py-4 sm:flex-row sm:items-start"
             >
+              <div className="flex min-w-0 flex-1 flex-col gap-3">
               <div className="min-w-0">
                 <Link href={storyPath(story.id, story.step)} className="block truncate text-base font-medium">
                   {story.title}
@@ -374,6 +382,27 @@ export default function Home() {
                   {Icons.trash}
                 </IconButton>
               </div>
+              </div>
+              {story.latestVideo && (
+                <div className="w-full shrink-0 sm:w-72">
+                  {missingVideos.includes(story.id) ? (
+                    <p className="flex aspect-video w-full items-center justify-center rounded-xl border border-dashed border-line px-4 text-center text-xs text-muted">
+                      The video file is no longer in ComfyUI&apos;s output folder.
+                    </p>
+                  ) : (
+                    <VideoPlayer
+                      src={videoUrl(story.latestVideo)}
+                      preload="metadata"
+                      onError={() => setMissingVideos((ids) => (ids.includes(story.id) ? ids : [...ids, story.id]))}
+                      className="aspect-video w-full rounded-xl border border-line bg-black"
+                    />
+                  )}
+                  <p className="mt-1 text-xs text-muted">
+                    Latest video · {story.latestVideo.ultraFast ? "Ultra fast" : story.latestVideo.devMode ? "DEV" : "FULL"} ·{" "}
+                    {formatDate(story.latestVideo.createdAt)}
+                  </p>
+                </div>
+              )}
             </li>
           ))}
         </ul>

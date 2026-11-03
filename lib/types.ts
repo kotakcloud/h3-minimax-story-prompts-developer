@@ -357,6 +357,8 @@ export type StorySummary = {
   imported: boolean;
   storyType: StoryType;
   projectId: string;
+  // The most recently started generation that finished, for the story list.
+  latestVideo: { filename: string; subfolder: string; type: string; createdAt: string; devMode: boolean; ultraFast: boolean } | null;
 };
 
 export function isStoryStep(value: string): value is StoryStep {
