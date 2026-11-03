@@ -124,6 +124,7 @@ function toSummary(story: Story): StorySummary {
     imported: story.imported !== null,
     storyType: story.storyType,
     projectId: story.projectId,
+    aiModel: story.aiModel,
     latestVideo: (() => {
       const run = story.videos
         .filter((item) => item.status === "done" && item.video)

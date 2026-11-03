@@ -9,6 +9,7 @@ import { ImportVideoFile } from "@/components/import-video-file";
 import { VideoPlayer } from "@/components/video-player";
 import type { Project, StorySummary, StoryType } from "@/lib/types";
 import { DEFAULT_PROJECT_ID, STORY_TYPES, storyPath } from "@/lib/types";
+import { modelLabel } from "@/lib/models";
 
 const LAST_PROJECT_KEY = "h3-last-project";
 
@@ -58,11 +59,19 @@ export default function Home() {
   // "new" while naming a new project, a project id while renaming it.
   const [editing, setEditing] = useState<string | null>(null);
   const [draftName, setDraftName] = useState("");
+  // The .env default model chain, named for stories that have no model of their own.
+  const [defaultModels, setDefaultModels] = useState<string[]>([]);
   // Stories whose latest video file is gone from ComfyUI's output folder.
   const [missingVideos, setMissingVideos] = useState<string[]>([]);
 
   async function refresh() {
     const [storyResponse, projectResponse] = await Promise.all([request("/api/stories"), request("/api/projects")]);
+    fetch("/api/openrouter-models")
+      .then((response) => response.json())
+      .then((data: { defaultModels?: unknown }) => {
+        if (Array.isArray(data.defaultModels)) setDefaultModels(data.defaultModels.filter((id): id is string => typeof id === "string"));
+      })
+      .catch(() => {});
     const data = await storyResponse.json();
     const projectData = await projectResponse.json();
     if (!storyResponse.ok) throw new Error(data.error || "Could not load stories.");
@@ -331,6 +340,9 @@ export default function Home() {
                 <Link href={storyPath(story.id, story.step)} className="block truncate text-base font-medium">
                   {story.title}
                 </Link>
+                <p className="truncate text-xs text-accent/80" title={story.aiModel || "The .env default model"}>
+                  {modelLabel(story.aiModel, defaultModels)}
+                </p>
                 <p className="mt-1 font-mono text-xs text-muted">
                   {story.id} · {story.imported ? "Imported" : stepLabel(story.step)} · {story.storyType === "type-1" ? "type-1 · " : ""}{story.frameCount} frames · {story.segmentCount} prompts
                 </p>

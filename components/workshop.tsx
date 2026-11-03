@@ -16,6 +16,7 @@ import { VideoPlayer } from "@/components/video-player";
 import { framesFromAnalysis } from "@/lib/beats";
 import { applyLineDurations, timingComment, timingFixes, type LineDuration } from "@/lib/dialogue";
 import { playDoneSound } from "@/lib/done-sound";
+import { modelLabel } from "@/lib/models";
 import { Money } from "@/components/money";
 import type { StoryCost } from "@/lib/story-cost";
 import { panelPosition, selectedGrid } from "@/lib/grid";
@@ -267,6 +268,7 @@ export function Workshop({
   const [story, setStory] = useState<Story | null>(null);
   const [stories, setStories] = useState<StorySummary[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [defaultModels, setDefaultModels] = useState<string[]>([]);
   const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState("");
   const [copiedId, setCopiedId] = useState("");
@@ -343,6 +345,14 @@ export function Workshop({
       const storyData = await storyRes.json();
       const listData = await listRes.json();
       const projectData = await projectRes.json().catch(() => ({}));
+      fetch("/api/openrouter-models")
+        .then((response) => response.json())
+        .then((data: { defaultModels?: unknown }) => {
+          if (!cancelled && Array.isArray(data.defaultModels)) {
+            setDefaultModels(data.defaultModels.filter((id): id is string => typeof id === "string"));
+          }
+        })
+        .catch(() => {});
       if (cancelled) return;
       if (!storyRes.ok) {
         setError(storyData.error || "Story not found.");
@@ -1548,6 +1558,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                   >
                     {item.title}
                     <span className="ml-1 text-xs text-muted">{stepLabel(item.step)}</span>
+                    <span className="block truncate text-[11px] text-muted/80">{modelLabel(item.aiModel, defaultModels)}</span>
                   </Link>
                   <IconButton
                     label="Open in new tab"
@@ -1585,6 +1596,9 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                 onChange={(event) => patchStory({ title: event.target.value, titleEdited: true })}
                 className="mt-1 w-full max-w-xl truncate bg-transparent text-2xl font-semibold tracking-tight outline-none"
               />
+              <p className="truncate text-xs text-accent/80" title="The AI model that writes this story's text (set in the sidebar)">
+                {modelLabel(story.aiModel, defaultModels)}
+              </p>
             </div>
             <div className="flex gap-2">
               <IconButton
