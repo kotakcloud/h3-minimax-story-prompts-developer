@@ -186,6 +186,27 @@ function writeHibernateTick(storyId: string, on: boolean) {
   }
 }
 
+// The storyboard grid's rows x columns last used in this browser, for every story.
+const GRID_SIZE_KEY = "h3-grid-size";
+
+function lastGridSize(): { rows: number; cols: number } {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(GRID_SIZE_KEY) || "null") as { rows?: unknown; cols?: unknown } | null;
+    const size = (value: unknown) => Math.max(1, Math.min(4, Math.round(Number(value) || 2)));
+    return saved ? { rows: size(saved.rows), cols: size(saved.cols) } : { rows: 2, cols: 2 };
+  } catch {
+    return { rows: 2, cols: 2 };
+  }
+}
+
+function rememberGridSize(rows: number, cols: number) {
+  try {
+    window.localStorage.setItem(GRID_SIZE_KEY, JSON.stringify({ rows, cols }));
+  } catch {
+    // Storage blocked: the size just resets next time.
+  }
+}
+
 function formatDuration(ms: number) {
   const total = Math.max(0, Math.round(ms / 1000));
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
@@ -280,7 +301,10 @@ export function Workshop({
   const [saveState, setSaveState] = useState("Saved");
   const skipSave = useRef(true);
   const storyRef = useRef<Story | null>(null);
-  const [gridUpload, setGridUpload] = useState({ on: false, rows: 2, cols: 2 });
+  const [gridUpload, setGridUpload] = useState(() => ({
+    on: false,
+    ...(typeof window === "undefined" ? { rows: 2, cols: 2 } : lastGridSize()),
+  }));
   const [dialogueLanguage, setDialogueLanguage] = useState("Gujarati");
   const [dialogueView, setDialogueView] = useState(false);
   const [selectedDialogue, setSelectedDialogue] = useState<string[]>([]);
@@ -2088,7 +2112,11 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                           min={1}
                           max={4}
                           value={gridUpload.rows}
-                          onChange={(event) => setGridUpload((grid) => ({ ...grid, rows: Number(event.target.value) || 1 }))}
+                          onChange={(event) => {
+                            const rows = Number(event.target.value) || 1;
+                            setGridUpload((grid) => ({ ...grid, rows }));
+                            rememberGridSize(rows, gridUpload.cols);
+                          }}
                           className="w-12 rounded-md border border-line bg-background px-1 py-0.5 text-foreground"
                         />
                       </label>
@@ -2099,7 +2127,11 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                           min={1}
                           max={4}
                           value={gridUpload.cols}
-                          onChange={(event) => setGridUpload((grid) => ({ ...grid, cols: Number(event.target.value) || 1 }))}
+                          onChange={(event) => {
+                            const cols = Number(event.target.value) || 1;
+                            setGridUpload((grid) => ({ ...grid, cols }));
+                            rememberGridSize(gridUpload.rows, cols);
+                          }}
                           className="w-12 rounded-md border border-line bg-background px-1 py-0.5 text-foreground"
                         />
                       </label>

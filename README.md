@@ -187,7 +187,7 @@ gives the same film in the other language. The new set is marked with its langua
 ### Storyboard grids
 
 A reference picture can be a **storyboard grid** of scenes. Tick *Storyboard grid of scenes* and set rows x columns before
-uploading: the browser also cuts the panels out (trimming white gutters) and the panel aspect ratio becomes the video's.
+uploading (the last rows x columns used in this browser come back next time): the browser also cuts the panels out (trimming white gutters) and the panel aspect ratio becomes the video's.
 Use clean panels without captions or numbers, the same characters in every panel. Then:
 
 - **Frames > Frames from grid** sends the picture to the story's AI model (needs one that can see images, e.g.
