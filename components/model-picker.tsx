@@ -1,5 +1,6 @@
 "use client";
 
+import { MoneyText } from "@/components/money";
 import { withInr } from "@/lib/money";
 import { useEffect, useState } from "react";
 import { MAX_MODELS, MODEL_OPTIONS, RECOMMENDED_MODEL, isWeakChain, parseModelChain } from "@/lib/models";
@@ -21,6 +22,8 @@ export function ModelPicker({ value, onChange }: { value: string; onChange: (val
   const typed = parseModelChain(value);
   const chain = typed.error ? [] : typed.models.length > 0 ? typed.models : defaults;
   const ignored = value.split(",").filter((id) => id.trim()).length > MAX_MODELS;
+  // The recommended model's price, as in the list ("~$0.75 / $3.75 per M tokens").
+  const recommendedPrice = (MODEL_OPTIONS.find((option) => option.id === RECOMMENDED_MODEL)?.label || "").replace(/^recommended,\s*/, "");
 
   return (
     <div className="space-y-1.5">
@@ -46,14 +49,21 @@ export function ModelPicker({ value, onChange }: { value: string; onChange: (val
         ))}
       </datalist>
       {value.trim() !== RECOMMENDED_MODEL && (
-        <button
-          type="button"
-          onClick={() => onChange(RECOMMENDED_MODEL)}
-          className="text-xs text-accent hover:underline"
-          title="Fast and cheap (about ₹1, a cent, per call)"
-        >
-          Use recommended: gemini-3.7-flash
-        </button>
+        <div>
+          <button
+            type="button"
+            onClick={() => onChange(RECOMMENDED_MODEL)}
+            className="text-xs text-accent hover:underline"
+            title="Fast and cheap (about ₹1, a cent, per call)"
+          >
+            Use recommended: gemini-3.7-flash
+          </button>
+          {recommendedPrice && (
+            <p className="text-xs text-muted" title="Input / output price per million tokens">
+              <MoneyText text={recommendedPrice} />
+            </p>
+          )}
+        </div>
       )}
       {typed.error ? (
         <p className="text-xs text-red-300">{typed.error}</p>

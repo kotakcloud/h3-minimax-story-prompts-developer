@@ -8,7 +8,7 @@ export function formatInr(usd: number): string {
 
 // Small amounts get a third decimal so a single call still shows.
 export function formatUsd(usd: number): string {
-  return `$${usd.toFixed(usd > 0 && usd < 1 ? 3 : 2)}`;
+  return `$${usd.toFixed(usd > 0 && usd < 0.1 ? 3 : 2)}`;
 }
 
 // For plain text, where nothing can be styled (a <select> option): "~$0.75 per M" -> "~₹75 ($0.75) per M".
