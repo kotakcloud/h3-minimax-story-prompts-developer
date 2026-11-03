@@ -36,6 +36,7 @@ import type {
   StoryStep,
   StoryAnalysis,
   StorySummary,
+  Project,
   VideoRun,
 } from "@/lib/types";
 import {
@@ -265,6 +266,7 @@ export function Workshop({
   const [aiCost, setAiCost] = useState<StoryCost | null>(null);
   const [story, setStory] = useState<Story | null>(null);
   const [stories, setStories] = useState<StorySummary[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState("");
   const [copiedId, setCopiedId] = useState("");
@@ -333,12 +335,14 @@ export function Workshop({
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const [storyRes, listRes] = await Promise.all([
+      const [storyRes, listRes, projectRes] = await Promise.all([
         request(`/api/stories/${storyId}`),
         request("/api/stories"),
+        request("/api/projects"),
       ]);
       const storyData = await storyRes.json();
       const listData = await listRes.json();
+      const projectData = await projectRes.json().catch(() => ({}));
       if (cancelled) return;
       if (!storyRes.ok) {
         setError(storyData.error || "Story not found.");
@@ -348,6 +352,7 @@ export function Workshop({
       skipSave.current = loaded.step === step;
       setStory({ ...loaded, step });
       setStories(listData.stories || []);
+      setProjects(projectData.projects || []);
     }
     load().catch((err) => {
       if (!cancelled) setError(err instanceof Error ? err.message : "Could not load story.");
@@ -1520,15 +1525,19 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     <div className="min-h-[calc(100vh-var(--nav-h))] md:grid md:grid-cols-[240px_1fr]">
       <aside className="border-b border-line bg-card md:border-b-0 md:border-r">
         <div className="sticky top-[var(--nav-h)] space-y-4 p-4">
-          <Link href="/" className="text-xs uppercase tracking-[0.18em] text-accent">
-            All stories
+          <Link
+            href={`/?project=${encodeURIComponent(story.projectId)}`}
+            title="Back to this project's stories"
+            className="block truncate text-xs uppercase tracking-[0.18em] text-accent"
+          >
+            ← {projects.find((project) => project.id === story.projectId)?.name || "Stories"}
           </Link>
           <ModelPicker value={story.aiModel} onChange={(aiModel) => patchStory({ aiModel })} />
           <div>
-            <p className="text-xs text-muted">Open another</p>
+            <p className="text-xs text-muted">Open another in this project</p>
             <ul className="mt-2 space-y-1">
               {stories
-                .filter((item) => !item.archived || item.id === storyId)
+                .filter((item) => item.projectId === story.projectId && (!item.archived || item.id === storyId))
                 .map((item) => (
                 <li key={item.id} className="flex items-center gap-2">
                   <Link
@@ -2668,7 +2677,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                     >
                       {busy === "export" ? "Exporting…" : "Export video file"}
                     </button>
-                    <ImportVideoFile onError={setError} />
+                    <ImportVideoFile onError={setError} projectId={story.projectId} />
                     <button
                       type="button"
                       onClick={() => goTo("video")}
@@ -2739,7 +2748,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                         segments · {totalVideoSeconds}s) and the selected reference image.
                       </p>
                     </div>
-                    <ImportVideoFile onError={setError} />
+                    <ImportVideoFile onError={setError} projectId={story.projectId} />
                   </div>
 
                   <ImportedDetails story={story} />

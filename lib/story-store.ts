@@ -3,13 +3,14 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import type { Story, StoryStep, StorySummary, StoryType } from "./types";
 import { RECOMMENDED_MODEL } from "./models";
-import { DEFAULT_IMAGE_SETTINGS, DEFAULT_VIDEO_SETTINGS, isPromptStyle, isStoryStep, isStoryType } from "./types";
+import { DEFAULT_IMAGE_SETTINGS, DEFAULT_PROJECT_ID, DEFAULT_VIDEO_SETTINGS, isPromptStyle, isStoryStep, isStoryType } from "./types";
 
 const storiesDir = path.join(process.cwd(), "data", "stories");
 
 function emptyStory(id: string, now: string): Story {
   return {
     id,
+    projectId: DEFAULT_PROJECT_ID,
     title: "Untitled story",
     titleEdited: false,
     storyType: "regular",
@@ -63,6 +64,7 @@ function asStory(value: unknown, fallbackId: string): Story {
     ...base,
     ...raw,
     id: typeof raw.id === "string" ? raw.id : fallbackId,
+    projectId: typeof raw.projectId === "string" && raw.projectId ? raw.projectId : DEFAULT_PROJECT_ID,
     title: typeof raw.title === "string" && raw.title.trim() ? raw.title : base.title,
     titleEdited: raw.titleEdited === true,
     storyType: isStoryType(raw.storyType) ? raw.storyType : "regular",
@@ -121,6 +123,7 @@ function toSummary(story: Story): StorySummary {
     archived: story.archived,
     imported: story.imported !== null,
     storyType: story.storyType,
+    projectId: story.projectId,
   };
 }
 
@@ -151,10 +154,10 @@ export async function readStory(id: string): Promise<Story | null> {
   }
 }
 
-export async function createStory(storyType: StoryType = "regular"): Promise<Story> {
+export async function createStory(storyType: StoryType = "regular", projectId: string = DEFAULT_PROJECT_ID): Promise<Story> {
   await ensureDir();
   const now = new Date().toISOString();
-  const story = { ...emptyStory(randomUUID(), now), storyType };
+  const story = { ...emptyStory(randomUUID(), now), storyType, projectId };
   await writeStory(story);
   return story;
 }

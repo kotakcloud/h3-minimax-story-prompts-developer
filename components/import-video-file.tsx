@@ -6,7 +6,16 @@ import { useLoggedFetch } from "@/components/debug-log";
 import { storyPath } from "@/lib/types";
 
 // Picks an exported video file and opens the Video-only story it becomes. Nothing renders until Generate video.
-export function ImportVideoFile({ onError, className }: { onError: (message: string) => void; className?: string }) {
+// The new story goes into `projectId` (the "unknown" project when not given).
+export function ImportVideoFile({
+  onError,
+  className,
+  projectId,
+}: {
+  onError: (message: string) => void;
+  className?: string;
+  projectId?: string;
+}) {
   const router = useRouter();
   const request = useLoggedFetch();
   const input = useRef<HTMLInputElement>(null);
@@ -16,7 +25,8 @@ export function ImportVideoFile({ onError, className }: { onError: (message: str
     setBusy(true);
     onError("");
     try {
-      const response = await request(`/api/video-package?name=${encodeURIComponent(file.name)}`, {
+      const query = new URLSearchParams({ name: file.name, ...(projectId ? { project: projectId } : {}) });
+      const response = await request(`/api/video-package?${query}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: file,

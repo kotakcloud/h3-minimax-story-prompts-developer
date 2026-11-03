@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { projectExists } from "@/lib/project-store";
 import { createStory, listStories } from "@/lib/story-store";
-import { isStoryType } from "@/lib/types";
+import { DEFAULT_PROJECT_ID, isStoryType } from "@/lib/types";
 
 export async function GET() {
   try {
@@ -13,8 +14,9 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json().catch(() => ({}))) as { storyType?: unknown };
-    const story = await createStory(isStoryType(body.storyType) ? body.storyType : "regular");
+    const body = (await request.json().catch(() => ({}))) as { storyType?: unknown; projectId?: unknown };
+    const projectId = typeof body.projectId === "string" && (await projectExists(body.projectId)) ? body.projectId : DEFAULT_PROJECT_ID;
+    const story = await createStory(isStoryType(body.storyType) ? body.storyType : "regular", projectId);
     return NextResponse.json({ story }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not create a story.";

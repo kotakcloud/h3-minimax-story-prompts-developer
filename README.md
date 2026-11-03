@@ -47,6 +47,15 @@ Set `COMFYUI_OUTPUT_DIR` in `.env.local` to ComfyUI's output folder when the app
 
 On the Image tab you can also **upload your own picture** (Upload image, or drop a file on the image area). The browser converts it to PNG (scaled down to at most 4 MP) and the app stores it in ComfyUI's output folder next to the generated ones (`h3-story/<story id>/upload_<time>.png`), so both video workflows use it the same way. Its aspect ratio is matched to the nearest supported one. The **Layout** box under the prompt (who stands where) feeds the H3 prompts: edit it to match an uploaded picture.
 
+### Projects
+
+Stories belong to projects. The story list shows the projects at the top (with how many stories each has); click one to
+see its stories below. *+ New project* makes one, *Rename* renames the open one. New stories and imported video files go
+into the open project, and a duplicate stays in its story's project. Stories made before projects existed are in
+**unknown**, which can be renamed too. The list remembers the last project you opened (`/?project=<id>` opens one
+directly). On a story's page the sidebar lists only that project's stories, and its top link goes back to the project.
+Projects are kept in `data/projects.json`.
+
 ### Story types
 
 Pick the type next to the New story button (type-1 is preselected); it is set when the story is created and shown in the list (*type-1*).

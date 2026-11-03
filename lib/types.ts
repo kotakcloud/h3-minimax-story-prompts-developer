@@ -288,8 +288,13 @@ export const DEFAULT_IMAGE_SETTINGS: ImageSettings = {
   seed: 42,
 };
 
+// A group of stories. Stories from before projects existed are in DEFAULT_PROJECT_ID.
+export type Project = { id: string; name: string; createdAt: string };
+export const DEFAULT_PROJECT_ID = "unknown";
+
 export type Story = {
   id: string;
+  projectId: string;
   title: string;
   // The title was typed by hand.
   titleEdited: boolean;
@@ -351,6 +356,7 @@ export type StorySummary = {
   archived: boolean;
   imported: boolean;
   storyType: StoryType;
+  projectId: string;
 };
 
 export function isStoryStep(value: string): value is StoryStep {

@@ -6,8 +6,22 @@ import { useEffect, useState } from "react";
 import { useLoggedFetch } from "@/components/debug-log";
 import { IconButton, IconLink, Icons } from "@/components/icons";
 import { ImportVideoFile } from "@/components/import-video-file";
-import type { StorySummary, StoryType } from "@/lib/types";
-import { STORY_TYPES, storyPath } from "@/lib/types";
+import type { Project, StorySummary, StoryType } from "@/lib/types";
+import { DEFAULT_PROJECT_ID, STORY_TYPES, storyPath } from "@/lib/types";
+
+const LAST_PROJECT_KEY = "h3-last-project";
+
+// The project to show first: the one in the address (?project=), else the last one opened here.
+function startingProject(): string {
+  if (typeof window === "undefined") return "";
+  const fromUrl = new URLSearchParams(window.location.search).get("project");
+  if (fromUrl) return fromUrl;
+  try {
+    return window.localStorage.getItem(LAST_PROJECT_KEY) || "";
+  } catch {
+    return "";
+  }
+}
 
 function stepLabel(step: StorySummary["step"]) {
   if (step === "gist") return "Gist";
@@ -34,12 +48,54 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [storyType, setStoryType] = useState<StoryType>("type-1");
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectId, setProjectId] = useState(startingProject);
+  // "new" while naming a new project, a project id while renaming it.
+  const [editing, setEditing] = useState<string | null>(null);
+  const [draftName, setDraftName] = useState("");
 
   async function refresh() {
-    const response = await request("/api/stories");
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "Could not load stories.");
+    const [storyResponse, projectResponse] = await Promise.all([request("/api/stories"), request("/api/projects")]);
+    const data = await storyResponse.json();
+    const projectData = await projectResponse.json();
+    if (!storyResponse.ok) throw new Error(data.error || "Could not load stories.");
+    if (!projectResponse.ok) throw new Error(projectData.error || "Could not load projects.");
     setStories(data.stories || []);
+    setProjects(projectData.projects || []);
+  }
+
+  // A project that no longer exists (or none chosen yet) falls back to the first one.
+  const project = projects.find((item) => item.id === projectId) || projects[0];
+  const activeProjectId = project?.id || DEFAULT_PROJECT_ID;
+
+  function openProject(id: string) {
+    setProjectId(id);
+    setShowArchived(false);
+    window.history.replaceState(null, "", `/?project=${encodeURIComponent(id)}`);
+    try {
+      window.localStorage.setItem(LAST_PROJECT_KEY, id);
+    } catch {
+      // Storage blocked: the address still says which project is open.
+    }
+  }
+
+  async function saveProjectName() {
+    const name = draftName.trim();
+    if (!name || !editing) return;
+    setError("");
+    const response = await request(editing === "new" ? "/api/projects" : `/api/projects/${encodeURIComponent(editing)}`, {
+      method: editing === "new" ? "POST" : "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      setError(data.error || "Could not save the project.");
+      return;
+    }
+    setEditing(null);
+    await refresh().catch((err) => setError(err instanceof Error ? err.message : "Could not load projects."));
+    if (editing === "new") openProject(data.project.id);
   }
 
   useEffect(() => {
@@ -53,7 +109,7 @@ export default function Home() {
       const response = await request("/api/stories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storyType }),
+        body: JSON.stringify({ storyType, projectId: activeProjectId }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not create a story.");
@@ -101,22 +157,95 @@ export default function Home() {
     setStories((current) => current.filter((story) => story.id !== id));
   }
 
-  const archivedCount = stories.filter((story) => story.archived).length;
-  const visible = stories.filter((story) => story.archived === showArchived);
+  const inProject = stories.filter((story) => story.projectId === activeProjectId);
+  const archivedCount = inProject.filter((story) => story.archived).length;
+  const visible = inProject.filter((story) => story.archived === showArchived);
+  const countIn = (id: string) => stories.filter((story) => story.projectId === id && !story.archived).length;
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-4xl px-5 py-10 sm:px-8">
-      <header className="mb-8 flex flex-wrap items-end justify-between gap-4 border-b border-line pb-6">
-        <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-accent">MiniMax H3</p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight">Stories</h1>
-          <p className="mt-2 max-w-xl text-sm text-muted">
-            Stories are stored on the computer running this server. Open this same
-            address from any device on the Wi-Fi to see the same list.
-          </p>
+      <section className="mb-8 border-b border-line pb-6">
+        <p className="text-xs uppercase tracking-[0.2em] text-accent">MiniMax H3</p>
+        <h1 className="mt-1 text-3xl font-semibold tracking-tight">Projects</h1>
+        <p className="mt-2 max-w-xl text-sm text-muted">
+          Stories are stored on the computer running this server. Open this same address from any device on the Wi-Fi to see
+          the same list.
+        </p>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {projects.map((item) =>
+            editing === item.id ? null : (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => openProject(item.id)}
+                aria-pressed={item.id === activeProjectId}
+                className={`rounded-full px-4 py-1.5 text-sm ${
+                  item.id === activeProjectId ? "bg-foreground text-background" : "border border-line text-muted"
+                }`}
+              >
+                {item.name} <span className="text-xs opacity-70">{countIn(item.id)}</span>
+              </button>
+            ),
+          )}
+          {editing ? (
+            <form
+              className="flex items-center gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void saveProjectName();
+              }}
+            >
+              <input
+                autoFocus
+                value={draftName}
+                onChange={(event) => setDraftName(event.target.value)}
+                onKeyDown={(event) => event.key === "Escape" && setEditing(null)}
+                placeholder="Project name"
+                maxLength={80}
+                className="w-48 rounded-full border border-accent bg-background px-4 py-1.5 text-sm outline-none"
+              />
+              <button type="submit" disabled={!draftName.trim()} className="rounded-full bg-accent px-4 py-1.5 text-sm text-accent-ink disabled:opacity-50">
+                {editing === "new" ? "Create" : "Rename"}
+              </button>
+              <button type="button" onClick={() => setEditing(null)} className="px-2 py-1.5 text-sm text-muted">
+                Cancel
+              </button>
+            </form>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setDraftName("");
+                  setEditing("new");
+                }}
+                className="rounded-full border border-dashed border-line px-4 py-1.5 text-sm text-muted hover:text-foreground"
+              >
+                + New project
+              </button>
+              {project && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDraftName(project.name);
+                    setEditing(project.id);
+                  }}
+                  className="px-2 py-1.5 text-sm text-muted underline-offset-2 hover:text-foreground hover:underline"
+                >
+                  Rename
+                </button>
+              )}
+            </>
+          )}
         </div>
+      </section>
+
+      <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <h2 className="text-xl font-semibold tracking-tight">
+          Stories in <span className="text-accent">{project?.name || "…"}</span>
+        </h2>
         <div className="flex items-center gap-3">
-          <ImportVideoFile onError={setError} />
+          <ImportVideoFile onError={setError} projectId={activeProjectId} />
           <label className="flex items-center gap-2 text-xs text-muted">
             New story type
             <select
@@ -164,9 +293,9 @@ export default function Home() {
         <p className="text-sm text-muted">
           {showArchived
             ? "No archived stories."
-            : stories.length > 0
-              ? "All stories are archived."
-              : "No stories yet. Create one to start a gist."}
+            : inProject.length > 0
+              ? "All stories in this project are archived."
+              : "No stories in this project yet. Create one with the + button to start a gist."}
         </p>
       ) : (
         <ul className="space-y-3">
