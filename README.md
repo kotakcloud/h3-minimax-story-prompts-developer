@@ -89,7 +89,8 @@ now, because a run takes a single reference image.
 - **Duplicate** (copy icon in the story list) makes a copy named "… (copy)" with everything except the generated
   videos and comparisons: gist, analysis, cast, reference images, frames, all prompt sets and the video settings.
 - **Queue several videos**: *Generate video* stays available while others render (*Queue another video*); ComfyUI
-  runs them one after another and each card shows its own place in the queue and progress.
+  runs them one after another and each card shows its own place in the queue and progress. A queued video's timer and
+  progress bar stay at zero until its turn comes; the time shown (and the time estimates) count from when it started.
 - **When done**: *Play a sound when done* is a setting saved with the story: every video queued while it is ticked plays
   `public/notify-2.mp3` when it ends, unless you cancelled it. Changing the tick does not affect videos already queued. *Hibernate this machine when done* then starts a
   60 s countdown with a Cancel button at the top of the page, and hibernates the computer running the app once ComfyUI has

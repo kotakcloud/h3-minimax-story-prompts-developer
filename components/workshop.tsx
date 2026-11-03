@@ -2682,7 +2682,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                 ? fastRuns.reduce(
                     (sum, run) =>
                       sum +
-                      (Date.parse(run.finishedAt) - Date.parse(run.createdAt)) /
+                      (Date.parse(run.finishedAt) - Date.parse(run.runningSince || run.createdAt)) /
                         1000 /
                         (run.durations || []).reduce((a, b) => a + b, 0),
                     0,
@@ -3026,8 +3026,10 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                               )
                             : story.videos
                           ).map((run) => {
-                            const started = Date.parse(run.createdAt);
-                            const ended = run.finishedAt ? Date.parse(run.finishedAt) : clock || started;
+                            // The clock starts when the run starts running, not while it waits in ComfyUI's queue (older runs
+                            // without runningSince count from when they were queued).
+                            const started = run.runningSince ? Date.parse(run.runningSince) : run.status === "queued" ? null : Date.parse(run.createdAt);
+                            const ended = run.finishedAt ? Date.parse(run.finishedAt) : clock || started || 0;
                             const active = run.status === "queued" || run.status === "running";
                             const v2Run = run.engine === "story-v2";
                             const fastRun = isFastEngine(run.engine);
@@ -3137,9 +3139,16 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                               ],
                               [
                                 "Started",
-                                `${new Date(run.createdAt).toLocaleString()}${
-                                  run.finishedAt ? ` · finished ${new Date(run.finishedAt).toLocaleTimeString()}` : ""
-                                }`,
+                                [
+                                  run.runningSince
+                                    ? `queued ${new Date(run.createdAt).toLocaleString()} · started ${new Date(run.runningSince).toLocaleTimeString()}`
+                                    : run.status === "queued"
+                                      ? `queued ${new Date(run.createdAt).toLocaleString()} · waiting for its turn`
+                                      : new Date(run.createdAt).toLocaleString(),
+                                  run.finishedAt ? `finished ${new Date(run.finishedAt).toLocaleTimeString()}` : "",
+                                ]
+                                  .filter(Boolean)
+                                  .join(" · "),
                               ],
                             ];
                             return (
@@ -3188,8 +3197,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                                     {run.status === "done" && "Done"}
                                     {run.status === "error" && "Failed"}
                                     {run.status === "cancelled" && "Cancelled"}
-                                    {" · "}
-                                    {formatDuration(ended - started)}
+                                    {started !== null && ` · ${formatDuration(Math.max(0, ended - started))}`}
                                     {active && (
                                       <button
                                         type="button"
@@ -3214,7 +3222,9 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                                   <div className="h-1.5 overflow-hidden rounded-full bg-background">
                                     <div
                                       className="h-full bg-accent transition-all"
-                                      style={{ width: `${Math.max(4, (run.segmentsDone / run.segmentCount) * 100)}%` }}
+                                      style={{
+                                        width: run.status === "queued" ? "0%" : `${Math.max(4, (run.segmentsDone / run.segmentCount) * 100)}%`,
+                                      }}
                                     />
                                   </div>
                                 )}
