@@ -1,5 +1,6 @@
 "use client";
 
+import { formatMoney } from "@/lib/money";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -18,8 +19,8 @@ function UsageBadge() {
         .then((response) => response.json())
         .then((data: { usage?: unknown; limit?: unknown } | null) => {
           if (cancelled || !data || typeof data.usage !== "number") return;
-          const limit = typeof data.limit === "number" ? ` / $${data.limit.toFixed(2)}` : "";
-          setText(`Spent: $${data.usage.toFixed(2)}${limit}`);
+          const limit = typeof data.limit === "number" ? ` / ${formatMoney(data.limit)}` : "";
+          setText(`Spent: ${formatMoney(data.usage)}${limit}`);
         })
         .catch(() => {});
     };

@@ -1,4 +1,5 @@
 import { parseModelChain } from "./models";
+import { recordCost } from "./story-cost";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 export const DEFAULT_MODEL = "deepseek/deepseek-v4-flash-0731";
@@ -63,7 +64,7 @@ export async function chatCompletion(messages: ChatMessage[], options?: ChatOpti
   const started = Date.now();
 
   let response: Response;
-  let body: { error?: { message?: string }; choices?: OpenRouterChoice[]; model?: string };
+  let body: { error?: { message?: string }; choices?: OpenRouterChoice[]; model?: string; usage?: { cost?: number } };
   try {
     response = await fetch(OPENROUTER_URL, {
       method: "POST",
@@ -95,6 +96,9 @@ export async function chatCompletion(messages: ChatMessage[], options?: ChatOpti
   console.log(
     `[openrouter] ${body.model && body.model !== models[0] ? `${model} -> answered by ${body.model}` : model} ${response.status} in ${((Date.now() - started) / 1000).toFixed(1)}s (max_tokens ${options?.maxTokens ?? 8000})`,
   );
+
+  // Charged even when the answer turns out unusable, so counted before any check.
+  await recordCost(body.usage?.cost);
 
   if (!response.ok) {
     throw new Error(body.error?.message || `OpenRouter request failed (${response.status}).`);

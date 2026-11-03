@@ -41,6 +41,7 @@ openrouter api.md
 /data/stories/*.json
 /data/stories/*.tmp
 /data/comparisons/
+/data/story-costs/
 
 # vercel
 .vercel

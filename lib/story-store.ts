@@ -185,7 +185,7 @@ export async function duplicateStory(id: string): Promise<Story | null> {
 }
 
 // Windows refuses to replace a file while a reader has it open (a story list or load, for milliseconds).
-async function replaceFile(temp: string, file: string) {
+export async function replaceFile(temp: string, file: string) {
   for (let attempt = 1; ; attempt++) {
     try {
       await rename(temp, file);
@@ -242,6 +242,7 @@ export async function deleteStory(id: string): Promise<boolean> {
     await unlink(storyFile(id));
     // Its comparison videos (data/comparisons/<id>) belong to it alone; ComfyUI's files are left alone.
     await rm(path.join(process.cwd(), "data", "comparisons", id), { recursive: true, force: true });
+    await rm(path.join(process.cwd(), "data", "story-costs", `${id}.json`), { force: true });
     return true;
   } catch {
     return false;

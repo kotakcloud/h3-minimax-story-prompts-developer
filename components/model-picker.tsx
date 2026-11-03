@@ -1,5 +1,6 @@
 "use client";
 
+import { withInr } from "@/lib/money";
 import { useEffect, useState } from "react";
 import { MAX_MODELS, MODEL_OPTIONS, RECOMMENDED_MODEL, isWeakChain, parseModelChain } from "@/lib/models";
 
@@ -39,8 +40,8 @@ export function ModelPicker({ value, onChange }: { value: string; onChange: (val
       </label>
       <datalist id="openrouter-models">
         {MODEL_OPTIONS.map((option) => (
-          <option key={option.id} value={option.id} label={option.label}>
-            {option.label}
+          <option key={option.id} value={option.id} label={withInr(option.label)}>
+            {withInr(option.label)}
           </option>
         ))}
       </datalist>
@@ -49,7 +50,7 @@ export function ModelPicker({ value, onChange }: { value: string; onChange: (val
           type="button"
           onClick={() => onChange(RECOMMENDED_MODEL)}
           className="text-xs text-accent hover:underline"
-          title="Fast and cheap (about a cent per call)"
+          title="Fast and cheap (about a cent, ₹1, per call)"
         >
           Use recommended: gemini-3.7-flash
         </button>

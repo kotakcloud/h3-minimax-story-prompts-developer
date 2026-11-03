@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useLoggedFetch } from "@/components/debug-log";
 import { IconButton, Icons } from "@/components/icons";
 import { DialogueView } from "@/components/dialogue-view";
@@ -16,6 +16,8 @@ import { VideoPlayer } from "@/components/video-player";
 import { framesFromAnalysis } from "@/lib/beats";
 import { applyLineDurations, timingComment, timingFixes, type LineDuration } from "@/lib/dialogue";
 import { playDoneSound } from "@/lib/done-sound";
+import { formatMoney } from "@/lib/money";
+import type { StoryCost } from "@/lib/story-cost";
 import { panelPosition, selectedGrid } from "@/lib/grid";
 import { FAST_ENGINE_STEPS, ULTRA_STEPS, VIDEO_ENGINES, engineInfo, fastStorySize, isFastEngine } from "@/lib/engines";
 import { UpdateCommentDialog } from "@/components/update-comment-dialog";
@@ -253,7 +255,14 @@ export function Workshop({
   step: StoryStep;
 }) {
   const router = useRouter();
-  const request = useLoggedFetch();
+  const loggedFetch = useLoggedFetch();
+  // Every request from a story's page names the story, so the server can add AI costs to it.
+  const request = useCallback(
+    (url: string, init: RequestInit = {}) =>
+      loggedFetch(url, { ...init, headers: { ...(init.headers as Record<string, string> | undefined), "X-Story-Id": storyId } }),
+    [loggedFetch, storyId],
+  );
+  const [aiCost, setAiCost] = useState<StoryCost | null>(null);
   const [story, setStory] = useState<Story | null>(null);
   const [stories, setStories] = useState<StorySummary[]>([]);
   const [busy, setBusy] = useState<Busy>(null);
@@ -938,6 +947,21 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     writeHibernateTick(storyId, on);
   }
 
+  // The story's AI cost, read again whenever an AI step (or anything busy) finishes.
+  useEffect(() => {
+    if (busy !== null) return;
+    let stopped = false;
+    fetch(`/api/stories/${storyId}/cost`)
+      .then((response) => response.json())
+      .then((data: { cost?: StoryCost | null }) => {
+        if (!stopped) setAiCost(data.cost ?? null);
+      })
+      .catch(() => {});
+    return () => {
+      stopped = true;
+    };
+  }, [busy, storyId]);
+
   // Runs that just ended: a sound if one was queued with it; when nothing is left in progress, hibernate if ticked.
   // A run cancelled by hand does neither.
   useEffect(() => {
@@ -1536,7 +1560,16 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
           <header className="mb-3 flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
               <p className="truncate font-mono text-xs text-muted">
-                {story.id} · {saveState}
+                {story.id} · {saveState} ·{" "}
+                <span
+                  title={
+                    aiCost
+                      ? `${aiCost.calls} AI ${aiCost.calls === 1 ? "call" : "calls"} since ${new Date(aiCost.since).toLocaleString()} (calls before that were not counted)`
+                      : "No AI calls counted for this story yet (counting started on 3 Nov 2026)"
+                  }
+                >
+                  AI cost {formatMoney(aiCost?.usd ?? 0)}
+                </span>
               </p>
               <input
                 value={story.title}

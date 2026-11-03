@@ -188,6 +188,14 @@ Use clean panels without captions or numbers, the same characters in every panel
 - **Video**: every cut is a fresh shot (`continuity_mode: shot`), the reference keeps its detail (`ref_image_size: max`),
   and grids need a ref2va workflow (Veda Turbo, Sage SLA, Story V2), not the long take.
 
+### AI cost per story
+
+Under the story title: *AI cost $0.042 (₹4.20)*, what that story's AI calls have cost so far, as OpenRouter reports each
+call (backup and retry calls included). Pages of a story send its id with every request, and the server adds each call's
+cost to `data/story-costs/<id>.json`. Counting started on 3 Nov 2026, so older calls are missing; hover for the number of
+calls. A duplicate starts at zero, and deleting a story deletes its count. Every dollar amount in the app also shows rupees,
+at a fixed 1 USD = 100 INR (`lib/money.ts`).
+
 ### Spend badge
 
 The top bar shows `Spent: $X.XX` (plus ` / $LIMIT` when the key has a limit): the total spend of the OpenRouter key, read from OpenRouter's `GET /api/v1/auth/key` by the server route `/api/openrouter-usage`. Only `usage` and `limit` reach the browser, never the key. The server caches a good answer for 60 s; the badge refreshes every minute while the tab is visible and stays hidden on any failure. It counts every project that uses the same key.
