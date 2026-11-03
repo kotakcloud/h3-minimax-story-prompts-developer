@@ -112,6 +112,8 @@ now, because a run takes a single reference image.
   section with the video, the full info of each side (with its stars and note), a note box and a delete button that
   also removes the file. Files: `data/comparisons/<story id>/<id>.mp4`. With `COMFYUI_OUTPUT_DIR` in `.env.local` the
   videos are read straight from ComfyUI's output folder (seconds instead of a minute through ComfyUI's /view).
+- **Picture in picture**: the button under a generation or comparison video plays it in a small floating window that stays
+  on top while you scroll or use another app (*Back to page* returns it). Chrome and Edge have it; Firefox does not show it.
 - **Full-screen view**: click a generation's reference thumbnail (or the big image on the Image tab) to open it full
   screen; ← / → step through the story's images and a storyboard grid's panels, Esc or a click outside closes.
 - **Delete** (bin icon on a finished, failed or cancelled video) removes it from the story after a confirmation; the

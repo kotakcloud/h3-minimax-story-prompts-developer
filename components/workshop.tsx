@@ -12,6 +12,7 @@ import { Lightbox, type Slide } from "@/components/lightbox";
 import { LoraDialog } from "@/components/lora-dialog";
 import { ModelPicker } from "@/components/model-picker";
 import { PromptDiffLink } from "@/components/prompt-diff";
+import { VideoPlayer } from "@/components/video-player";
 import { framesFromAnalysis } from "@/lib/beats";
 import { applyLineDurations, timingComment, timingFixes, type LineDuration } from "@/lib/dialogue";
 import { playDoneSound } from "@/lib/done-sound";
@@ -3268,9 +3269,8 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                                 {!collapsed && run.error && <p className="mt-2 text-xs text-red-200">{run.error}</p>}
                                 {!collapsed && run.video && (
                                   <>
-                                    <video
+                                    <VideoPlayer
                                       src={imageSrc({ ...run.video, id: run.id } as ReferenceImage)}
-                                      controls
                                       className="mt-2 w-full rounded-xl border border-line"
                                     />
                                     <p className="mt-2 break-all text-xs text-muted">
@@ -3307,9 +3307,8 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                                 </IconButton>
                               </span>
                             </div>
-                            <video
+                            <VideoPlayer
                               src={`/api/compare/file?${new URLSearchParams({ storyId: story.id, id: comparison.id })}`}
-                              controls
                               preload="metadata"
                               className="w-full rounded-xl border border-line bg-black"
                             />
