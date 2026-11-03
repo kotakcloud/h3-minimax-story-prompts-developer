@@ -146,6 +146,21 @@ export default function Home() {
     await refresh().catch((err) => setError(err instanceof Error ? err.message : "Could not load stories."));
   }
 
+  async function moveStory(id: string, target: string) {
+    setError("");
+    const response = await request(`/api/stories/${id}/project`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ projectId: target }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      setError(data.error || "Could not move the story.");
+      return;
+    }
+    setStories((current) => current.map((story) => (story.id === id ? { ...story, projectId: target } : story)));
+  }
+
   async function removeStory(id: string) {
     if (!window.confirm("Delete this story from this machine?")) return;
     const response = await request(`/api/stories/${id}`, { method: "DELETE" });
@@ -317,7 +332,25 @@ export default function Home() {
                   <span title={story.updatedAt}>Updated {formatDate(story.updatedAt)}</span>
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {projects.length > 1 && (
+                  <select
+                    value=""
+                    onChange={(event) => event.target.value && void moveStory(story.id, event.target.value)}
+                    aria-label="Move to another project"
+                    title="Move to another project"
+                    className="max-w-36 rounded-full border border-line bg-background px-3 py-1.5 text-xs text-muted"
+                  >
+                    <option value="">Move to…</option>
+                    {projects
+                      .filter((item) => item.id !== story.projectId)
+                      .map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                  </select>
+                )}
                 <IconLink
                   href={storyPath(story.id, story.step)}
                   label="Open"

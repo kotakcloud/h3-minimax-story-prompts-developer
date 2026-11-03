@@ -50,7 +50,8 @@ On the Image tab you can also **upload your own picture** (Upload image, or drop
 ### Projects
 
 Stories belong to projects. The story list shows the projects at the top (with how many stories each has); click one to
-see its stories below. *+ New project* makes one, *Rename* renames the open one. New stories and imported video files go
+see its stories below. *+ New project* makes one, *Rename* renames the open one, and *Move to…* on a story moves it to another project (with
+everything it has: prompts, videos, comparisons, cost). New stories and imported video files go
 into the open project, and a duplicate stays in its story's project. Stories made before projects existed are in
 **unknown**, which can be renamed too. The list remembers the last project you opened (`/?project=<id>` opens one
 directly). On a story's page the sidebar lists only that project's stories, and its top link goes back to the project.

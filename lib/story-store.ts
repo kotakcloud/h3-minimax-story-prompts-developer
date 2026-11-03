@@ -225,6 +225,8 @@ export async function updateStory(id: string, patch: Partial<Story>): Promise<St
   delete rest.createdAt;
   // Only setArchived changes this, so an open editor's autosave cannot unarchive a story.
   delete rest.archived;
+  // Only setProject moves a story, so a page left open on it cannot move it back.
+  delete rest.projectId;
   return writeStory({
     ...current,
     ...rest,
@@ -238,6 +240,12 @@ export async function setArchived(id: string, archived: boolean): Promise<Story 
   const current = await readStory(id);
   if (!current) return null;
   return writeStory({ ...current, archived }, { touch: false });
+}
+
+export async function setProject(id: string, projectId: string): Promise<Story | null> {
+  const current = await readStory(id);
+  if (!current) return null;
+  return writeStory({ ...current, projectId }, { touch: false });
 }
 
 export async function deleteStory(id: string): Promise<boolean> {
