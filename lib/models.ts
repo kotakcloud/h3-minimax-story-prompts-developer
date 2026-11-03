@@ -32,13 +32,13 @@ export function parseModelChain(value: unknown): { models: string[]; error: stri
   return { models: ids.slice(0, MAX_MODELS), error: "" };
 }
 
-// A story's text model, short, for under its title: "gemini-3.7-flash", "gemini-3.7-flash +1 fallback", or the .env
+// A story's text model, for under its title: "google/gemini-3.7-flash", "google/gemini-3.7-flash +1 fallback", or the .env
 // default's name with "(default)" when the story names none.
 export function modelLabel(aiModel: string, defaults: string[] = []): string {
   const { models } = parseModelChain(aiModel);
   const chain = models.length > 0 ? models : defaults;
   if (chain.length === 0) return "default model";
-  const name = chain[0].split("/").pop() || chain[0];
+  const name = chain[0];
   const extra = chain.length > 1 ? ` +${chain.length - 1} fallback${chain.length > 2 ? "s" : ""}` : "";
   return `${name}${extra}${models.length > 0 ? "" : " (default)"}`;
 }
