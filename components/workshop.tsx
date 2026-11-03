@@ -16,7 +16,7 @@ import { VideoPlayer } from "@/components/video-player";
 import { framesFromAnalysis } from "@/lib/beats";
 import { applyLineDurations, timingComment, timingFixes, type LineDuration } from "@/lib/dialogue";
 import { playDoneSound } from "@/lib/done-sound";
-import { formatMoney } from "@/lib/money";
+import { Money } from "@/components/money";
 import type { StoryCost } from "@/lib/story-cost";
 import { panelPosition, selectedGrid } from "@/lib/grid";
 import { FAST_ENGINE_STEPS, ULTRA_STEPS, VIDEO_ENGINES, engineInfo, fastStorySize, isFastEngine } from "@/lib/engines";
@@ -1568,7 +1568,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                       : "No AI calls counted for this story yet (counting started on 3 Nov 2026)"
                   }
                 >
-                  AI cost {formatMoney(aiCost?.usd ?? 0)}
+                  AI cost <Money usd={aiCost?.usd ?? 0} />
                 </span>
               </p>
               <input

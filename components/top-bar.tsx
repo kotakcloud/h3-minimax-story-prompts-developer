@@ -1,6 +1,6 @@
 "use client";
 
-import { formatMoney } from "@/lib/money";
+import { Money } from "@/components/money";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -9,7 +9,7 @@ const REFRESH_MS = 60_000;
 // Total spend on the OpenRouter key, from our own /api/openrouter-usage (the key never
 // reaches the browser). Purely informational: any failure keeps the badge hidden.
 function UsageBadge() {
-  const [text, setText] = useState("");
+  const [spend, setSpend] = useState<{ usage: number; limit: number | null } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -19,8 +19,7 @@ function UsageBadge() {
         .then((response) => response.json())
         .then((data: { usage?: unknown; limit?: unknown } | null) => {
           if (cancelled || !data || typeof data.usage !== "number") return;
-          const limit = typeof data.limit === "number" ? ` / ${formatMoney(data.limit)}` : "";
-          setText(`Spent: ${formatMoney(data.usage)}${limit}`);
+          setSpend({ usage: data.usage, limit: typeof data.limit === "number" ? data.limit : null });
         })
         .catch(() => {});
     };
@@ -36,11 +35,21 @@ function UsageBadge() {
 
   return (
     <span
-      hidden={!text}
+      hidden={!spend}
       title="Total spent on this OpenRouter API key (all projects using it)"
       className="shrink-0 rounded-full border border-line px-3 py-0.5 text-xs text-muted"
     >
-      {text}
+      {spend && (
+        <>
+          Spent: <Money usd={spend.usage} />
+          {spend.limit !== null && (
+            <>
+              {" / "}
+              <Money usd={spend.limit} />
+            </>
+          )}
+        </>
+      )}
     </span>
   );
 }

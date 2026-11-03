@@ -190,11 +190,12 @@ Use clean panels without captions or numbers, the same characters in every panel
 
 ### AI cost per story
 
-Under the story title: *AI cost $0.042 (₹4.20)*, what that story's AI calls have cost so far, as OpenRouter reports each
+Under the story title: *AI cost ₹4.20 $0.042*, what that story's AI calls have cost so far, as OpenRouter reports each
 call (backup and retry calls included). Pages of a story send its id with every request, and the server adds each call's
 cost to `data/story-costs/<id>.json`. Counting started on 3 Nov 2026, so older calls are missing; hover for the number of
-calls. A duplicate starts at zero, and deleting a story deletes its count. Every dollar amount in the app also shows rupees,
-at a fixed 1 USD = 100 INR (`lib/money.ts`).
+calls. A duplicate starts at zero, and deleting a story deletes its count. Amounts show rupees first (green), with
+the dollars small and dim after them, at a fixed 1 USD = 100 INR (`lib/money.ts`); the model list, which cannot be
+styled, reads ₹75 ($0.75).
 
 ### Spend badge
 

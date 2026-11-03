@@ -50,7 +50,7 @@ export function ModelPicker({ value, onChange }: { value: string; onChange: (val
           type="button"
           onClick={() => onChange(RECOMMENDED_MODEL)}
           className="text-xs text-accent hover:underline"
-          title="Fast and cheap (about a cent, ₹1, per call)"
+          title="Fast and cheap (about ₹1, a cent, per call)"
         >
           Use recommended: gemini-3.7-flash
         </button>
