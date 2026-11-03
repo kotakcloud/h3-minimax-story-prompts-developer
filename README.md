@@ -117,6 +117,14 @@ now, because a run takes a single reference image.
 - **Delete** (bin icon on a finished, failed or cancelled video) removes it from the story after a confirmation; the
   video file stays in ComfyUI's output folder (ComfyUI has no delete call).
 
+### Splitting a frame
+
+On the Frames step every frame has a **Split** button: choose *Auto* (the AI picks 2 to 4) or 2, 3 or 4 frames. The AI
+divides the action at natural moments and puts each spoken line, word for word and in order, into exactly one of the new
+frames; the app checks that and asks once more if a line went missing. Each new frame gets a length that fits its lines.
+The first part keeps the frame's panel and join, the others continue it. Like any frame edit it clears the current prompts
+(earlier prompt sets stay), so write the prompts again afterwards.
+
 ### What changed between prompt sets
 
 Each generation's *Prompts* row and the Prompts tab show a link like *vs set 5: 3 added · 2 removed · 4 updated*, comparing the

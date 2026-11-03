@@ -45,11 +45,16 @@ export function quotedWords(text: string): number {
   return wordCount([...text.matchAll(QUOTED)].map((match) => match[2]).join(" "));
 }
 
+// The spoken lines quoted in a frame summary or beat, in order.
+export function quotedLines(text: string): string[] {
+  return [...text.matchAll(QUOTED)].map((match) => match[2]);
+}
+
 // Lines quoted in a frame summary that a written prompt left out.
 export function missingLines(summary: string, prompt: string): string[] {
   const squeeze = (text: string) => text.replace(/\s+/g, " ").trim();
   const written = parseDialogue(prompt).map((line) => squeeze(line.text));
-  return [...summary.matchAll(QUOTED)].map((match) => squeeze(match[2])).filter((line) => !written.includes(line));
+  return quotedLines(summary).map(squeeze).filter((line) => !written.includes(line));
 }
 
 // A frame's length, raised so the lines in its summary fit (the clip limit still applies).

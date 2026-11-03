@@ -48,7 +48,7 @@ import {
   storyRevisions,
 } from "@/lib/types";
 
-type Busy = "analyze" | "cast" | "imagePrompt" | "image" | "upload" | "translate" | "compare" | "breakdown" | "prompts" | "update" | "export" | "video" | null;
+type Busy = "analyze" | "cast" | "imagePrompt" | "image" | "upload" | "translate" | "compare" | "breakdown" | "prompts" | "update" | "export" | "video" | "split" | null;
 
 const VIDEO_POLL_MS = 5000;
 
@@ -152,6 +152,7 @@ const BUSY_LABELS: Record<NonNullable<Busy>, string> = {
   update: "Prompt update",
   export: "Video file export",
   video: "Sending video",
+  split: "Splitting frame",
 };
 
 // The hibernate tick lives in this browser tab only and never in the story, so a forgotten tick cannot hibernate
@@ -269,6 +270,8 @@ export function Workshop({
   const [dialogueLanguage, setDialogueLanguage] = useState("Gujarati");
   const [dialogueView, setDialogueView] = useState(false);
   const [selectedDialogue, setSelectedDialogue] = useState<string[]>([]);
+  // The frame whose Split choices are open.
+  const [splitFor, setSplitFor] = useState<string | null>(null);
   const [hibernateTick, setHibernateTick] = useState(() => typeof window !== "undefined" && readHibernateTick(storyId));
   const [hibernateAt, setHibernateAt] = useState<number | null>(null);
   const [hibernateLeft, setHibernateLeft] = useState(0);
@@ -1359,6 +1362,54 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     });
   }
 
+  // The AI splits one frame into consecutive frames (parts: 2-4, or null to let it choose). The first part keeps the
+  // frame's id, panel and join; the others continue it.
+  async function splitFrame(id: string, parts: number | null) {
+    const current = storyRef.current;
+    const frame = current?.frames.find((item) => item.id === id);
+    if (!current || !frame) return;
+    setSplitFor(null);
+    if (current.segments.length > 0 && !window.confirm("Split this frame? This clears the current prompts; earlier prompt sets stay.")) return;
+    setBusy("split");
+    setError("");
+    try {
+      const response = await request("/api/frames/split", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: current.aiModel,
+          frame,
+          frames: current.frames,
+          characters: current.characters,
+          gist: effectiveGist(current),
+          analysis: current.analysis,
+          parts,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not split the frame.");
+      const latest = storyRef.current;
+      const index = latest?.frames.findIndex((item) => item.id === id) ?? -1;
+      if (!latest || index < 0) throw new Error("The frame is gone.");
+      const made: Frame[] = [];
+      (data.frames as { title: string; summary: string; duration: number }[]).forEach((part, k) => {
+        made.push({
+          id: k === 0 ? frame.id : newFrameId([...latest.frames, ...made]),
+          title: part.title,
+          summary: part.summary,
+          duration: part.duration,
+          ...(frame.panel ? { panel: frame.panel } : {}),
+          ...(k === 0 ? (frame.join ? { join: frame.join } : {}) : frame.join || frame.panel ? { join: "continuous" as const } : {}),
+        });
+      });
+      patchStory({ frames: [...latest.frames.slice(0, index), ...made, ...latest.frames.slice(index + 1)], segments: [] });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not split the frame.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   function removeFrame(id: string) {
     if (!story) return;
     patchStory({
@@ -2284,6 +2335,35 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                           </>
                         );
                       })()}
+                      {splitFor === frame.id ? (
+                        <span className="flex items-center gap-1 text-xs text-muted">
+                          Split into
+                          {[null, 2, 3, 4].map((parts) => (
+                            <button
+                              key={parts ?? "auto"}
+                              type="button"
+                              onClick={() => void splitFrame(frame.id, parts)}
+                              title={parts ? `${parts} frames` : "The AI chooses 2 to 4 frames"}
+                              className="rounded-full border border-line px-2.5 py-1 text-foreground"
+                            >
+                              {parts ?? "Auto"}
+                            </button>
+                          ))}
+                          <button type="button" onClick={() => setSplitFor(null)} className="px-1.5 py-1">
+                            Cancel
+                          </button>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setSplitFor(frame.id)}
+                          disabled={busy !== null || !frame.summary.trim()}
+                          title="Split this frame into consecutive frames with the AI, keeping every spoken line"
+                          className="rounded-full border border-line px-3 py-1 text-xs text-foreground disabled:opacity-50"
+                        >
+                          {busy === "split" ? "Splitting…" : "Split"}
+                        </button>
+                      )}
                       <IconButton label="Move up" onClick={() => moveFrame(index, -1)}>
                         {Icons.up}
                       </IconButton>
