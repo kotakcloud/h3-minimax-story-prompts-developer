@@ -49,7 +49,7 @@ On the Image tab you can also **upload your own picture** (Upload image, or drop
 
 ### Story types
 
-Pick the type next to the New story button; it is set when the story is created and shown in the list (*type-1*).
+Pick the type next to the New story button (type-1 is preselected); it is set when the story is created and shown in the list (*type-1*).
 
 - **regular**: every step, as described above.
 - **type-1**: no Cast step, so the Gist step goes straight to the reference image, and *Write image prompt* and the frames

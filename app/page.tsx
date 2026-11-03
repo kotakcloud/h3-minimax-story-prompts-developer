@@ -33,7 +33,7 @@ export default function Home() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
-  const [storyType, setStoryType] = useState<StoryType>("regular");
+  const [storyType, setStoryType] = useState<StoryType>("type-1");
 
   async function refresh() {
     const response = await request("/api/stories");
