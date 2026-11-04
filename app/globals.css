@@ -53,3 +53,17 @@ button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
 }
+
+/* A step tab waiting for review (AI-written frames nobody approved yet): an amber outline that blinks. */
+.needs-review {
+  animation: needs-review 1.1s ease-in-out infinite;
+}
+
+@keyframes needs-review {
+  0%, 100% { box-shadow: 0 0 0 2px rgb(251 191 36 / 0.9); color: rgb(252 211 77); }
+  50% { box-shadow: 0 0 0 2px rgb(251 191 36 / 0.1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .needs-review { animation: none; box-shadow: 0 0 0 2px rgb(251 191 36 / 0.9); }
+}

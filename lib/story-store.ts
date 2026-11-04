@@ -11,6 +11,7 @@ function emptyStory(id: string, now: string): Story {
   return {
     id,
     projectId: DEFAULT_PROJECT_ID,
+    framesApproved: true,
     title: "Untitled story",
     titleEdited: false,
     storyType: "regular",
@@ -65,6 +66,8 @@ function asStory(value: unknown, fallbackId: string): Story {
     ...raw,
     id: typeof raw.id === "string" ? raw.id : fallbackId,
     projectId: typeof raw.projectId === "string" && raw.projectId ? raw.projectId : DEFAULT_PROJECT_ID,
+    // Stories from before the approval step count as approved.
+    framesApproved: raw.framesApproved !== false,
     title: typeof raw.title === "string" && raw.title.trim() ? raw.title : base.title,
     titleEdited: raw.titleEdited === true,
     storyType: isStoryType(raw.storyType) ? raw.storyType : "regular",

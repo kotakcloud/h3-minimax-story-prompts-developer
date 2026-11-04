@@ -134,6 +134,13 @@ now, because a run takes a single reference image.
 - **Delete** (bin icon on a finished, failed or cancelled video) removes it from the story after a confirmation; the
   video file stays in ComfyUI's output folder (ComfyUI has no delete call).
 
+### Approving AI frames
+
+After *Break into frames* or *Frames from grid*, the Frames step shows a reminder: the AI wrote these frames and nobody
+has changed them yet, so read them through. Until you press **Approve frames** (or edit, add, move, remove or split a frame,
+which counts as a review), the Frames tab blinks amber on every step, and moving on to the prompts asks whether you are sure
+no changes are required (yes approves them).
+
 ### Splitting a frame
 
 On the Frames step every frame has a **Split** button: choose *Auto* (the AI picks 2 to 4) or 2, 3 or 4 frames. The AI

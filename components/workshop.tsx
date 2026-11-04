@@ -1124,6 +1124,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
           looks.has(character.id) ? { ...character, look: looks.get(character.id) as string } : character,
         ),
         frames: data.frames || [],
+        framesApproved: false,
         segments: [],
         step: "frames",
       };
@@ -1160,6 +1161,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
         title: aiTitle(story, data.title),
         characters: data.characters || [],
         frames: data.frames || [],
+        framesApproved: false,
         segments: [],
         step: "frames",
       };
@@ -1174,6 +1176,10 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
 
   async function runPrompts() {
     if (!story) return;
+    if (!story.framesApproved && story.frames.length > 0) {
+      if (!window.confirm("The AI wrote the frames and they have not been reviewed. Are you sure no changes are required?")) return;
+      patchStory({ framesApproved: true });
+    }
     if (!story.selectedImageId && !window.confirm("No reference image is selected, so the prompts will be text-only (T2VA). The video workflows need a reference image and reference-image prompts. Generate and select an image on the Image tab first, or write text-only prompts anyway?")) return;
     setBusy("prompts");
     setError("");
@@ -1401,6 +1407,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     if (!story) return;
     patchStory({
       frames: story.frames.map((frame) => (frame.id === id ? { ...frame, ...next } : frame)),
+      framesApproved: true,
       segments: [],
     });
   }
@@ -1412,7 +1419,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     const copy = [...story.frames];
     const [item] = copy.splice(index, 1);
     copy.splice(next, 0, item);
-    patchStory({ frames: copy, segments: [] });
+    patchStory({ frames: copy, framesApproved: true, segments: [] });
   }
 
   function addFrame() {
@@ -1422,6 +1429,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
         ...story.frames,
         { id: newFrameId(story.frames), title: "New frame", summary: "", duration: 8 },
       ],
+      framesApproved: true,
       segments: [],
     });
   }
@@ -1466,7 +1474,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
           ...(k === 0 ? (frame.join ? { join: frame.join } : {}) : frame.join || frame.panel ? { join: "continuous" as const } : {}),
         });
       });
-      patchStory({ frames: [...latest.frames.slice(0, index), ...made, ...latest.frames.slice(index + 1)], segments: [] });
+      patchStory({ frames: [...latest.frames.slice(0, index), ...made, ...latest.frames.slice(index + 1)], framesApproved: true, segments: [] });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not split the frame.");
     } finally {
@@ -1478,6 +1486,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     if (!story) return;
     patchStory({
       frames: story.frames.filter((frame) => frame.id !== id),
+      framesApproved: true,
       segments: story.segments.filter((segment) => segment.id !== id),
     });
   }
@@ -1650,9 +1659,10 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                 key={item}
                 type="button"
                 onClick={() => goTo(item)}
+                title={item === "frames" && !story.framesApproved ? "The AI wrote these frames: review and approve them" : undefined}
                 className={`rounded-full px-4 py-1.5 text-sm ${
                   step === item ? "bg-foreground text-background" : "border border-line text-muted"
-                }`}
+                } ${item === "frames" && !story.framesApproved && story.frames.length > 0 ? "needs-review" : ""}`}
               >
                 {stepLabel(item)}
               </button>
@@ -2236,6 +2246,21 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
 
         {step === "frames" && (
           <section>
+            {!story.framesApproved && story.frames.length > 0 && (
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/50 bg-amber-400/10 px-4 py-3 text-sm text-amber-200">
+                <p>
+                  The AI wrote these frames and nobody has changed them yet. Read them through: are you sure no changes are
+                  required? Editing any frame also counts as reviewed.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => patchStory({ framesApproved: true })}
+                  className="rounded-full bg-amber-300 px-4 py-1.5 text-sm font-semibold text-black"
+                >
+                  Approve frames
+                </button>
+              </div>
+            )}
             <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
               <div>
                 <h2 className="text-sm font-medium uppercase tracking-wider text-muted">Frames</h2>
@@ -2282,7 +2307,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                         story.frames.length === 0 ||
                         window.confirm("Replace the current frames with the analysis beats? This clears the prompts.")
                       ) {
-                        patchStory({ frames: framesFromAnalysis(story.analysis), segments: [] });
+                        patchStory({ frames: framesFromAnalysis(story.analysis), framesApproved: true, segments: [] });
                       }
                     }}
                     disabled={busy !== null}
@@ -2313,7 +2338,13 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                 </button>
                 <button
                   type="button"
-                  onClick={() => goTo("prompts")}
+                  onClick={() => {
+                    if (!story.framesApproved) {
+                      if (!window.confirm("The AI wrote these frames and they have not been reviewed. Are you sure no changes are required?")) return;
+                      patchStory({ framesApproved: true });
+                    }
+                    goTo("prompts");
+                  }}
                   className="rounded-full bg-foreground px-5 py-2 text-sm font-medium text-background"
                 >
                   Progress: H3 prompts

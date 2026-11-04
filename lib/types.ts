@@ -295,6 +295,8 @@ export const DEFAULT_PROJECT_ID = "unknown";
 export type Story = {
   id: string;
   projectId: string;
+  // False right after the AI wrote the frames, until they are approved or edited by hand.
+  framesApproved: boolean;
   title: string;
   // The title was typed by hand.
   titleEdited: boolean;
