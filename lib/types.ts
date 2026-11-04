@@ -299,6 +299,8 @@ export type Story = {
   projectId: string;
   // False right after the AI wrote the frames, until they are approved or edited by hand.
   framesApproved: boolean;
+  // A free note, written in the story list.
+  note: string;
   title: string;
   // The title was typed by hand.
   titleEdited: boolean;
@@ -363,6 +365,7 @@ export type StorySummary = {
   projectId: string;
   // The story's OpenRouter model (or chain); blank = the .env default.
   aiModel: string;
+  note: string;
   // What its AI calls have cost so far (added by the story list route; 0 before the first counted call).
   aiCostUsd?: number;
   // The most recently started generation that finished, for the story list.

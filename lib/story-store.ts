@@ -12,6 +12,7 @@ function emptyStory(id: string, now: string): Story {
     id,
     projectId: DEFAULT_PROJECT_ID,
     framesApproved: true,
+    note: "",
     title: "Untitled story",
     titleEdited: false,
     storyType: "regular",
@@ -68,6 +69,7 @@ function asStory(value: unknown, fallbackId: string): Story {
     projectId: typeof raw.projectId === "string" && raw.projectId ? raw.projectId : DEFAULT_PROJECT_ID,
     // Stories from before the approval step count as approved.
     framesApproved: raw.framesApproved !== false,
+    note: typeof raw.note === "string" ? raw.note : "",
     title: typeof raw.title === "string" && raw.title.trim() ? raw.title : base.title,
     titleEdited: raw.titleEdited === true,
     storyType: isStoryType(raw.storyType) ? raw.storyType : "regular",
@@ -128,6 +130,7 @@ function toSummary(story: Story): StorySummary {
     storyType: story.storyType,
     projectId: story.projectId,
     aiModel: story.aiModel,
+    note: story.note,
     latestVideo: (() => {
       const run = story.videos
         .filter((item) => item.status === "done" && item.video)
@@ -240,6 +243,8 @@ export async function updateStory(id: string, patch: Partial<Story>): Promise<St
   delete rest.archived;
   // Only setProject moves a story, so a page left open on it cannot move it back.
   delete rest.projectId;
+  // Only setNote writes the note, so a page left open on the story cannot overwrite it.
+  delete rest.note;
   return writeStory({
     ...current,
     ...rest,
@@ -253,6 +258,13 @@ export async function setArchived(id: string, archived: boolean): Promise<Story 
   const current = await readStory(id);
   if (!current) return null;
   return writeStory({ ...current, archived }, { touch: false });
+}
+
+// The story list's note; it does not count as an edit, so the story keeps its place in the list.
+export async function setNote(id: string, note: string): Promise<Story | null> {
+  const current = await readStory(id);
+  if (!current) return null;
+  return writeStory({ ...current, note }, { touch: false });
 }
 
 export async function setProject(id: string, projectId: string): Promise<Story | null> {

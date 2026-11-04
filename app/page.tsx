@@ -7,6 +7,7 @@ import { useLoggedFetch } from "@/components/debug-log";
 import { IconButton, IconLink, Icons } from "@/components/icons";
 import { ImportVideoFile } from "@/components/import-video-file";
 import { Money } from "@/components/money";
+import { StoryNote } from "@/components/story-note";
 import { VideoPlayer } from "@/components/video-player";
 import type { Project, StorySummary, StoryType } from "@/lib/types";
 import { DEFAULT_PROJECT_ID, STORY_TYPES, storyPath } from "@/lib/types";
@@ -411,6 +412,7 @@ export default function Home() {
                   {Icons.trash}
                 </IconButton>
               </div>
+              <StoryNote storyId={story.id} initial={story.note} />
               </div>
               {story.latestVideo && (
                 <div className="w-full shrink-0 sm:w-72">
