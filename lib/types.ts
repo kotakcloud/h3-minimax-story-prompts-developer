@@ -366,7 +366,16 @@ export type StorySummary = {
   // What its AI calls have cost so far (added by the story list route; 0 before the first counted call).
   aiCostUsd?: number;
   // The most recently started generation that finished, for the story list.
-  latestVideo: { filename: string; subfolder: string; type: string; createdAt: string; devMode: boolean; ultraFast: boolean } | null;
+  latestVideo: {
+    filename: string;
+    subfolder: string;
+    type: string;
+    createdAt: string;
+    devMode: boolean;
+    ultraFast: boolean;
+    // Its stars (1-5), 0 when not rated.
+    rating: number;
+  } | null;
 };
 
 export function isStoryStep(value: string): value is StoryStep {

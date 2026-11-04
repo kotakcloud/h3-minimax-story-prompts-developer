@@ -55,7 +55,7 @@ everything it has: prompts, videos, comparisons, cost). New stories and imported
 into the open project, and a duplicate stays in its story's project. Stories made before projects existed are in
 **unknown**, which can be renamed too. The list remembers the last project you opened (`/?project=<id>` opens one
 directly). On a story's page the sidebar lists only that project's stories, and its top link goes back to the project.
-Under each story title (in the list, on the story page and in its sidebar) is the AI model that writes the story's text; the list and the sidebar also show each story's AI cost
+Under each story title (in the list, on the story page and in its sidebar) is the AI model that writes the story's text; the list and the sidebar also show each story's AI cost, and the list the stars of its latest video
 (google/gemini-3.7-flash), with "(default)" when the story uses the .env default. Each story in the list shows its
 latest finished video on the right, ready to play (with picture in picture). Projects are kept in `data/projects.json`.
 

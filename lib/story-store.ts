@@ -133,7 +133,7 @@ function toSummary(story: Story): StorySummary {
         .filter((item) => item.status === "done" && item.video)
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
       return run?.video
-        ? { ...run.video, createdAt: run.createdAt, devMode: run.devMode, ultraFast: Boolean(run.ultraFast) }
+        ? { ...run.video, createdAt: run.createdAt, devMode: run.devMode, ultraFast: Boolean(run.ultraFast), rating: run.rating || 0 }
         : null;
     })(),
   };

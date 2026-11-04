@@ -347,6 +347,19 @@ export default function Home() {
                 <p className="text-xs text-muted" title="What this story's AI calls have cost so far (counted since 3 Nov 2026)">
                   AI cost <Money usd={story.aiCostUsd ?? 0} />
                 </p>
+                {story.latestVideo && (
+                  <p className="text-xs text-muted" title="The stars you gave the latest video (on its Video tab)">
+                    Latest video{" "}
+                    {story.latestVideo.rating > 0 ? (
+                      <span className="text-amber-300" aria-label={`${story.latestVideo.rating} of 5 stars`}>
+                        {"★".repeat(story.latestVideo.rating)}
+                        <span className="text-muted/50">{"★".repeat(5 - story.latestVideo.rating)}</span>
+                      </span>
+                    ) : (
+                      "not rated"
+                    )}
+                  </p>
+                )}
                 <p className="mt-1 font-mono text-xs text-muted">
                   {story.id} · {story.imported ? "Imported" : stepLabel(story.step)} · {story.storyType === "type-1" ? "type-1 · " : ""}{story.frameCount} frames · {story.segmentCount} prompts
                 </p>
