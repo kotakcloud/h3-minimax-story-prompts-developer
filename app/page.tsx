@@ -344,6 +344,9 @@ export default function Home() {
                 <p className="truncate text-xs text-accent/80" title={story.aiModel || "The .env default model"}>
                   {modelLabel(story.aiModel, defaultModels)}
                 </p>
+                <p className="text-xs text-muted" title="What this story's AI calls have cost so far (counted since 3 Nov 2026)">
+                  AI cost <Money usd={story.aiCostUsd ?? 0} />
+                </p>
                 <p className="mt-1 font-mono text-xs text-muted">
                   {story.id} · {story.imported ? "Imported" : stepLabel(story.step)} · {story.storyType === "type-1" ? "type-1 · " : ""}{story.frameCount} frames · {story.segmentCount} prompts
                 </p>
@@ -396,9 +399,9 @@ export default function Home() {
                 </IconButton>
               </div>
               </div>
-              {(story.latestVideo || (story.aiCostUsd ?? 0) > 0) && (
+              {story.latestVideo && (
                 <div className="w-full shrink-0 sm:w-72">
-                  {story.latestVideo && (missingVideos.includes(story.id) ? (
+                  {missingVideos.includes(story.id) ? (
                     <p className="flex aspect-video w-full items-center justify-center rounded-xl border border-dashed border-line px-4 text-center text-xs text-muted">
                       The video file is no longer in ComfyUI&apos;s output folder.
                     </p>
@@ -409,15 +412,10 @@ export default function Home() {
                       onError={() => setMissingVideos((ids) => (ids.includes(story.id) ? ids : [...ids, story.id]))}
                       className="aspect-video w-full rounded-xl border border-line bg-black"
                     />
-                  ))}
-                  {story.latestVideo && (
-                    <p className="mt-1 text-xs text-muted">
-                      Latest video · {story.latestVideo.ultraFast ? "Ultra fast" : story.latestVideo.devMode ? "DEV" : "FULL"} ·{" "}
-                      {formatDate(story.latestVideo.createdAt)}
-                    </p>
                   )}
-                  <p className="mt-1 text-xs text-muted" title="What this story's AI calls have cost so far (counted since 3 Nov 2026)">
-                    AI cost <Money usd={story.aiCostUsd ?? 0} />
+                  <p className="mt-1 text-xs text-muted">
+                    Latest video · {story.latestVideo.ultraFast ? "Ultra fast" : story.latestVideo.devMode ? "DEV" : "FULL"} ·{" "}
+                    {formatDate(story.latestVideo.createdAt)}
                   </p>
                 </div>
               )}
