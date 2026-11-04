@@ -206,7 +206,7 @@ Use clean panels without captions or numbers, the same characters in every panel
   `google/gemini-3.7-flash`) and writes one frame per panel (reading order), each with its panel and a *Cut* join, and
   updates the character looks to what the panels show. Panel and join can be changed per frame.
 - **Image tab**: choose what H3 gets on each segment: the **whole grid**, naming the segment's panel (default), or **only
-  the segment's own panel** (faster). Both were tested on Veda Turbo: H3 opens each segment on the right panel with no grid
+  the segment's own panel** (faster; the default for new type-1 stories). Both were tested on Veda Turbo: H3 opens each segment on the right panel with no grid
   borders in the video (`docs/RESEARCH_grid_reference_image.md`, section 6).
 - **Prompts** name `<Picture 1>` as the storyboard reference for the segment's panel; cut segments start fresh (no
   continuation opener or +0.92 s timing).

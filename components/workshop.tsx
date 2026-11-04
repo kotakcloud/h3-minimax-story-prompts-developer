@@ -2253,7 +2253,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                               checked={story.gridFeed === "whole"}
                               onChange={() => patchStory({ gridFeed: "whole" })}
                             />
-                            the whole grid, naming the segment&apos;s panel (default; tested)
+                            the whole grid, naming the segment&apos;s panel ({story.storyType === "type-1" ? "" : "default; "}tested)
                           </label>
                           <label className="flex items-center gap-2">
                             <input
@@ -2262,7 +2262,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                               checked={story.gridFeed === "panels"}
                               onChange={() => patchStory({ gridFeed: "panels" })}
                             />
-                            only the segment&apos;s own panel (faster; tested)
+                            only the segment&apos;s own panel (faster; {story.storyType === "type-1" ? "default for type-1; " : ""}tested)
                           </label>
                           <p>Write the H3 prompts after changing this: the prompts name the picture differently.</p>
                         </div>
