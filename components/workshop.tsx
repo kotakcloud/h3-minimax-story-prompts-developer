@@ -1623,6 +1623,10 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                     {item.title}
                     <span className="ml-1 text-xs text-muted">{stepLabel(item.step)}</span>
                     <span className="block truncate text-[11px] text-muted/80">{modelLabel(item.aiModel, defaultModels)}</span>
+                    {/* The open story's cost is live; the others are as of when this page loaded. */}
+                    <span className="block text-[11px] text-muted/80">
+                      AI cost <Money usd={(item.id === storyId ? aiCost?.usd : item.aiCostUsd) ?? 0} />
+                    </span>
                   </Link>
                   <IconButton
                     label="Open in new tab"
