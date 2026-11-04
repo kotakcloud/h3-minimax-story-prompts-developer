@@ -197,6 +197,11 @@ A reference picture can be a **storyboard grid** of scenes. Tick *Storyboard gri
 uploading (the last rows x columns used in this browser come back next time): the browser also cuts the panels out (trimming white gutters) and the panel aspect ratio becomes the video's.
 Use clean panels without captions or numbers, the same characters in every panel. Then:
 
+- **+ next to a frame's Panel** gives the frame the next panel (after its own, or after the previous frame's when it has
+  none) and fills that panel into the following frames that have none, up to the first frame whose panel you chose
+  yourself; panels filled this way follow a later **+** on an earlier frame. With *+ switches the frame to a Cut when it
+  moves to a later panel* ticked (the default, remembered in this browser), that frame's join becomes **Cut** when its
+  panel is later than the previous frame's; the following frames keep their joins.
 - **Frames > Frames from grid** sends the picture to the story's AI model (needs one that can see images, e.g.
   `google/gemini-3.7-flash`) and writes one frame per panel (reading order), each with its panel and a *Cut* join, and
   updates the character looks to what the panels show. Panel and join can be changed per frame.

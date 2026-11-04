@@ -207,6 +207,17 @@ function rememberGridSize(rows: number, cols: number) {
   }
 }
 
+// Frames step: "+" on a panel also switches that frame to a Cut when it moves to a later panel (remembered here).
+const CUT_ON_NEXT_PANEL_KEY = "h3-cut-on-next-panel";
+
+function readCutOnNextPanel(): boolean {
+  try {
+    return window.localStorage.getItem(CUT_ON_NEXT_PANEL_KEY) !== "0";
+  } catch {
+    return true;
+  }
+}
+
 function formatDuration(ms: number) {
   const total = Math.max(0, Math.round(ms / 1000));
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
@@ -308,6 +319,7 @@ export function Workshop({
   const [dialogueLanguage, setDialogueLanguage] = useState("Gujarati");
   const [dialogueView, setDialogueView] = useState(false);
   const [selectedDialogue, setSelectedDialogue] = useState<string[]>([]);
+  const [cutOnNextPanel, setCutOnNextPanel] = useState(() => typeof window === "undefined" || readCutOnNextPanel());
   // The frame whose Split choices are open.
   const [splitFor, setSplitFor] = useState<string | null>(null);
   const [hibernateTick, setHibernateTick] = useState(() => typeof window !== "undefined" && readHibernateTick(storyId));
@@ -1434,6 +1446,25 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     });
   }
 
+  // "+" on a frame's panel: the next panel (after its own, else after the previous frame's), filled forward into the
+  // following frames that have no panel or one "+" filled in, up to the first frame whose panel was chosen by hand.
+  // With the option on, the frame becomes a Cut when its panel is later than the previous frame's.
+  function nextPanel(index: number) {
+    const grid = selectedGrid(story || { referenceImages: [], selectedImageId: "" })?.grid;
+    if (!story || !grid) return;
+    const frames = story.frames.map((frame) => ({ ...frame }));
+    const current = frames[index];
+    const previous = index > 0 ? frames[index - 1].panel : undefined;
+    const panel = Math.min(grid.rows * grid.cols, (current.panel ?? previous ?? 0) + 1);
+    frames[index] = { ...current, panel, panelAuto: undefined };
+    if (cutOnNextPanel && index > 0 && panel > (previous ?? 0)) frames[index].join = "cut";
+    for (let i = index + 1; i < frames.length; i++) {
+      if (frames[i].panel !== undefined && !frames[i].panelAuto) break;
+      frames[i] = { ...frames[i], panel, panelAuto: true };
+    }
+    patchStory({ frames, framesApproved: true, segments: [] });
+  }
+
   // The AI splits one frame into consecutive frames (parts: 2-4, or null to let it choose). The first part keeps the
   // frame's id, panel and join; the others continue it.
   async function splitFrame(id: string, parts: number | null) {
@@ -2246,6 +2277,23 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
 
         {step === "frames" && (
           <section>
+            {selectedGrid(story) && story.frames.length > 0 && (
+              <label className="mb-3 flex w-fit items-center gap-2 text-sm text-foreground">
+                <input
+                  type="checkbox"
+                  checked={cutOnNextPanel}
+                  onChange={(event) => {
+                    setCutOnNextPanel(event.target.checked);
+                    try {
+                      window.localStorage.setItem(CUT_ON_NEXT_PANEL_KEY, event.target.checked ? "1" : "0");
+                    } catch {
+                      // Storage blocked: the choice lasts until the page reloads.
+                    }
+                  }}
+                />
+                + switches the frame to a Cut when it moves to a later panel
+              </label>
+            )}
             {!story.framesApproved && story.frames.length > 0 && (
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/50 bg-amber-400/10 px-4 py-3 text-sm text-amber-200">
                 <p>
@@ -2423,7 +2471,10 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                               <select
                                 value={frame.panel ?? ""}
                                 onChange={(event) =>
-                                  updateFrame(frame.id, { panel: event.target.value ? Number(event.target.value) : undefined })
+                                  updateFrame(frame.id, {
+                                    panel: event.target.value ? Number(event.target.value) : undefined,
+                                    panelAuto: undefined,
+                                  })
                                 }
                                 title={frame.panel ? panelPosition(frame.panel, grid.rows, grid.cols) : "No panel"}
                                 className="rounded-md border border-line bg-background px-2 py-1 text-foreground"
@@ -2436,6 +2487,18 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                                 ))}
                               </select>
                             </label>
+                            <IconButton
+                              label={
+                                frame.panel === count
+                                  ? "Already the last panel"
+                                  : `Next panel (${Math.min(count, (frame.panel ?? (index > 0 ? story.frames[index - 1].panel : undefined) ?? 0) + 1)}), also for the following frames without one`
+                              }
+                              onClick={() => nextPanel(index)}
+                              disabled={frame.panel === count}
+                              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-line text-foreground disabled:opacity-40"
+                            >
+                              {Icons.plus}
+                            </IconButton>
                             {index > 0 && (
                               <label className="flex items-center gap-2 text-xs text-muted">
                                 Join

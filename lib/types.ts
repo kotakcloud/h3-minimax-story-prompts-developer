@@ -196,6 +196,8 @@ export type Frame = {
   // Storyboard grid stories: the panel this frame plays (1-based) and how it joins the previous
   // frame. Without a join every frame after the first continues the take (the long-take default).
   panel?: number;
+  // The panel was filled in by "+" on an earlier frame, not chosen for this frame: a later "+" may change it.
+  panelAuto?: boolean;
   join?: "cut" | "continuous";
 };
 
