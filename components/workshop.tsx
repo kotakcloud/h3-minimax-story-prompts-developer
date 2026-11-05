@@ -1164,6 +1164,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
           location: story.location,
           layout: story.imageLayout,
           analysis: story.analysis,
+          instructions: story.frameInstructions,
         }),
       });
       const data = await response.json();
@@ -2283,6 +2284,22 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
 
         {step === "frames" && (
           <section>
+            <label className="mb-4 block rounded-xl border border-line bg-card px-4 py-3">
+              <span className="text-sm text-foreground">Extra instructions for Break into frames</span>
+              <span className="ml-2 text-xs text-muted">optional: tell the AI what to do or avoid</span>
+              <textarea
+                value={story.frameInstructions}
+                onChange={(event) => patchStory({ frameInstructions: event.target.value })}
+                rows={story.frameInstructions ? 3 : 1}
+                maxLength={2000}
+                placeholder="e.g. Keep every frame under 10 s. Do not add a narrator. Put the reveal in its own frame."
+                className="mt-2 block w-full resize-y rounded-lg border border-line bg-background px-3 py-2 text-sm outline-none focus:border-accent"
+              />
+              <span className="mt-1 block text-xs text-muted">
+                Saved with the story and sent with every Break into frames (and again). The AI follows them over its usual frame
+                rules; spoken lines still stay word for word.
+              </span>
+            </label>
             {selectedGrid(story) && story.frames.length > 0 && (
               <label className="mb-3 flex w-fit items-center gap-2 text-sm text-foreground">
                 <input

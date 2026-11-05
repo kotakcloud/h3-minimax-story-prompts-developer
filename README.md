@@ -135,6 +135,12 @@ now, because a run takes a single reference image.
 - **Delete** (bin icon on a finished, failed or cancelled video) removes it from the story after a confirmation; the
   video file stays in ComfyUI's output folder (ComfyUI has no delete call).
 
+### Extra instructions for the frames
+
+At the top of the Frames step, *Extra instructions for Break into frames* takes your own instructions for the AI ("keep every
+frame under 10 s", "do not add a narrator"). They are saved with the story and sent with every Break into frames (and
+again); the AI follows them over its usual frame rules, but spoken lines still stay word for word.
+
 ### Approving AI frames
 
 After *Break into frames* or *Frames from grid*, the Frames step shows a reminder: the AI wrote these frames and nobody

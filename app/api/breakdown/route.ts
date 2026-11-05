@@ -60,6 +60,8 @@ export async function POST(request: Request) {
       layout?: string;
       analysis?: unknown;
       model?: string;
+      // The owner's own instructions for this break-down.
+      instructions?: string;
     };
     // The story's OpenRouter model chain; blank = the .env default.
     const chain = parseModelChain(body.model);
@@ -85,6 +87,14 @@ export async function POST(request: Request) {
     const analysis = analysisBlock(body.analysis);
     if (analysis) {
       parts.push("", `STORY ANALYSIS:\n${analysis}`);
+    }
+    const instructions = typeof body.instructions === "string" ? body.instructions.trim().slice(0, 2000) : "";
+    if (instructions) {
+      parts.push(
+        "",
+        "EXTRA INSTRUCTIONS FROM THE OWNER (follow them; where they differ from the rules above, they win, except that every spoken line stays word for word):",
+        instructions,
+      );
     }
 
     const system = await readPromptWithFormats("prompts/breakdown-system.md");

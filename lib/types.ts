@@ -301,6 +301,8 @@ export type Story = {
   framesApproved: boolean;
   // A free note, written in the story list.
   note: string;
+  // Extra instructions sent with Break into frames ("do this, don't do that").
+  frameInstructions: string;
   title: string;
   // The title was typed by hand.
   titleEdited: boolean;
