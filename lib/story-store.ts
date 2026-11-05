@@ -1,7 +1,7 @@
 import { mkdir, readdir, readFile, rename, rm, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import type { Story, StoryStep, StorySummary, StoryType } from "./types";
+import type { StepModels, Story, StoryStep, StorySummary, StoryType } from "./types";
 import { RECOMMENDED_MODEL } from "./models";
 import { DEFAULT_IMAGE_SETTINGS, DEFAULT_PROJECT_ID, DEFAULT_VIDEO_SETTINGS, isPromptStyle, isStoryStep, isStoryType } from "./types";
 
@@ -195,20 +195,34 @@ export async function addStory(id: string, fields: Partial<Story>): Promise<Stor
 
 // A copy of a story under a new id: everything but its generated videos and comparisons (their files belong to
 // the original). Reference images are shared (same ComfyUI files), prompt sets and settings are copied.
-export async function duplicateStory(id: string): Promise<Story | null> {
+// With fromFrames, the copy stops at the Frames step: no prompt sets and no note, and it opens on Prompts (to try
+// another model on the same frames).
+export async function duplicateStory(
+  id: string,
+  options: { fromFrames?: boolean; stepModels?: StepModels; title?: string } = {},
+): Promise<Story | null> {
   const source = await readStory(id);
   if (!source) return null;
   const now = new Date().toISOString();
   const copy: Story = {
     ...source,
     id: randomUUID(),
-    title: `${source.title} (copy)`,
+    title: options.title?.trim().slice(0, 200) || `${source.title} (copy)`,
+    titleEdited: options.title?.trim() ? true : source.titleEdited,
     videos: [],
     comparisons: [],
     archived: false,
     createdAt: now,
     updatedAt: now,
   };
+  if (options.stepModels) copy.stepModels = options.stepModels;
+  if (options.fromFrames) {
+    copy.segments = [];
+    copy.promptRevisions = [];
+    copy.activeRevisionId = "";
+    copy.note = "";
+    copy.step = "prompts";
+  }
   return writeStory(copy);
 }
 

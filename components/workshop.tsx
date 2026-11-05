@@ -16,7 +16,7 @@ import { VideoPlayer } from "@/components/video-player";
 import { framesFromAnalysis } from "@/lib/beats";
 import { applyLineDurations, timingComment, timingFixes, type LineDuration } from "@/lib/dialogue";
 import { playDoneSound } from "@/lib/done-sound";
-import { stepModel, storyModelsLabel } from "@/lib/models";
+import { modelLabel, stepModel, storyModelsLabel } from "@/lib/models";
 import { StepModelSelect } from "@/components/step-model-select";
 import { Money } from "@/components/money";
 import type { StoryCost } from "@/lib/story-cost";
@@ -306,6 +306,8 @@ export function Workshop({
   const [error, setError] = useState("");
   const [copiedId, setCopiedId] = useState("");
   const [updateOpen, setUpdateOpen] = useState(false);
+  // A Prompts model picked on a story that has frames: asked whether to branch a new story or change this one.
+  const [promptModelChoice, setPromptModelChoice] = useState<string | null>(null);
   const [castCommentOpen, setCastCommentOpen] = useState(false);
   const [castComment, setCastComment] = useState("");
   const [queuePositions, setQueuePositions] = useState<Record<string, number>>({});
@@ -438,6 +440,32 @@ export function Workshop({
       void persist(latest).catch(() => undefined);
     };
   }, [storyId]);
+
+  // A copy of this story up to its frames, with another Prompts model, opened on its Prompts step.
+  async function branchWithPromptModel(model: string) {
+    setPromptModelChoice(null);
+    const current = storyRef.current || story;
+    if (!current) return;
+    setError("");
+    try {
+      await persist(current).catch(() => undefined);
+      const shown = (model || current.aiModel || defaultModels[0] || "default model").split(",")[0].trim();
+      const response = await request(`/api/stories/${current.id}/duplicate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fromFrames: true,
+          stepModels: { ...current.stepModels, prompts: model || undefined },
+          title: `${current.title} · ${shown.split("/").pop()}`,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not create the new story.");
+      router.push(storyPath(data.story.id, "prompts"));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not create the new story.");
+    }
+  }
 
   function patchStory(patch: Partial<Story>) {
     setStory((current) => (current ? { ...current, ...patch } : current));
@@ -2613,8 +2641,62 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                   value={story.stepModels.prompts || ""}
                   storyModel={story.aiModel}
                   defaults={defaultModels}
-                  onChange={(model) => patchStory({ stepModels: { ...story.stepModels, prompts: model || undefined } })}
+                  onChange={(model) =>
+                    story.frames.length > 0
+                      ? setPromptModelChoice(model)
+                      : patchStory({ stepModels: { ...story.stepModels, prompts: model || undefined } })
+                  }
                 />
+                {promptModelChoice !== null && (
+                  <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+                    onClick={() => setPromptModelChoice(null)}
+                    onKeyDown={(event) => event.key === "Escape" && setPromptModelChoice(null)}
+                  >
+                    <div
+                      role="dialog"
+                      aria-modal="true"
+                      aria-label="Prompts model change"
+                      className="w-full max-w-md space-y-4 rounded-2xl border border-line bg-card p-5 normal-case tracking-normal"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <div>
+                        <h3 className="text-base font-medium text-foreground">Prompts model → {promptModelChoice || `Story model (${modelLabel(story.aiModel, defaultModels)})`}</h3>
+                        <p className="mt-1 text-sm text-muted">
+                          A new story keeps this one&apos;s gist, characters, images and frames, starts with no prompts and no
+                          videos, and opens on its Prompts step. This story stays as it is.
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <button
+                          type="button"
+                          autoFocus
+                          onClick={() => void branchWithPromptModel(promptModelChoice)}
+                          className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-background hover:opacity-90"
+                        >
+                          Create a new story from here
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            patchStory({ stepModels: { ...story.stepModels, prompts: promptModelChoice || undefined } });
+                            setPromptModelChoice(null);
+                          }}
+                          className="rounded-full border border-line px-4 py-2 text-sm text-foreground hover:border-accent"
+                        >
+                          Update this story only
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPromptModelChoice(null)}
+                          className="px-4 py-1 text-xs text-muted hover:text-foreground"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {revisions.map((revision, index) => {
                   const active = revision.id === activeRevisionId;
                   return (
