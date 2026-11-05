@@ -1616,6 +1616,8 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                 <li key={item.id} className="flex items-center gap-2">
                   <Link
                     href={storyPath(item.id, item.step)}
+                    // The note written in the story list, shown on hover.
+                    title={item.note.trim() ? `${item.title}\n\nNote: ${item.note.trim()}` : undefined}
                     className={`block min-w-0 flex-1 truncate rounded-md px-2 py-1 text-sm ${
                       item.id === storyId ? "bg-background text-foreground" : "text-muted"
                     }`}
