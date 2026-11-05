@@ -43,6 +43,23 @@ export function modelLabel(aiModel: string, defaults: string[] = []): string {
   return `${name}${extra}${models.length > 0 ? "" : " (default)"}`;
 }
 
+type ModelChoice = { aiModel: string; stepModels?: { frames?: string; prompts?: string } };
+
+// The model an AI action on a step uses: the step's own choice, else the story's.
+export function stepModel(story: ModelChoice, step: "frames" | "prompts"): string {
+  return story.stepModels?.[step]?.trim() || story.aiModel;
+}
+
+// Under a story title: the story's model, plus the Frames / Prompts models where those differ from it.
+export function storyModelsLabel(story: ModelChoice, defaults: string[] = []): string {
+  const differs = (model?: string) => (model?.trim() && model.trim() !== story.aiModel.trim() ? model.trim() : "");
+  const frames = differs(story.stepModels?.frames);
+  const prompts = differs(story.stepModels?.prompts);
+  const base = modelLabel(story.aiModel, defaults);
+  if (frames && frames === prompts) return `${base} · Frames & Prompts: ${modelLabel(frames)}`;
+  return [base, frames && `Frames: ${modelLabel(frames)}`, prompts && `Prompts: ${modelLabel(prompts)}`].filter(Boolean).join(" · ");
+}
+
 // Free models and gpt-4o-mini work but are slow, often rate-limited and write weaker prompts.
 export function isWeakChain(models: string[]): boolean {
   return models.length > 0 && models.every((id) => id.endsWith(":free") || id === "openai/gpt-4o-mini");

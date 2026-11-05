@@ -16,7 +16,8 @@ import { VideoPlayer } from "@/components/video-player";
 import { framesFromAnalysis } from "@/lib/beats";
 import { applyLineDurations, timingComment, timingFixes, type LineDuration } from "@/lib/dialogue";
 import { playDoneSound } from "@/lib/done-sound";
-import { modelLabel } from "@/lib/models";
+import { stepModel, storyModelsLabel } from "@/lib/models";
+import { StepModelSelect } from "@/components/step-model-select";
 import { Money } from "@/components/money";
 import type { StoryCost } from "@/lib/story-cost";
 import { panelPosition, selectedGrid } from "@/lib/grid";
@@ -1112,7 +1113,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: storyRef.current?.aiModel ?? "",
+          model: stepModel(storyRef.current || story, "frames"),
           gist: effectiveGist(story),
           title: story.title,
           characters: story.characters,
@@ -1158,7 +1159,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: storyRef.current?.aiModel ?? "",
+          model: stepModel(storyRef.current || story, "frames"),
           gist: effectiveGist(story),
           characters: story.characters,
           location: story.location,
@@ -1209,7 +1210,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: storyRef.current?.aiModel ?? "",
+          model: stepModel(storyRef.current || story, "prompts"),
           gist: effectiveGist(story),
           title: story.title,
           characters: story.characters,
@@ -1248,7 +1249,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: current.aiModel,
+          model: stepModel(current, "prompts"),
           language,
           segments: current.segments,
           context: effectiveGist(current),
@@ -1337,7 +1338,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: storyRef.current?.aiModel ?? "",
+          model: stepModel(storyRef.current || story, "prompts"),
           gist: effectiveGist(story),
           title: story.title,
           comment,
@@ -1481,7 +1482,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: current.aiModel,
+          model: stepModel(current, "frames"),
           frame,
           frames: current.frames,
           characters: current.characters,
@@ -1625,7 +1626,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                   >
                     {item.title}
                     <span className="ml-1 text-xs text-muted">{stepLabel(item.step)}</span>
-                    <span className="block truncate text-[11px] text-muted/80">{modelLabel(item.aiModel, defaultModels)}</span>
+                    <span className="block truncate text-[11px] text-muted/80">{storyModelsLabel(item, defaultModels)}</span>
                     {/* The open story's cost is live; the others are as of when this page loaded. */}
                     <span className="block text-[11px] text-muted/80">
                       AI cost <Money usd={(item.id === storyId ? aiCost?.usd : item.aiCostUsd) ?? 0} />
@@ -1668,7 +1669,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                 className="mt-1 w-full max-w-xl truncate bg-transparent text-2xl font-semibold tracking-tight outline-none"
               />
               <p className="truncate text-xs text-accent/80" title="The AI model that writes this story's text (set in the sidebar)">
-                {modelLabel(story.aiModel, defaultModels)}
+                {storyModelsLabel(story, defaultModels)}
               </p>
             </div>
             <div className="flex gap-2">
@@ -2334,7 +2335,16 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
             )}
             <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
               <div>
-                <h2 className="text-sm font-medium uppercase tracking-wider text-muted">Frames</h2>
+                <div className="flex flex-wrap items-center gap-3">
+                  <h2 className="text-sm font-medium uppercase tracking-wider text-muted">Frames</h2>
+                  <StepModelSelect
+                    step="Frames"
+                    value={story.stepModels.frames || ""}
+                    storyModel={story.aiModel}
+                    defaults={defaultModels}
+                    onChange={(model) => patchStory({ stepModels: { ...story.stepModels, frames: model || undefined } })}
+                  />
+                </div>
                 <p className="mt-1 text-xs text-muted">
                   {story.frames.length} frames · {totalSeconds}s total · durations must be 4–15s
                 </p>
@@ -2598,6 +2608,13 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-sm font-medium uppercase tracking-wider text-muted">H3 prompts</h2>
+                <StepModelSelect
+                  step="Prompts"
+                  value={story.stepModels.prompts || ""}
+                  storyModel={story.aiModel}
+                  defaults={defaultModels}
+                  onChange={(model) => patchStory({ stepModels: { ...story.stepModels, prompts: model || undefined } })}
+                />
                 {revisions.map((revision, index) => {
                   const active = revision.id === activeRevisionId;
                   return (

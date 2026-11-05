@@ -294,6 +294,9 @@ export const DEFAULT_IMAGE_SETTINGS: ImageSettings = {
 export type Project = { id: string; name: string; createdAt: string };
 export const DEFAULT_PROJECT_ID = "unknown";
 
+// A step's own AI model instead of the story's (blank or missing = the story's model).
+export type StepModels = { frames?: string; prompts?: string };
+
 export type Story = {
   id: string;
   projectId: string;
@@ -327,6 +330,8 @@ export type Story = {
   h3Tips: boolean;
   // OpenRouter model (or comma-separated fallback chain) for every AI step; blank = .env default.
   aiModel: string;
+  // Frames / Prompts can use their own model instead.
+  stepModels: StepModels;
   // Storyboard grid: give H3 the whole grid on every segment, or only the segment's own panel.
   gridFeed: "whole" | "panels";
   // Archived stories are hidden from the story lists until unarchived.
@@ -367,6 +372,7 @@ export type StorySummary = {
   projectId: string;
   // The story's OpenRouter model (or chain); blank = the .env default.
   aiModel: string;
+  stepModels: StepModels;
   note: string;
   // What its AI calls have cost so far (added by the story list route; 0 before the first counted call).
   aiCostUsd?: number;

@@ -11,7 +11,7 @@ import { StoryNote } from "@/components/story-note";
 import { VideoPlayer } from "@/components/video-player";
 import type { Project, StorySummary, StoryType } from "@/lib/types";
 import { DEFAULT_PROJECT_ID, STORY_TYPES, storyPath } from "@/lib/types";
-import { modelLabel } from "@/lib/models";
+import { storyModelsLabel } from "@/lib/models";
 
 const LAST_PROJECT_KEY = "h3-last-project";
 
@@ -343,7 +343,7 @@ export default function Home() {
                   {story.title}
                 </Link>
                 <p className="truncate text-xs text-accent/80" title={story.aiModel || "The .env default model"}>
-                  {modelLabel(story.aiModel, defaultModels)}
+                  {storyModelsLabel(story, defaultModels)}
                 </p>
                 <p className="text-xs text-muted" title="What this story's AI calls have cost so far (counted since 3 Nov 2026)">
                   AI cost <Money usd={story.aiCostUsd ?? 0} />

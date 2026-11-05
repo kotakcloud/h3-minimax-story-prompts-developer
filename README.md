@@ -135,6 +135,13 @@ now, because a run takes a single reference image.
 - **Delete** (bin icon on a finished, failed or cancelled video) removes it from the story after a confirmation; the
   video file stays in ComfyUI's output folder (ComfyUI has no delete call).
 
+### A different AI model for Frames or Prompts
+
+Next to the Frames and H3 prompts headings, *AI model* starts on "Story model (…)", the model chosen in the sidebar. Pick
+another one there and every AI action on that step uses it (Frames: Break into frames, Frames from grid, Split; Prompts:
+write, Update with comment, Fix timing, Language version); the other steps keep the story's model. The model line under the
+story title then names it too: `google/gemini-3.7-flash · Frames: openai/gpt-5-mini`. Pick "Story model" again to undo.
+
 ### Extra instructions for the frames
 
 At the top of the Frames step, *Extra instructions for Break into frames* takes your own instructions for the AI ("keep every

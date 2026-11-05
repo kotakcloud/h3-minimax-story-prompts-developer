@@ -12,6 +12,7 @@ function emptyStory(id: string, now: string): Story {
     id,
     projectId: DEFAULT_PROJECT_ID,
     framesApproved: true,
+    stepModels: {},
     note: "",
     frameInstructions: "",
     title: "Untitled story",
@@ -71,6 +72,11 @@ function asStory(value: unknown, fallbackId: string): Story {
     // Stories from before the approval step count as approved.
     framesApproved: raw.framesApproved !== false,
     note: typeof raw.note === "string" ? raw.note : "",
+    stepModels: (() => {
+      const value = raw.stepModels && typeof raw.stepModels === "object" ? (raw.stepModels as Record<string, unknown>) : {};
+      const text = (item: unknown) => (typeof item === "string" && item.trim() ? item.trim() : undefined);
+      return { frames: text(value.frames), prompts: text(value.prompts) };
+    })(),
     frameInstructions: typeof raw.frameInstructions === "string" ? raw.frameInstructions : "",
     title: typeof raw.title === "string" && raw.title.trim() ? raw.title : base.title,
     titleEdited: raw.titleEdited === true,
@@ -132,6 +138,7 @@ function toSummary(story: Story): StorySummary {
     storyType: story.storyType,
     projectId: story.projectId,
     aiModel: story.aiModel,
+    stepModels: story.stepModels,
     note: story.note,
     latestVideo: (() => {
       const run = story.videos
