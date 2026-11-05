@@ -43,6 +43,7 @@ openrouter api.md
 /data/comparisons/
 /data/story-costs/
 /data/projects.json
+/data/story-codes.json*
 
 # vercel
 .vercel

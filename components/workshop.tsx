@@ -1692,6 +1692,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                     <span className="block truncate text-[11px] text-muted/80">{storyModelsLabel(item, defaultModels)}</span>
                     {/* The open story's cost is live; the others are as of when this page loaded. */}
                     <span className="block text-[11px] text-muted/80">
+                      {item.code && <span className="font-mono">#{item.code} · </span>}
                       AI cost <Money usd={(item.id === storyId ? aiCost?.usd : item.aiCostUsd) ?? 0} />
                     </span>
                   </Link>
@@ -1715,7 +1716,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
           <header className="mb-3 flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
               <p className="truncate font-mono text-xs text-muted">
-                {story.id} · {saveState} ·{" "}
+                <span className="text-foreground" title={`Story number (id ${story.id})`}>#{story.code || story.id}</span> · {saveState} ·{" "}
                 <span
                   title={
                     aiCost

@@ -135,6 +135,12 @@ now, because a run takes a single reference image.
 - **Delete** (bin icon on a finished, failed or cancelled video) removes it from the story after a confirmation; the
   video file stays in ComfyUI's output folder (ComfyUI has no delete call).
 
+### Story numbers
+
+Every story has a short number, #10001 and up, shown in the story list, the story header and the sidebar (hover it for
+the full id). New stories and copies get the next number; a deleted story's number is never given again (the last one
+given is kept in `data/story-codes.json`). Stories made before numbers got theirs in the order they were created.
+
 ### A different AI model for Frames or Prompts
 
 Next to the Frames and H3 prompts headings, *AI model* starts on "Story model (…)", the model chosen in the sidebar. Pick

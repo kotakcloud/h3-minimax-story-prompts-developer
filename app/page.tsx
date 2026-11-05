@@ -362,7 +362,7 @@ export default function Home() {
                   </p>
                 )}
                 <p className="mt-1 font-mono text-xs text-muted">
-                  {story.id} · {story.imported ? "Imported" : stepLabel(story.step)} · {story.storyType === "type-1" ? "type-1 · " : ""}{story.frameCount} frames · {story.segmentCount} prompts
+                  <span className="text-foreground" title={`Story number (id ${story.id})`}>#{story.code || story.id}</span> · {story.imported ? "Imported" : stepLabel(story.step)} · {story.storyType === "type-1" ? "type-1 · " : ""}{story.frameCount} frames · {story.segmentCount} prompts
                 </p>
                 <p className="mt-0.5 text-xs text-muted">
                   <span title={story.createdAt}>Created {formatDate(story.createdAt)}</span>

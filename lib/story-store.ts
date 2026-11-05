@@ -7,9 +7,86 @@ import { DEFAULT_IMAGE_SETTINGS, DEFAULT_PROJECT_ID, DEFAULT_VIDEO_SETTINGS, isP
 
 const storiesDir = path.join(process.cwd(), "data", "stories");
 
+// Story numbers: 5 digits from 10001 up, each given once. One assignment at a time, so two new stories never get the
+// same number.
+const FIRST_CODE = 10001;
+let codeQueue: Promise<unknown> = Promise.resolve();
+
+function withCodeLock<T>(task: () => Promise<T>): Promise<T> {
+  const run = codeQueue.then(task);
+  codeQueue = run.catch(() => undefined);
+  return run;
+}
+
+async function readAllStories(): Promise<Story[]> {
+  await ensureDir();
+  const names = (await readdir(storiesDir)).filter((name) => name.endsWith(".json"));
+  const stories = await Promise.all(names.map((name) => readStory(name.replace(/\.json$/, ""))));
+  return stories.filter((story): story is Story => story !== null);
+}
+
+function nextCode(taken: Iterable<string>): string {
+  let max = FIRST_CODE - 1;
+  for (const code of taken) {
+    const value = Number(code);
+    if (Number.isInteger(value) && value > max) max = value;
+  }
+  return String(max + 1);
+}
+
+// Gives stories without a number (or sharing one) their own, oldest first. Returns true when it changed any.
+async function assignMissingCodes(stories: Story[]): Promise<boolean> {
+  const byAge = [...stories].sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
+  const seen = new Set<string>();
+  const missing: Story[] = [];
+  for (const story of byAge) {
+    if (/^\d{5,}$/.test(story.code) && !seen.has(story.code)) seen.add(story.code);
+    else missing.push(story);
+  }
+  const last = await lastCode();
+  for (const story of missing) {
+    const code = nextCode([...seen, last]);
+    seen.add(code);
+    await writeStory({ ...story, code }, { touch: false });
+    await saveLastCode(code);
+  }
+  return missing.length > 0;
+}
+
+// The highest number ever given (data/story-codes.json), so a deleted story's number is not given again.
+const codesFile = path.join(process.cwd(), "data", "story-codes.json");
+
+async function lastCode(): Promise<string> {
+  try {
+    const value = (JSON.parse(await readFile(codesFile, "utf8")) as { last?: unknown }).last;
+    return typeof value === "string" ? value : "";
+  } catch {
+    return "";
+  }
+}
+
+async function saveLastCode(code: string) {
+  const temp = `${codesFile}.${randomUUID().slice(0, 8)}.tmp`;
+  await writeFile(temp, JSON.stringify({ last: code }, null, 2), "utf8");
+  await replaceFile(temp, codesFile);
+}
+
+// A new story's number: one more than the highest ever given.
+function takeCode(story: Story): Promise<Story> {
+  return withCodeLock(async () => {
+    const all = await readAllStories();
+    await assignMissingCodes(all.filter((item) => item.id !== story.id));
+    const taken = (await readAllStories()).filter((item) => item.id !== story.id).map((item) => item.code);
+    const code = nextCode([...taken, await lastCode()]);
+    await saveLastCode(code);
+    return writeStory({ ...story, code });
+  });
+}
+
 function emptyStory(id: string, now: string): Story {
   return {
     id,
+    code: "",
     projectId: DEFAULT_PROJECT_ID,
     framesApproved: true,
     stepModels: {},
@@ -72,6 +149,7 @@ function asStory(value: unknown, fallbackId: string): Story {
     // Stories from before the approval step count as approved.
     framesApproved: raw.framesApproved !== false,
     note: typeof raw.note === "string" ? raw.note : "",
+    code: typeof raw.code === "string" ? raw.code : "",
     stepModels: (() => {
       const value = raw.stepModels && typeof raw.stepModels === "object" ? (raw.stepModels as Record<string, unknown>) : {};
       const text = (item: unknown) => (typeof item === "string" && item.trim() ? item.trim() : undefined);
@@ -127,6 +205,7 @@ function asStory(value: unknown, fallbackId: string): Story {
 function toSummary(story: Story): StorySummary {
   return {
     id: story.id,
+    code: story.code,
     title: story.title,
     step: story.step,
     createdAt: story.createdAt,
@@ -152,20 +231,15 @@ function toSummary(story: Story): StorySummary {
 }
 
 export async function listStories(): Promise<StorySummary[]> {
-  await ensureDir();
-  const names = await readdir(storiesDir);
-  const stories = await Promise.all(
-    names
-      .filter((name) => name.endsWith(".json"))
-      .map(async (name) => {
-        const id = name.replace(/\.json$/, "");
-        const story = await readStory(id);
-        return story ? toSummary(story) : null;
-      }),
-  );
-  return stories
-    .filter((item): item is StorySummary => item !== null)
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  let stories = await readAllStories();
+  if (stories.some((story) => !story.code)) {
+    // Stories from before numbers (or written without one) get theirs here, once.
+    stories = await withCodeLock(async () => {
+      const fresh = await readAllStories();
+      return (await assignMissingCodes(fresh)) ? readAllStories() : fresh;
+    });
+  }
+  return stories.map(toSummary).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
 export async function readStory(id: string): Promise<Story | null> {
@@ -183,14 +257,13 @@ export async function createStory(storyType: StoryType = "regular", projectId: s
   const now = new Date().toISOString();
   // type-1 stories give H3 only each segment's own panel of a storyboard grid unless changed.
   const story: Story = { ...emptyStory(randomUUID(), now), storyType, projectId, gridFeed: storyType === "type-1" ? "panels" : "whole" };
-  await writeStory(story);
-  return story;
+  return takeCode(story);
 }
 
 // A story made from given fields (an imported video file).
 export async function addStory(id: string, fields: Partial<Story>): Promise<Story> {
   await ensureDir();
-  return writeStory({ ...emptyStory(id, new Date().toISOString()), ...fields, id });
+  return takeCode({ ...emptyStory(id, new Date().toISOString()), ...fields, id, code: "" });
 }
 
 // A copy of a story under a new id: everything but its generated videos and comparisons (their files belong to
@@ -223,7 +296,7 @@ export async function duplicateStory(
     copy.note = "";
     copy.step = "prompts";
   }
-  return writeStory(copy);
+  return takeCode({ ...copy, code: "" });
 }
 
 // Windows refuses to replace a file while a reader has it open (a story list or load, for milliseconds).
@@ -262,6 +335,8 @@ export async function updateStory(id: string, patch: Partial<Story>): Promise<St
   const rest = { ...patch };
   delete rest.id;
   delete rest.createdAt;
+  // The story's number is given by the server only.
+  delete rest.code;
   // Only setArchived changes this, so an open editor's autosave cannot unarchive a story.
   delete rest.archived;
   // Only setProject moves a story, so a page left open on it cannot move it back.

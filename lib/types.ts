@@ -299,6 +299,8 @@ export type StepModels = { frames?: string; prompts?: string };
 
 export type Story = {
   id: string;
+  // A short unique number for people (10001, 10002…), given once and never changed; the id stays the real key.
+  code: string;
   projectId: string;
   // False right after the AI wrote the frames, until they are approved or edited by hand.
   framesApproved: boolean;
@@ -370,6 +372,7 @@ export type StorySummary = {
   imported: boolean;
   storyType: StoryType;
   projectId: string;
+  code: string;
   // The story's OpenRouter model (or chain); blank = the .env default.
   aiModel: string;
   stepModels: StepModels;
