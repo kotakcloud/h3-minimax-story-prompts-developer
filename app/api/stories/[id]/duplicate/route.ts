@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { duplicateStory } from "@/lib/story-store";
+import { copyCostUpToFrames } from "@/lib/story-cost";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -20,6 +21,7 @@ export async function POST(request: Request, context: RouteContext) {
         : undefined;
     const story = await duplicateStory(id, { fromFrames: body.fromFrames === true, stepModels, title: text(body.title) });
     if (!story) return NextResponse.json({ error: "Story not found." }, { status: 404 });
+    if (body.fromFrames === true) await copyCostUpToFrames(id, story.id);
     return NextResponse.json({ story });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not duplicate the story.";

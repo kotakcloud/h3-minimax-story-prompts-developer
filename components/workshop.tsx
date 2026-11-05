@@ -19,6 +19,7 @@ import { playDoneSound } from "@/lib/done-sound";
 import { modelLabel, stepModel, storyModelsLabel } from "@/lib/models";
 import { StepModelSelect } from "@/components/step-model-select";
 import { Money } from "@/components/money";
+import { formatInr } from "@/lib/money";
 import type { StoryCost } from "@/lib/story-cost";
 import { panelPosition, selectedGrid } from "@/lib/grid";
 import { FAST_ENGINE_STEPS, ULTRA_STEPS, VIDEO_ENGINES, engineInfo, fastStorySize, isFastEngine } from "@/lib/engines";
@@ -44,6 +45,7 @@ import type {
 import {
   IMAGE_ASPECT_RATIOS,
   aiTitle,
+  STORY_STEPS,
   storySteps,
   STORY_V2_MAX_SEGMENT_SECONDS,
   activePromptStyle,
@@ -282,6 +284,31 @@ function imageSrc(image: ReferenceImage) {
   return `/api/image/view?${query}`;
 }
 
+// The header's AI cost tooltip: the calls, the split by step, and what a branched story carried over.
+function costTooltip(cost: StoryCost): string {
+  const lines = [
+    `${cost.calls} AI ${cost.calls === 1 ? "call" : "calls"} since ${new Date(cost.since).toLocaleString()} (calls before that were not counted)`,
+  ];
+  const steps = STORY_STEPS.filter((step) => (cost.byStep?.[step]?.usd ?? 0) > 0);
+  if (steps.length > 0) {
+    lines.push("By step (counted since 5 Nov 2026):");
+    for (const step of steps) lines.push(`  ${step}: ${formatInr(cost.byStep![step]!.usd)}`);
+  }
+  if (cost.copiedFrom) lines.push(`Includes the Gist to Frames costs of the story it was branched from (${cost.copiedFrom}).`);
+  return lines.join("\n");
+}
+
+// The step whose work an AI API does, for the per-step AI cost.
+function apiStep(url: string): StoryStep | null {
+  const path = url.split("?")[0];
+  if (path === "/api/analyze") return "gist";
+  if (path === "/api/cast") return "cast";
+  if (path === "/api/image-prompt") return "image";
+  if (path === "/api/breakdown" || path === "/api/grid/frames" || path === "/api/frames/split") return "frames";
+  if (path === "/api/prompts" || path.startsWith("/api/prompts/")) return "prompts";
+  return null;
+}
+
 export function Workshop({
   storyId,
   step,
@@ -291,11 +318,19 @@ export function Workshop({
 }) {
   const router = useRouter();
   const loggedFetch = useLoggedFetch();
-  // Every request from a story's page names the story, so the server can add AI costs to it.
+  // Every request from a story's page names the story, so the server can add AI costs to it, and the step the call
+  // belongs to (by its API; else the step on screen), so costs are also kept per step.
   const request = useCallback(
     (url: string, init: RequestInit = {}) =>
-      loggedFetch(url, { ...init, headers: { ...(init.headers as Record<string, string> | undefined), "X-Story-Id": storyId } }),
-    [loggedFetch, storyId],
+      loggedFetch(url, {
+        ...init,
+        headers: {
+          ...(init.headers as Record<string, string> | undefined),
+          "X-Story-Id": storyId,
+          "X-Story-Step": apiStep(url) || step,
+        },
+      }),
+    [loggedFetch, storyId, step],
   );
   const [aiCost, setAiCost] = useState<StoryCost | null>(null);
   const [story, setStory] = useState<Story | null>(null);
@@ -1684,7 +1719,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                 <span
                   title={
                     aiCost
-                      ? `${aiCost.calls} AI ${aiCost.calls === 1 ? "call" : "calls"} since ${new Date(aiCost.since).toLocaleString()} (calls before that were not counted)`
+                      ? costTooltip(aiCost)
                       : "No AI calls counted for this story yet (counting started on 3 Nov 2026)"
                   }
                 >

@@ -148,6 +148,10 @@ Changing the Prompts model on a story that already has frames asks first:
   as it is, so you can try several models on the same frames and compare the stories.
 - *Update this story only*: just changes this story's Prompts model.
 
+The new story's AI cost starts with what the original's Gist, Cast, Image and Frames steps cost (not its prompts),
+so it shows what that model's version really cost. Costs are split by step from 5 Nov 2026; calls before that are
+only in the original's total and are not carried over. Hover the AI cost in the story header to see the split.
+
 ### Extra instructions for the frames
 
 At the top of the Frames step, *Extra instructions for Break into frames* takes your own instructions for the AI ("keep every
