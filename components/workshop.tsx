@@ -14,7 +14,7 @@ import { ModelPicker } from "@/components/model-picker";
 import { PromptDiffLink } from "@/components/prompt-diff";
 import { VideoPlayer } from "@/components/video-player";
 import { framesFromAnalysis } from "@/lib/beats";
-import { applyLineDurations, timingComment, timingFixes, type LineDuration } from "@/lib/dialogue";
+import { applyLineDurations, applyLineTexts, timingComment, timingFixes, type LineDuration, type LineText } from "@/lib/dialogue";
 import { playDoneSound } from "@/lib/done-sound";
 import { modelLabel, stepModel, storyModelsLabel } from "@/lib/models";
 import { StepModelSelect } from "@/components/step-model-select";
@@ -1468,12 +1468,14 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
   }
 
   // Typed line lengths: a new prompt set with the timestamps moved, no AI involved.
-  async function updateLineDurations(edits: LineDuration[]) {
+  async function updateLineDurations(edits: LineDuration[], texts: LineText[] = []) {
     const current = storyRef.current;
     if (!current) return;
     setError("");
     try {
-      await saveRevision(applyLineDurations(current.segments, edits), true, activePromptStyle(current));
+      // Words first (they do not move any line), then the timing.
+      const segments = applyLineDurations(applyLineTexts(current.segments, texts), edits);
+      await saveRevision(segments, true, activePromptStyle(current));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update the prompts.");
     }
@@ -2973,7 +2975,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                   characters={story.characters}
                   selected={selectedDialogue}
                   onFixTiming={() => void fixDialogueTiming()}
-                  onUpdateDurations={(edits) => void updateLineDurations(edits)}
+                  onUpdateDurations={(edits, texts) => void updateLineDurations(edits, texts)}
                   fixing={busy === "update"}
                   onToggle={(key) =>
                     setSelectedDialogue((keys) => (keys.includes(key) ? keys.filter((item) => item !== key) : [...keys, key]))

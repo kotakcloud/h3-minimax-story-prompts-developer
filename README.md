@@ -247,6 +247,13 @@ through a camera move in its first second or two. Every on-screen speaker's face
 Weak models (e.g. gemini-2.5-flash-lite) follow moves well but can skip a close framing; gemini-3.7-flash followed both.
 Changing the camera clears the current prompts, like any frame edit; a split keeps the frame's camera on every part.
 
+### Editing spoken lines (Dialogue view)
+
+In Dialogue view, **✎** next to a line opens its words for editing (✎ again drops the change; *Discard line edits* drops
+all). **Update in prompts (N)** then makes a new prompt set without the AI: edited lines get your words, with the same
+speaker, language tag and timing (line breaks become spaces), together with any seconds typed for lines. Only the words
+inside the prompt change, so the frames keep the old wording until you edit them too.
+
 ### Reviewing new prompts
 
 Right after **Write H3 prompts**, the Prompts step shows a blinking reminder to review the new prompts in Dialogue view

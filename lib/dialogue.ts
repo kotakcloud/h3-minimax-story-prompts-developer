@@ -181,6 +181,27 @@ export function applyLineDurations<T extends { id: string; duration: number; pro
   );
 }
 
+export type LineText = { segmentId: string; lineIndex: number; text: string };
+
+// Applies typed line words to a prompt set (no AI): the words inside a line's <d>…</d> are swapped, its language tag,
+// speaker and timing stay. Tags and line breaks typed into the words are dropped.
+export function applyLineTexts<T extends { id: string; prompt: string }>(segments: T[], edits: LineText[]): T[] {
+  return segments.map((segment) => {
+    const mine = edits.filter((edit) => edit.segmentId === segment.id);
+    if (mine.length === 0) return segment;
+    let index = -1;
+    const prompt = segment.prompt.replace(LINE, (match, language: string | undefined) => {
+      index += 1;
+      const edit = mine.find((item) => item.lineIndex === index);
+      if (!edit) return match;
+      const text = edit.text.replace(/<\/?d>/gi, "").replace(/\s+/g, " ").trim();
+      if (!text) return match;
+      return `<d>${language?.trim() ? `[${language.trim()}] ` : ""}${text}</d>`;
+    });
+    return { ...segment, prompt };
+  });
+}
+
 // Segments whose dialogue does not fit, with the length they should have.
 export function timingFixes(segments: { id: string; duration: number; prompt: string }[]): { id: string; duration: number }[] {
   return segments.filter(isTight).map((segment) => ({

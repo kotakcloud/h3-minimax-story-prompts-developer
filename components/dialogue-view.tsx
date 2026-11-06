@@ -1,5 +1,15 @@
 import { useState } from "react";
-import { MAX_CLIP_SECONDS, clipSecondsNeeded, cutOffLines, isTight, parseDialogue, speakerProblems, timingFixes, type LineDuration } from "@/lib/dialogue";
+import {
+  MAX_CLIP_SECONDS,
+  clipSecondsNeeded,
+  cutOffLines,
+  isTight,
+  parseDialogue,
+  speakerProblems,
+  timingFixes,
+  type LineDuration,
+  type LineText,
+} from "@/lib/dialogue";
 import type { Character, Frame, PromptSegment } from "@/lib/types";
 
 function clock(value: number) {
@@ -25,11 +35,13 @@ export function DialogueView({
   onToggle: (key: string) => void;
   onFixTiming: () => void;
   fixing: boolean;
-  onUpdateDurations: (edits: LineDuration[]) => void;
+  onUpdateDurations: (edits: LineDuration[], texts: LineText[]) => void;
 }) {
   const [hideUnselected, setHideUnselected] = useState(false);
   // Typed line lengths, by the same key as `selected`.
   const [durations, setDurations] = useState<Record<string, string>>({});
+  // Typed line words (lines being edited), by the same key.
+  const [texts, setTexts] = useState<Record<string, string>>({});
   const rows = segments.map((segment) => ({ segment, lines: parseDialogue(segment.prompt) }));
   const fixes = timingFixes(segments).length;
   const lineCount = rows.reduce((sum, row) => sum + row.lines.length, 0);
@@ -42,6 +54,15 @@ export function DialogueView({
       return seconds > 0 && line.start !== undefined && line.end !== undefined ? [{ segmentId: segment.id, lineIndex, seconds }] : [];
     }),
   );
+  const textEdits: LineText[] = rows.flatMap(({ segment, lines }) =>
+    lines.flatMap((line, lineIndex) => {
+      const text = texts[`${segment.id}:${lineIndex}:${line.text}`];
+      return text !== undefined && text.replace(/\s+/g, " ").trim() && text.replace(/\s+/g, " ").trim() !== line.text
+        ? [{ segmentId: segment.id, lineIndex, text }]
+        : [];
+    }),
+  );
+  const changes = edits.length + textEdits.length;
   // With nothing ticked there is nothing to narrow down to, so every line shows.
   const onlySelected = hideUnselected && selectedCount > 0;
   const name = (id: string) => characters.find((character) => character.id === id)?.name || id;
@@ -56,17 +77,23 @@ export function DialogueView({
         {selectedCount > 0 && ` · ${selectedCount} selected`}.
       </p>
       <div className="flex flex-wrap gap-2">
-      {edits.length > 0 && (
+      {Object.keys(texts).length > 0 && (
+        <button type="button" onClick={() => setTexts({})} className="rounded-full border border-line px-3 py-1 text-xs text-muted">
+          Discard line edits
+        </button>
+      )}
+      {changes > 0 && (
         <button
           type="button"
           onClick={() => {
-            onUpdateDurations(edits);
+            onUpdateDurations(edits, textEdits);
             setDurations({});
+            setTexts({});
           }}
-          title="New prompt set: each line gets the seconds you typed, everything after it moves, and the segment length follows."
+          title="New prompt set (no AI): edited lines get your words (same speaker, language and timing); each line with typed seconds gets them, everything after it moves, and the segment length follows."
           className="rounded-full bg-foreground px-3 py-1 text-xs font-semibold text-background"
         >
-          Update in prompts ({edits.length})
+          Update in prompts ({changes})
         </button>
       )}
       {fixes > 0 && (
@@ -134,7 +161,20 @@ export function DialogueView({
                         />
                         <div className="min-w-0 flex-1">
                         <span className="font-medium text-accent">{line.speakers.map(name).join(" & ") || "Speaker"}: </span>
-                        {line.text}
+                        {texts[key] === undefined ? (
+                          line.text
+                        ) : (
+                          <textarea
+                            value={texts[key]}
+                            onChange={(event) => setTexts((current) => ({ ...current, [key]: event.target.value }))}
+                            rows={2}
+                            autoFocus
+                            aria-label={`Words of line ${lineIndex + 1} of segment ${index + 1}`}
+                            className={`mt-1 block w-full resize-y rounded-md border bg-background px-2 py-1 text-sm text-foreground outline-none ${
+                              texts[key].replace(/\s+/g, " ").trim() !== line.text ? "border-accent" : "border-line"
+                            }`}
+                          />
+                        )}
                         <p className="text-xs text-muted">
                           about {line.estimate}s
                           {line.language && ` · ${line.language}`}
@@ -146,6 +186,24 @@ export function DialogueView({
                           )}
                         </p>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setTexts((current) => {
+                              if (current[key] === undefined) return { ...current, [key]: line.text };
+                              const next = { ...current };
+                              delete next[key];
+                              return next;
+                            })
+                          }
+                          aria-label={texts[key] === undefined ? `Edit the words of line ${lineIndex + 1}` : `Stop editing line ${lineIndex + 1}`}
+                          title={texts[key] === undefined ? "Edit the words of this line" : "Stop editing (drops the change)"}
+                          className={`mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm ${
+                            texts[key] === undefined ? "text-muted hover:text-foreground" : "bg-accent/20 text-accent"
+                          }`}
+                        >
+                          ✎
+                        </button>
                         {written !== null && (
                           <input
                             type="number"
