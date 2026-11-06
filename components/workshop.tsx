@@ -29,6 +29,7 @@ import { panelPosition, selectedGrid } from "@/lib/grid";
 import { FAST_ENGINE_STEPS, ULTRA_STEPS, VIDEO_ENGINES, engineInfo, fastStorySize, isFastEngine } from "@/lib/engines";
 import { UpdateCommentDialog } from "@/components/update-comment-dialog";
 import { ErrorText } from "@/components/error-text";
+import { SectionRail } from "@/components/section-rail";
 import { TabStatus } from "@/lib/tab-status";
 import { buildExportPayload, buildMarkdownExport, downloadJson, downloadMarkdown } from "@/lib/export";
 import type {
@@ -2767,7 +2768,9 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
         )}
 
         {step === "prompts" && (
-          <section>
+          <section className={story.segments.length > 1 ? "pl-9 md:pl-8" : ""}>
+            {/* Numbers at the left edge that jump to each prompt (in Dialogue view too). */}
+            <SectionRail ids={story.segments.map((segment) => `${dialogueView ? "dialogue" : "prompt"}-${segment.id}`)} />
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-sm font-medium uppercase tracking-wider text-muted">H3 prompts</h2>
@@ -3074,7 +3077,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                 {story.segments.map((segment, index) => {
                   const frame = story.frames.find((item) => item.id === segment.id);
                   return (
-                    <li key={segment.id} className="rounded-2xl border border-line bg-card p-4">
+                    <li key={segment.id} id={`prompt-${segment.id}`} className="scroll-mt-24 rounded-2xl border border-line bg-card p-4">
                       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                         <div>
                           <p className="text-sm font-medium">

@@ -127,7 +127,7 @@ export function DialogueView({
             .filter(({ line, lineIndex }) => !onlySelected || selected.includes(`${segment.id}:${lineIndex}:${line.text}`));
           if (onlySelected && visible.length === 0) return null;
           return (
-            <li key={segment.id} className="rounded-2xl border border-line bg-card p-4">
+            <li key={segment.id} id={`dialogue-${segment.id}`} className="scroll-mt-24 rounded-2xl border border-line bg-card p-4">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <p className="text-sm font-medium">
                   {index + 1}. {frames.find((item) => item.id === segment.id)?.title || segment.id}
