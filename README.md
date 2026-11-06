@@ -189,6 +189,11 @@ frames; the app checks that and asks once more if a line went missing. Each new 
 The first part keeps the frame's panel and join, the others continue it. Like any frame edit it clears the current prompts
 (earlier prompt sets stay), so write the prompts again afterwards.
 
+Tick **Split the dialogue too** (off each time) when one long spoken line is what makes the frame too full: the AI may then
+cut lines into pieces across the new frames, at a natural break (a sentence end, a comma, a breath), each piece quoted on
+its own and said by the same speaker. The app checks that the spoken words are all still there, exactly once and in order
+(punctuation at a cut may change), and asks once more if not.
+
 ### What changed between prompt sets
 
 Each generation's *Prompts* row and the Prompts tab show a link like *vs set 5: 3 added · 2 removed · 4 updated*, comparing the

@@ -360,6 +360,8 @@ export function Workshop({
   const [cutOnNextPanel, setCutOnNextPanel] = useState(() => typeof window === "undefined" || readCutOnNextPanel());
   // The frame whose Split choices are open.
   const [splitFor, setSplitFor] = useState<string | null>(null);
+  // Split frame: let the AI cut long spoken lines between the new frames too (off each time the chooser opens).
+  const [splitDialogue, setSplitDialogue] = useState(false);
   const [hibernateTick, setHibernateTick] = useState(() => typeof window !== "undefined" && readHibernateTick(storyId));
   const [hibernateAt, setHibernateAt] = useState<number | null>(null);
   const [hibernateLeft, setHibernateLeft] = useState(0);
@@ -1554,6 +1556,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
           gist: effectiveGist(current),
           analysis: current.analysis,
           parts,
+          ...(splitDialogue ? { splitDialogue: true } : {}),
         }),
       });
       const data = await response.json();
@@ -2631,6 +2634,13 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                               {parts ?? "Auto"}
                             </button>
                           ))}
+                          <label
+                            className="ml-1 flex items-center gap-1.5"
+                            title="Also cut long spoken lines between the new frames, at a natural break (a sentence end, a comma, a breath). The words stay exactly as written, in order; the app checks none is lost or repeated."
+                          >
+                            <input type="checkbox" checked={splitDialogue} onChange={(event) => setSplitDialogue(event.target.checked)} />
+                            Split the dialogue too
+                          </label>
                           <button type="button" onClick={() => setSplitFor(null)} className="px-1.5 py-1">
                             Cancel
                           </button>
@@ -2638,7 +2648,10 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                       ) : (
                         <button
                           type="button"
-                          onClick={() => setSplitFor(frame.id)}
+                          onClick={() => {
+                            setSplitDialogue(false);
+                            setSplitFor(frame.id);
+                          }}
                           disabled={busy !== null || !frame.summary.trim()}
                           title="Split this frame into consecutive frames with the AI, keeping every spoken line"
                           className="rounded-full border border-line px-3 py-1 text-xs text-foreground disabled:opacity-50"
