@@ -11,6 +11,7 @@ import { StoryNote } from "@/components/story-note";
 import { VideoPlayer } from "@/components/video-player";
 import type { Project, StoryStep, StorySummary, StoryType } from "@/lib/types";
 import { DuplicateStory } from "@/components/duplicate-story";
+import { ProjectCharacters } from "@/components/project-characters";
 import { DEFAULT_PROJECT_ID, STORY_TYPES, storyPath } from "@/lib/types";
 import { DEFAULT_STEP_MODELS, RECOMMENDED_MODEL, storyModelsLabel } from "@/lib/models";
 import { StepModelSelect } from "@/components/step-model-select";
@@ -124,6 +125,21 @@ export default function Home() {
   useEffect(() => {
     refresh().catch((err) => setError(err instanceof Error ? err.message : "Could not load stories."));
   }, []);
+
+  async function saveProjectCharacters(id: string, characterText: string) {
+    setError("");
+    const response = await request(`/api/projects/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ characterText }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      setError(data.error || "Could not save the characters.");
+      throw new Error(data.error || "Could not save the characters.");
+    }
+    setProjects((list) => list.map((item) => (item.id === id ? data.project : item)));
+  }
 
   // The new story's Frames / Prompts models: "" = the story's model. Remembered on this computer for the next story.
   const [newStepModels, setNewStepModels] = useState<{ frames: string; prompts: string }>(DEFAULT_STEP_MODELS);
@@ -304,6 +320,9 @@ export default function Home() {
             </>
           )}
         </div>
+        {project && (
+          <ProjectCharacters key={project.id} project={project} onSave={(text) => saveProjectCharacters(project.id, text)} />
+        )}
       </section>
 
       <header className="mb-6 flex flex-wrap items-end justify-between gap-4">

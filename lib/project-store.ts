@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { replaceFile } from "./story-store";
+import { parseCharacterCards } from "./character-cards";
 import { DEFAULT_PROJECT_ID, type Project } from "./types";
 
 // Projects group stories (data/projects.json). Stories from before projects existed belong to "unknown", which is
@@ -56,6 +57,19 @@ export function createProject(name: unknown): Promise<Project> {
   return change(async (list) => {
     const project = { id: randomUUID(), name: clean, createdAt: new Date().toISOString() };
     await saveProjects([...list, project]);
+    return project;
+  });
+}
+
+// Saves the pasted character designs and the cards read from them.
+export function setProjectCharacters(id: string, text: unknown): Promise<Project | null> {
+  const characterText = typeof text === "string" ? text.slice(0, 50_000) : "";
+  return change(async (list) => {
+    const project = list.find((item) => item.id === id);
+    if (!project) return null;
+    project.characterText = characterText;
+    project.characters = parseCharacterCards(characterText);
+    await saveProjects(list);
     return project;
   });
 }

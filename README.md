@@ -223,9 +223,20 @@ cut lines into pieces across the new frames, at a natural break (a sentence end,
 its own and said by the same speaker. The app checks that the spoken words are all still there, exactly once and in order
 (punctuation at a cut may change), and asks once more if not.
 
+### Project characters
+
+Under the project buttons, **Characters of <project>** takes the project's character designs: paste them, and every
+numbered heading (`### 1. ADHIYO BRAHMAN`, `1. NAME`) becomes a card whose number is its S number (S1, S2…) and whose
+description is the text under it (a heading with nothing under it, like a title, is skipped; no AI). **Save N characters**
+keeps the text and the cards with the project. In the project's stories, *Edit S numbers* then offers these cards.
+
 ### Character numbers (S1, S2…)
 
-To keep the same person on the same number across the parts of a story, press **Edit S numbers** above the characters on
+When the project has character cards, **Edit S numbers** shows a list per character with the project's cards, already
+set to the card with the matching name; pick another, *Keep* the current number, or *Type a number…*. With *Also use each
+picked card's name and description* (on), the characters also take the card's name and description.
+
+Without cards: to keep the same person on the same number across the parts of a story, press **Edit S numbers** above the characters on
 the Frames step and type any number from S1 to S99 for each character (S11 is fine in a story with four characters; each
 number can be used once). **Save numbers** changes the characters, every S number in the frames and the story analysis at
 once, without the AI (changing S1 and S2 into each other works too). The characters are then listed by number. S numbers

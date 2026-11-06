@@ -1,4 +1,4 @@
-import type { Story } from "./types";
+import type { Character, Story } from "./types";
 
 // Renumbering the characters (S1, S2…) without the AI: every "S<n>" in the frames and the analysis is swapped in one
 // pass, so S1 <-> S2 swaps do not collide. S<n> is <Subject n> in the prompts, so the current prompts were written for the
@@ -30,14 +30,26 @@ function swapDeep<T>(value: T, map: Map<string, string>): T {
   return value;
 }
 
-// The story fields to change for new ids (old id -> new id), or null when nothing changes.
-export function renumberCharacters(story: Story, next: Record<string, string>): Partial<Story> | null {
+// The story fields to change for new ids (old id -> new id), or null when nothing changes. fromCards (old id -> a
+// project character card) also gives those characters the card's name and description.
+export function renumberCharacters(
+  story: Story,
+  next: Record<string, string>,
+  fromCards: Record<string, Character> = {},
+): Partial<Story> | null {
   const map = new Map(Object.entries(next).filter(([from, to]) => from !== to));
-  if (map.size === 0) return null;
+  const cards = Object.entries(fromCards).filter(([id, card]) => {
+    const character = story.characters.find((item) => item.id === id);
+    return character && (character.name !== card.name || character.look !== card.look);
+  });
+  if (map.size === 0 && cards.length === 0) return null;
   const number = (id: string) => Number(CHARACTER_ID.exec(id)?.[1] ?? 999);
   return {
     characters: story.characters
-      .map((character) => ({ ...character, id: map.get(character.id) ?? character.id }))
+      .map((character) => {
+        const card = fromCards[character.id];
+        return { ...character, id: map.get(character.id) ?? character.id, ...(card ? { name: card.name, look: card.look } : {}) };
+      })
       .sort((a, b) => number(a.id) - number(b.id)),
     frames: story.frames.map((frame) => ({ ...frame, title: swap(frame.title, map), summary: swap(frame.summary, map) })),
     analysis: story.analysis ? swapDeep(story.analysis, map) : story.analysis,

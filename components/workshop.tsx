@@ -2534,7 +2534,8 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 <CharacterIdsEditor
                   characters={story.characters}
-                  onSave={(next) => {
+                  cards={projects.find((item) => item.id === story.projectId)?.characters || []}
+                  onSave={(next, fromCards) => {
                     const current = storyRef.current || story;
                     if (
                       current.segments.length > 0 &&
@@ -2542,7 +2543,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                     ) {
                       return;
                     }
-                    const patch = renumberCharacters(current, next);
+                    const patch = renumberCharacters(current, next, fromCards);
                     if (patch) patchStory(patch);
                   }}
                 />
