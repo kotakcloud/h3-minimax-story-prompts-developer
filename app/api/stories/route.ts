@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { projectExists } from "@/lib/project-store";
 import { readStoryCost } from "@/lib/story-cost";
-import { parseModelChain } from "@/lib/models";
+import { DEFAULT_STEP_MODELS, parseModelChain } from "@/lib/models";
 import { createStory, listStories } from "@/lib/story-store";
 import { DEFAULT_PROJECT_ID, isStoryType } from "@/lib/types";
 
@@ -32,7 +32,9 @@ export async function POST(request: Request) {
       if (chain.error) throw new Error(chain.error);
       return chain.models.join(",") || undefined;
     };
-    const stepModels = { frames: stepModel(body.stepModels?.frames), prompts: stepModel(body.stepModels?.prompts) };
+    // Without choices (an older page or a script): the default step models.
+    const chosen = body.stepModels ?? DEFAULT_STEP_MODELS;
+    const stepModels = { frames: stepModel(chosen.frames), prompts: stepModel(chosen.prompts) };
     const story = await createStory(isStoryType(body.storyType) ? body.storyType : "regular", projectId, stepModels);
     return NextResponse.json({ story }, { status: 201 });
   } catch (error) {

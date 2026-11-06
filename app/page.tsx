@@ -12,10 +12,11 @@ import { VideoPlayer } from "@/components/video-player";
 import type { Project, StoryStep, StorySummary, StoryType } from "@/lib/types";
 import { DuplicateStory } from "@/components/duplicate-story";
 import { DEFAULT_PROJECT_ID, STORY_TYPES, storyPath } from "@/lib/types";
-import { RECOMMENDED_MODEL, storyModelsLabel } from "@/lib/models";
+import { DEFAULT_STEP_MODELS, RECOMMENDED_MODEL, storyModelsLabel } from "@/lib/models";
 import { StepModelSelect } from "@/components/step-model-select";
 
-const NEW_STEP_MODELS_KEY = "h3-new-story-step-models";
+// v2: choices saved before the Prompts default existed are not reused.
+const NEW_STEP_MODELS_KEY = "h3-new-story-step-models-v2";
 
 const LAST_PROJECT_KEY = "h3-last-project";
 
@@ -125,10 +126,12 @@ export default function Home() {
   }, []);
 
   // The new story's Frames / Prompts models: "" = the story's model. Remembered on this computer for the next story.
-  const [newStepModels, setNewStepModels] = useState<{ frames: string; prompts: string }>({ frames: "", prompts: "" });
+  const [newStepModels, setNewStepModels] = useState<{ frames: string; prompts: string }>(DEFAULT_STEP_MODELS);
   useEffect(() => {
     try {
-      const saved = JSON.parse(window.localStorage.getItem(NEW_STEP_MODELS_KEY) || "{}") as { frames?: unknown; prompts?: unknown };
+      const stored = window.localStorage.getItem(NEW_STEP_MODELS_KEY);
+      if (!stored) return;
+      const saved = JSON.parse(stored) as { frames?: unknown; prompts?: unknown };
       const text = (value: unknown) => (typeof value === "string" ? value : "");
       // eslint-disable-next-line react-hooks/set-state-in-effect -- read once from this browser after the first render
       setNewStepModels({ frames: text(saved.frames), prompts: text(saved.prompts) });

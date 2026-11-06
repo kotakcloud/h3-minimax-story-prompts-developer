@@ -168,7 +168,8 @@ write, Update with comment, Fix timing, Language version); the other steps keep 
 story title then names it too: `google/gemini-3.7-flash · Frames: openai/gpt-5-mini`. Pick "Story model" again to undo.
 
 You can also pick both before the story exists: next to *New story type* in the story list, **Frames model** and
-**Prompts model** start on "Story model"; the new story is created with them, and the last choice is remembered in this
+**Prompts model** start on the defaults (Frames: the story model, google/gemini-3.7-flash; Prompts:
+deepseek/deepseek-v4-flash-0731); the new story is created with them, and the last choice is remembered in this
 browser for the next new story.
 
 Changing the Prompts model on a story that already has frames asks first:
