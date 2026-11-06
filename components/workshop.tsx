@@ -19,6 +19,7 @@ import { playDoneSound } from "@/lib/done-sound";
 import { modelLabel, stepModel, storyModelsLabel } from "@/lib/models";
 import { StepModelSelect } from "@/components/step-model-select";
 import { CameraPicker } from "@/components/camera-picker";
+import { DurationInput } from "@/components/duration-input";
 import { CharacterIdsEditor } from "@/components/character-ids-editor";
 import { renumberCharacters } from "@/lib/character-ids";
 import { Money } from "@/components/money";
@@ -2572,19 +2573,11 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                       />
                       <label className="flex items-center gap-2 text-xs text-muted">
                         Duration
-                        <input
-                          type="number"
+                        <DurationInput
+                          value={frame.duration}
                           min={4}
                           max={15}
-                          value={frame.duration}
-                          onChange={(event) => {
-                            const next = Number(event.target.value);
-                            if (!Number.isFinite(next)) return;
-                            updateFrame(frame.id, {
-                              duration: Math.min(15, Math.max(4, Math.round(next))),
-                            });
-                          }}
-                          className="w-16 rounded-md border border-line bg-background px-2 py-1 text-foreground"
+                          onCommit={(duration) => updateFrame(frame.id, { duration })}
                         />
                       </label>
                       {(() => {
