@@ -3875,6 +3875,8 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                                     <VideoPlayer
                                       src={imageSrc({ ...run.video, id: run.id } as ReferenceImage)}
                                       className="mt-2 w-full rounded-xl border border-line"
+                                      // Watch it floating while reading the prompts.
+                                      onFloat={() => goTo("prompts")}
                                     />
                                     <p className="mt-2 break-all text-xs text-muted">
                                       ComfyUI output: {run.video.subfolder}\{run.video.filename}
@@ -3913,6 +3915,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                             <VideoPlayer
                               src={`/api/compare/file?${new URLSearchParams({ storyId: story.id, id: comparison.id })}`}
                               preload="metadata"
+                              onFloat={() => goTo("prompts")}
                               className="w-full rounded-xl border border-line bg-black"
                             />
                             <dl className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 text-xs">

@@ -130,7 +130,8 @@ now, because a run takes a single reference image.
   also removes the file. Files: `data/comparisons/<story id>/<id>.mp4`. With `COMFYUI_OUTPUT_DIR` in `.env.local` the
   videos are read straight from ComfyUI's output folder (seconds instead of a minute through ComfyUI's /view).
 - **Picture in picture**: the button under a generation or comparison video plays it in a small floating window that stays
-  on top while you scroll, switch browser tabs or use another app (*Back to page* returns it, at the point it reached). Chrome,
+  on top while you scroll, switch browser tabs or use another app, and the page switches to the Prompts step so you can
+  read the prompts while it plays (close the floating window to stop it). Chrome,
   Brave and Edge open it as a window of its own; elsewhere the video's own picture-in-picture is used, and Firefox does not show it.
 - **Full-screen view**: click a generation's reference thumbnail (or the big image on the Image tab) to open it full
   screen; ← / → step through the story's images and a storyboard grid's panels, Esc or a click outside closes.

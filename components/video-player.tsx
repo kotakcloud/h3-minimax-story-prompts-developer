@@ -25,7 +25,8 @@ let windowRefused = false;
 // plays in that window and hands its position back when the window closes; otherwise, or when the browser refuses the
 // window (embedded browsers do), the video's own picture-in-picture is used. Browsers with neither (Firefox) do not
 // show the button.
-export function VideoPlayer(props: VideoHTMLAttributes<HTMLVideoElement>) {
+// onFloat: called when the video goes into picture in picture (the floating window keeps playing when the page moves on).
+export function VideoPlayer({ onFloat, ...props }: VideoHTMLAttributes<HTMLVideoElement> & { onFloat?: () => void }) {
   const video = useRef<HTMLVideoElement>(null);
   const [floating, setFloating] = useState(false);
   const [retry, setRetry] = useState(false);
@@ -66,6 +67,7 @@ export function VideoPlayer(props: VideoHTMLAttributes<HTMLVideoElement>) {
     );
     win.document.body.append(copy);
     setFloating(true);
+    onFloat?.();
     // Closed by its own button, by Back to page, or by another video taking the window.
     win.addEventListener("pagehide", () => {
       element.currentTime = copy.currentTime;
@@ -91,6 +93,7 @@ export function VideoPlayer(props: VideoHTMLAttributes<HTMLVideoElement>) {
         await document.exitPictureInPicture();
       } else {
         await element.requestPictureInPicture();
+        onFloat?.();
       }
     } catch {
       // The video has not loaded yet, or the browser refused; the next click tries again.
