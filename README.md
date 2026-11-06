@@ -194,6 +194,14 @@ cut lines into pieces across the new frames, at a natural break (a sentence end,
 its own and said by the same speaker. The app checks that the spoken words are all still there, exactly once and in order
 (punctuation at a cut may change), and asks once more if not.
 
+### Character numbers (S1, S2…)
+
+To keep the same person on the same number across the parts of a story, press **Edit S numbers** above the characters on
+the Frames step and type any number from S1 to S99 for each character (S11 is fine in a story with four characters; each
+number can be used once). **Save numbers** changes the characters, every S number in the frames and the story analysis at
+once, without the AI (changing S1 and S2 into each other works too). The characters are then listed by number. S numbers
+are the <Subject N> of the prompts, so the current prompts are cleared; earlier prompt sets stay.
+
 ### Camera for a frame
 
 Under each frame's text, **Camera** has two lists, both starting on *Let the AI choose*:

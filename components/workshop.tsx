@@ -19,6 +19,8 @@ import { playDoneSound } from "@/lib/done-sound";
 import { modelLabel, stepModel, storyModelsLabel } from "@/lib/models";
 import { StepModelSelect } from "@/components/step-model-select";
 import { CameraPicker } from "@/components/camera-picker";
+import { CharacterIdsEditor } from "@/components/character-ids-editor";
+import { renumberCharacters } from "@/lib/character-ids";
 import { Money } from "@/components/money";
 import { formatInr } from "@/lib/money";
 import type { StoryCost } from "@/lib/story-cost";
@@ -2506,6 +2508,24 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
             </div>
             {busy && <p className="mb-4 text-xs text-muted">OpenRouter can take one to two minutes.</p>}
 
+            {story.characters.length > 0 && (
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <CharacterIdsEditor
+                  characters={story.characters}
+                  onSave={(next) => {
+                    const current = storyRef.current || story;
+                    if (
+                      current.segments.length > 0 &&
+                      !window.confirm("Change the S numbers? The frames are updated to match and the current prompts are cleared; earlier prompt sets stay.")
+                    ) {
+                      return;
+                    }
+                    const patch = renumberCharacters(current, next);
+                    if (patch) patchStory(patch);
+                  }}
+                />
+              </div>
+            )}
             {story.characters.length > 0 && (
               <div className="mb-5 grid gap-3 md:grid-cols-2">
                 {story.characters.map((character) => (
