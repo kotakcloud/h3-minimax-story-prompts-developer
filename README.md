@@ -229,6 +229,8 @@ Under the project buttons, **Characters of <project>** takes the project's chara
 numbered heading (`### 1. ADHIYO BRAHMAN`, `1. NAME`) becomes a card whose number is its S number (S1, S2…) and whose
 description is the text under it (a heading with nothing under it, like a title, is skipped; no AI). **Save N characters**
 keeps the text and the cards with the project. In the project's stories, *Edit S numbers* then offers these cards.
+*Copy from another project…* (shown when another project has characters) fills the box with that project's
+designs, to check and save (or cancel); the two projects' lists stay separate after that.
 
 ### Character numbers (S1, S2…)
 

@@ -8,11 +8,15 @@ import type { Project } from "@/lib/types";
 // shared by the project's stories (Edit S numbers on the Frames step offers them).
 export function ProjectCharacters({
   project,
+  projects = [],
   onSave,
 }: {
   project: Project;
+  // Other projects whose characters can be copied in.
+  projects?: Project[];
   onSave: (characterText: string) => Promise<void>;
 }) {
+  const sources = projects.filter((item) => item.id !== project.id && item.characterText?.trim());
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -32,6 +36,28 @@ export function ProjectCharacters({
       </button>
       {open && (
         <div className="mt-3 space-y-3">
+          {sources.length > 0 && (
+            <label className="flex flex-wrap items-center gap-2 text-xs text-muted">
+              Copy from
+              <select
+                value=""
+                onChange={(event) => {
+                  const source = sources.find((item) => item.id === event.target.value);
+                  if (source?.characterText) setDraft(source.characterText);
+                }}
+                aria-label="Copy the characters of another project"
+                className="rounded-md border border-line bg-background px-2 py-1 text-foreground"
+              >
+                <option value="">another project…</option>
+                {sources.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name} ({item.characters?.length || 0})
+                  </option>
+                ))}
+              </select>
+              <span>fills the box below; check it, then Save (or Cancel).</span>
+            </label>
+          )}
           <label className="block text-xs text-muted">
             Paste the character designs. Each numbered heading (<code>### 1. NAME</code>) becomes a card: its number is the S
             number (S1, S2…) and the text under it the description.

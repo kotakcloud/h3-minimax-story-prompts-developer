@@ -321,7 +321,7 @@ export default function Home() {
           )}
         </div>
         {project && (
-          <ProjectCharacters key={project.id} project={project} onSave={(text) => saveProjectCharacters(project.id, text)} />
+          <ProjectCharacters key={project.id} project={project} projects={projects} onSave={(text) => saveProjectCharacters(project.id, text)} />
         )}
       </section>
 
