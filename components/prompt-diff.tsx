@@ -16,8 +16,12 @@ type Props = {
 };
 
 function summary(diff: SetDiff) {
-  if (diff.added + diff.removed + diff.updated === 0) return "no line changes";
-  return `${diff.added} added · ${diff.removed} removed · ${diff.updated} updated`;
+  const lengths = diff.segments.filter(
+    (segment) => segment.leftDuration !== undefined && segment.rightDuration !== undefined && segment.leftDuration !== segment.rightDuration,
+  ).length;
+  const lengthNote = lengths > 0 ? ` · ${lengths} ${lengths === 1 ? "length" : "lengths"} changed` : "";
+  if (diff.added + diff.removed + diff.updated === 0) return `no line changes${lengthNote}`;
+  return `${diff.added} added · ${diff.removed} removed · ${diff.updated} updated${lengthNote}`;
 }
 
 // A link saying what changed between two prompt sets; it opens the side-by-side view.
@@ -160,7 +164,11 @@ function PromptDiffDialog({
                   <p className="mb-1 text-sm font-medium">
                     {index + 1}. {title} <span className="text-xs font-normal text-muted">· {seconds}</span>
                     <span className="ml-2 text-xs font-normal text-muted">
-                      {changed ? `${segment.added} added · ${segment.removed} removed · ${segment.updated} updated` : "unchanged"}
+                      {changed
+                        ? `${segment.added} added · ${segment.removed} removed · ${segment.updated} updated`
+                        : segment.leftDuration !== segment.rightDuration
+                          ? "length changed"
+                          : "unchanged"}
                     </span>
                   </p>
                   {(changed || showAll) && (

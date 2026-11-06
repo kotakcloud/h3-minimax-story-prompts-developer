@@ -282,7 +282,8 @@ On the Prompts step (outside Dialogue view) every prompt is an editable box. Edi
 prompt is outlined (*Undo* drops its edit), and a bar says how many are edited, with **Discard** and **Review & save**.
 Review & save shows the saved prompts next to your edits, changed lines marked; **Confirm & save** turns them into a new
 prompt set (the earlier set stays), *Keep editing* goes back. Opening another prompt set asks before dropping unsaved
-edits, and so does leaving or reloading the page.
+edits, and so does leaving or reloading the page. Each prompt's **Duration** box (4–15 s) is edited the same way: a changed length
+is saved with the prompt edits through Review & save, which shows it as `8s → 10s`.
 
 ### Editing spoken lines (Dialogue view)
 

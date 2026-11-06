@@ -351,6 +351,8 @@ export function Workshop({
   const [updateOpen, setUpdateOpen] = useState(false);
   // Prompts edited by hand on the Prompts step, by segment id: not saved until confirmed in the diff.
   const [promptDrafts, setPromptDrafts] = useState<Record<string, string>>({});
+  // Segment lengths changed by hand on the Prompts step (seconds), saved with the prompt edits.
+  const [durationDrafts, setDurationDrafts] = useState<Record<string, number>>({});
   const [promptReviewOpen, setPromptReviewOpen] = useState(false);
   const [promptSaving, setPromptSaving] = useState(false);
   // A Prompts model picked on a story that has frames: asked whether to branch a new story or change this one.
@@ -464,6 +466,7 @@ export function Workshop({
       skipSave.current = loaded.step === step;
       setStory({ ...loaded, step });
       setPromptDrafts({});
+      setDurationDrafts({});
       // New prompts still waiting for their review open in Dialogue view.
       if (!loaded.promptsReviewed && loaded.segments.length > 0) setDialogueView(true);
       setStories(listData.stories || []);
@@ -1376,6 +1379,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     if (!current) return;
     // A new prompt set replaces the one the hand edits were made on.
     setPromptDrafts({});
+    setDurationDrafts({});
     const prior = current.promptRevisions.length
       ? current.promptRevisions
       : current.segments.length
@@ -1492,7 +1496,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
 
   // Typed line lengths: a new prompt set with the timestamps moved, no AI involved.
   // Unsaved prompt edits: leaving or reloading the page asks first.
-  const hasPromptDrafts = Object.keys(promptDrafts).length > 0;
+  const hasPromptDrafts = Object.keys(promptDrafts).length + Object.keys(durationDrafts).length > 0;
   useEffect(() => {
     if (!hasPromptDrafts) return;
     const warn = (event: BeforeUnloadEvent) => event.preventDefault();
@@ -1504,10 +1508,22 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
   function editedSegments(): PromptSegment[] | null {
     const current = storyRef.current || story;
     if (!current) return null;
-    const changed = current.segments.some((segment) => promptDrafts[segment.id] !== undefined && promptDrafts[segment.id] !== segment.prompt);
+    const changed = current.segments.some((segment) => segmentEdited(segment));
     return changed
-      ? current.segments.map((segment) => (promptDrafts[segment.id] !== undefined ? { ...segment, prompt: promptDrafts[segment.id] } : segment))
+      ? current.segments.map((segment) => ({
+          ...segment,
+          prompt: promptDrafts[segment.id] ?? segment.prompt,
+          duration: durationDrafts[segment.id] ?? segment.duration,
+        }))
       : null;
+  }
+
+  // Whether a segment's prompt or length was changed by hand and not saved.
+  function segmentEdited(segment: PromptSegment) {
+    return (
+      (promptDrafts[segment.id] !== undefined && promptDrafts[segment.id] !== segment.prompt) ||
+      (durationDrafts[segment.id] !== undefined && durationDrafts[segment.id] !== segment.duration)
+    );
   }
 
   // Confirmed in the diff: the hand edits become a new prompt set.
@@ -1520,6 +1536,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     try {
       await saveRevision(segments, true, activePromptStyle(current));
       setPromptDrafts({});
+      setDurationDrafts({});
       setPromptReviewOpen(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save the prompts.");
@@ -2859,8 +2876,9 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                       aria-label={`Prompt set ${index + 1}`}
                       onClick={() => {
                         if (revision.id === activeRevisionId) return;
-                        if (Object.keys(promptDrafts).length > 0 && !window.confirm("Drop your unsaved prompt edits and open this prompt set?")) return;
+                        if (hasPromptDrafts && !window.confirm("Drop your unsaved prompt edits and open this prompt set?")) return;
                         setPromptDrafts({});
+                        setDurationDrafts({});
                         patchStory({
                           activeRevisionId: revision.id,
                           segments: revision.segments,
@@ -3047,9 +3065,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
               ) : (
               <>
               {(() => {
-                const count = story.segments.filter(
-                  (segment) => promptDrafts[segment.id] !== undefined && promptDrafts[segment.id] !== segment.prompt,
-                ).length;
+                const count = story.segments.filter((segment) => segmentEdited(segment)).length;
                 return count > 0 ? (
                   <div className="sticky top-[calc(var(--nav-h)+0.5rem)] z-20 mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-accent/60 bg-card px-4 py-2 text-sm">
                     <span>
@@ -3059,7 +3075,10 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                       <button
                         type="button"
                         onClick={() => {
-                          if (window.confirm("Drop all unsaved prompt edits?")) setPromptDrafts({});
+                          if (window.confirm("Drop all unsaved prompt edits?")) {
+                            setPromptDrafts({});
+                            setDurationDrafts({});
+                          }
                         }}
                         className="rounded-full border border-line px-3 py-1 text-xs text-muted hover:text-foreground"
                       >
@@ -3098,7 +3117,26 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                           <p className="text-sm font-medium">
                             {index + 1}. {frame?.title || segment.id}
                           </p>
-                          <p className="text-xs text-muted">{segment.duration}s</p>
+                          <label className="mt-1 flex items-center gap-2 text-xs text-muted">
+                            Duration
+                            <DurationInput
+                              value={durationDrafts[segment.id] ?? segment.duration}
+                              min={4}
+                              max={15}
+                              onCommit={(duration) =>
+                                setDurationDrafts((drafts) => {
+                                  const next = { ...drafts };
+                                  if (duration === segment.duration) delete next[segment.id];
+                                  else next[segment.id] = duration;
+                                  return next;
+                                })
+                              }
+                              className={`py-0.5 text-xs ${
+                                durationDrafts[segment.id] !== undefined && durationDrafts[segment.id] !== segment.duration ? "border-accent" : ""
+                              }`}
+                            />
+                            s
+                          </label>
                         </div>
                         <IconButton
                           label={copiedId === segment.id ? "Copied" : "Copy prompt"}
@@ -3109,7 +3147,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                       </div>
                       {(() => {
                         const draft = promptDrafts[segment.id];
-                        const edited = draft !== undefined && draft !== segment.prompt;
+                        const edited = segmentEdited(segment);
                         const value = draft ?? segment.prompt;
                         return (
                           <>
@@ -3140,11 +3178,18 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                                 <button
                                   type="button"
                                   onClick={() =>
+                                  {
                                     setPromptDrafts((drafts) => {
                                       const next = { ...drafts };
                                       delete next[segment.id];
                                       return next;
-                                    })
+                                    });
+                                    setDurationDrafts((drafts) => {
+                                      const next = { ...drafts };
+                                      delete next[segment.id];
+                                      return next;
+                                    });
+                                  }
                                   }
                                   className="text-muted underline underline-offset-2 hover:text-foreground"
                                 >
