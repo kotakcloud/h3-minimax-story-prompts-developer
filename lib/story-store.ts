@@ -252,11 +252,21 @@ export async function readStory(id: string): Promise<Story | null> {
   }
 }
 
-export async function createStory(storyType: StoryType = "regular", projectId: string = DEFAULT_PROJECT_ID): Promise<Story> {
+export async function createStory(
+  storyType: StoryType = "regular",
+  projectId: string = DEFAULT_PROJECT_ID,
+  stepModels: StepModels = {},
+): Promise<Story> {
   await ensureDir();
   const now = new Date().toISOString();
   // type-1 stories give H3 only each segment's own panel of a storyboard grid unless changed.
-  const story: Story = { ...emptyStory(randomUUID(), now), storyType, projectId, gridFeed: storyType === "type-1" ? "panels" : "whole" };
+  const story: Story = {
+    ...emptyStory(randomUUID(), now),
+    storyType,
+    projectId,
+    stepModels,
+    gridFeed: storyType === "type-1" ? "panels" : "whole",
+  };
   return takeCode(story);
 }
 

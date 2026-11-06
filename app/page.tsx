@@ -11,7 +11,10 @@ import { StoryNote } from "@/components/story-note";
 import { VideoPlayer } from "@/components/video-player";
 import type { Project, StorySummary, StoryType } from "@/lib/types";
 import { DEFAULT_PROJECT_ID, STORY_TYPES, storyPath } from "@/lib/types";
-import { storyModelsLabel } from "@/lib/models";
+import { RECOMMENDED_MODEL, storyModelsLabel } from "@/lib/models";
+import { StepModelSelect } from "@/components/step-model-select";
+
+const NEW_STEP_MODELS_KEY = "h3-new-story-step-models";
 
 const LAST_PROJECT_KEY = "h3-last-project";
 
@@ -120,6 +123,28 @@ export default function Home() {
     refresh().catch((err) => setError(err instanceof Error ? err.message : "Could not load stories."));
   }, []);
 
+  // The new story's Frames / Prompts models: "" = the story's model. Remembered on this computer for the next story.
+  const [newStepModels, setNewStepModels] = useState<{ frames: string; prompts: string }>({ frames: "", prompts: "" });
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(NEW_STEP_MODELS_KEY) || "{}") as { frames?: unknown; prompts?: unknown };
+      const text = (value: unknown) => (typeof value === "string" ? value : "");
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- read once from this browser after the first render
+      setNewStepModels({ frames: text(saved.frames), prompts: text(saved.prompts) });
+    } catch {
+      // No storage here: start on the story's model.
+    }
+  }, []);
+  function chooseNewStepModel(step: "frames" | "prompts", model: string) {
+    const next = { ...newStepModels, [step]: model };
+    setNewStepModels(next);
+    try {
+      window.localStorage.setItem(NEW_STEP_MODELS_KEY, JSON.stringify(next));
+    } catch {
+      // Not remembered; still used for this story.
+    }
+  }
+
   async function createStory() {
     setBusy(true);
     setError("");
@@ -127,7 +152,7 @@ export default function Home() {
       const response = await request("/api/stories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storyType, projectId: activeProjectId }),
+        body: JSON.stringify({ storyType, projectId: activeProjectId, stepModels: newStepModels }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not create a story.");
@@ -277,7 +302,7 @@ export default function Home() {
         <h2 className="text-xl font-semibold tracking-tight">
           Stories in <span className="text-accent">{project?.name || "…"}</span>
         </h2>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           <ImportVideoFile onError={setError} projectId={activeProjectId} />
           <label className="flex items-center gap-2 text-xs text-muted">
             New story type
@@ -293,6 +318,22 @@ export default function Home() {
               ))}
             </select>
           </label>
+          <StepModelSelect
+            step="Frames"
+            label="Frames model"
+            value={newStepModels.frames}
+            storyModel={RECOMMENDED_MODEL}
+            defaults={defaultModels}
+            onChange={(model) => chooseNewStepModel("frames", model)}
+          />
+          <StepModelSelect
+            step="Prompts"
+            label="Prompts model"
+            value={newStepModels.prompts}
+            storyModel={RECOMMENDED_MODEL}
+            defaults={defaultModels}
+            onChange={(model) => chooseNewStepModel("prompts", model)}
+          />
           <IconButton
             label={busy ? "Creating story" : "New story"}
             onClick={createStory}

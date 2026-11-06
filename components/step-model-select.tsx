@@ -4,12 +4,14 @@ import { withInr } from "@/lib/money";
 // A step's own AI model (Frames, Prompts): the story's model unless another one is picked here.
 export function StepModelSelect({
   step,
+  label = "AI model",
   value,
   storyModel,
   defaults,
   onChange,
 }: {
   step: string;
+  label?: string;
   value: string;
   storyModel: string;
   defaults: string[];
@@ -18,7 +20,7 @@ export function StepModelSelect({
   const known = MODEL_OPTIONS.some((option) => option.id === value);
   return (
     <label className="flex items-center gap-2 text-xs text-muted" title={`The AI model for every AI action on the ${step} step`}>
-      AI model
+      {label}
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}

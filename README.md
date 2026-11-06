@@ -158,6 +158,10 @@ another one there and every AI action on that step uses it (Frames: Break into f
 write, Update with comment, Fix timing, Language version); the other steps keep the story's model. The model line under the
 story title then names it too: `google/gemini-3.7-flash · Frames: openai/gpt-5-mini`. Pick "Story model" again to undo.
 
+You can also pick both before the story exists: next to *New story type* in the story list, **Frames model** and
+**Prompts model** start on "Story model"; the new story is created with them, and the last choice is remembered in this
+browser for the next new story.
+
 Changing the Prompts model on a story that already has frames asks first:
 - *Create a new story from here*: a copy with the gist, characters, images and frames (no prompts, no videos, no note),
   titled "… · <model>", in the same project, opened on its Prompts step with the new model. The story you were on stays
