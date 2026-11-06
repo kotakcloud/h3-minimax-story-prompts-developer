@@ -306,7 +306,7 @@ unchanged lines folded away (*Show unchanged lines* brings them back). Lines are
 
 ### Dialogue view
 
-On the Prompts tab, tick **Dialogue view** (or press **D**, when not typing in a box) to see only the spoken lines of the current prompt set, segment by segment:
+On the Prompts tab, tick **Dialogue view** (or press **Alt+Shift+D**, also while typing in a box) to see only the spoken lines of the current prompt set, segment by segment:
 who says what, or *No dialogue*. Nothing is sent to the AI: the lines are read from the `<d>` tags in the prompts
 (`lib/dialogue.ts`). Times are estimates at 2.2 words per second. Long-take prompts also show the start and end times they
 give the line; a line and its segment turn amber when the line, spoken from its start, runs past the end of the clip, which

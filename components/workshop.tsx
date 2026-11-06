@@ -368,13 +368,12 @@ export function Workshop({
   }));
   const [dialogueLanguage, setDialogueLanguage] = useState("Gujarati");
   const [dialogueView, setDialogueView] = useState(false);
-  // On the Prompts step, the D key turns Dialogue view on or off (not while typing in a box or with a dialog open).
+  // On the Prompts step, Alt+Shift+D turns Dialogue view on or off. A combination nobody types by accident, so it also
+  // works while a prompt box has the focus (not with a dialog open). By key position, so any keyboard layout works.
   useEffect(() => {
     if (step !== "prompts") return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() !== "d" || event.ctrlKey || event.metaKey || event.altKey || event.repeat) return;
-      const target = event.target as HTMLElement | null;
-      if (target?.closest("input, textarea, select, [contenteditable=''], [contenteditable='true']")) return;
+      if (event.code !== "KeyD" || !event.altKey || !event.shiftKey || event.ctrlKey || event.metaKey || event.repeat) return;
       if (document.querySelector("dialog[open], [role='dialog']")) return;
       event.preventDefault();
       setDialogueView((on) => !on);
@@ -3025,10 +3024,10 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                   </div>
                 </div>
               )}
-              <label id="dialogue-view" title="Shortcut: D" className="mb-3 flex w-fit scroll-mt-24 items-center gap-2 text-sm text-foreground">
+              <label id="dialogue-view" title="Shortcut: Alt+Shift+D"className="mb-3 flex w-fit scroll-mt-24 items-center gap-2 text-sm text-foreground">
                 <input type="checkbox" checked={dialogueView} onChange={(event) => setDialogueView(event.target.checked)} />
                 Dialogue view
-                <kbd className="rounded border border-line px-1 text-[10px] text-muted">D</kbd>
+                <kbd className="rounded border border-line px-1 text-[10px] text-muted">Alt+Shift+D</kbd>
                 <span className="text-xs text-muted">only the spoken lines, to review</span>
               </label>
               {dialogueView ? (
