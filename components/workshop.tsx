@@ -28,6 +28,7 @@ import type { StoryCost } from "@/lib/story-cost";
 import { panelPosition, selectedGrid } from "@/lib/grid";
 import { FAST_ENGINE_STEPS, ULTRA_STEPS, VIDEO_ENGINES, engineInfo, fastStorySize, isFastEngine } from "@/lib/engines";
 import { UpdateCommentDialog } from "@/components/update-comment-dialog";
+import { ErrorText } from "@/components/error-text";
 import { TabStatus } from "@/lib/tab-status";
 import { buildExportPayload, buildMarkdownExport, downloadJson, downloadMarkdown } from "@/lib/export";
 import type {
@@ -1805,11 +1806,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
           </nav>
         </div>
 
-        {error && (
-          <p className="mb-4 rounded-xl border border-red-900/60 bg-red-950/40 px-4 py-3 text-sm text-red-200">
-            {error}
-          </p>
-        )}
+        {error && <ErrorText message={error} className="mb-4" />}
 
         {hibernateAt !== null && (
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-2 text-sm text-amber-300">

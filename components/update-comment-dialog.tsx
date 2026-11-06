@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { diffLines, type DiffLine } from "@/lib/line-diff";
 import type { PromptSegment } from "@/lib/types";
+import { ErrorText } from "@/components/error-text";
 
 function PromptDiffColumn({ label, lines }: { label: string; lines: DiffLine[] }) {
   return (
@@ -64,9 +65,12 @@ export function UpdateCommentDialog({
   const [accepted, setAccepted] = useState<string[]>([]);
   const [previews, setPreviews] = useState<PreviewRow[]>([]);
   const [proposed, setProposed] = useState<PromptSegment[]>([]);
+  // The last preview's error, shown here (the page behind the dialog shows it too).
+  const [failure, setFailure] = useState("");
 
   useEffect(() => {
     if (!open) return;
+    setFailure("");
     setComment("");
     setSelected(segments.map((segment) => segment.id));
     setAccepted([]);
@@ -103,7 +107,14 @@ export function UpdateCommentDialog({
   }
 
   async function preview() {
-    const updated = await onPreview(comment.trim(), selected);
+    setFailure("");
+    let updated: PromptSegment[];
+    try {
+      updated = await onPreview(comment.trim(), selected);
+    } catch (error) {
+      setFailure(error instanceof Error ? error.message : "Prompt update failed.");
+      return;
+    }
     const byId = new Map(updated.map((segment) => [segment.id, segment]));
     const rows = options
       .filter((option) => selected.includes(option.id))
@@ -212,6 +223,7 @@ export function UpdateCommentDialog({
             </div>
           )}
         </div>
+        {failure && <ErrorText message={failure} className="mt-4" />}
         <div className="mt-5 flex flex-wrap justify-end gap-2">
           <button
             type="button"

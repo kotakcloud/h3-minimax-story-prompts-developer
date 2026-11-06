@@ -47,6 +47,37 @@ function readMessageText(choice: OpenRouterChoice | undefined): string {
   return "";
 }
 
+// OpenRouter's error as one short line, then (after a line break) the details: the provider's own error, which
+// "Provider returned error" hides, its name, the status code and the model. Pages show the first line and the rest
+// under "Details".
+export function openRouterError(
+  error: { message?: string; code?: number | string; metadata?: { raw?: unknown; provider_name?: string; reasons?: unknown } } | undefined,
+  status: number,
+  model: string,
+): string {
+  const provider = error?.metadata?.provider_name;
+  const rawValue = error?.metadata?.raw;
+  const raw = typeof rawValue === "string" ? rawValue : rawValue !== undefined ? JSON.stringify(rawValue) : "";
+  // The provider's own message, when its raw answer is JSON with one.
+  let inner = "";
+  try {
+    const parsed = JSON.parse(raw) as { error?: { message?: string } | string; message?: string };
+    inner = typeof parsed.error === "string" ? parsed.error : parsed.error?.message || parsed.message || "";
+  } catch {
+    inner = raw.length <= 200 ? raw : "";
+  }
+  const head = error?.message || `OpenRouter request failed (${status}).`;
+  const short = `${head}${provider ? ` (${provider})` : ""}${inner && inner !== head ? `: ${inner.slice(0, 200)}` : ""}`;
+  const details = [
+    `Status: ${error?.code ?? status}`,
+    `Model: ${model}`,
+    provider ? `Provider: ${provider}` : "",
+    raw ? `Provider's answer: ${raw.slice(0, 4000)}` : "",
+    error?.metadata?.reasons !== undefined ? `Reasons: ${JSON.stringify(error.metadata.reasons).slice(0, 1000)}` : "",
+  ].filter(Boolean);
+  return [short, ...details].join("\n");
+}
+
 // models: the story's validated chain (at most 3); empty or missing = the .env default.
 // images: data URLs attached to the user message (needs an image-capable model).
 export type ChatOptions = { maxTokens?: number; timeoutMs?: number; models?: string[]; images?: string[] };
@@ -65,7 +96,12 @@ export async function chatCompletion(messages: ChatMessage[], options?: ChatOpti
   const started = Date.now();
 
   let response: Response;
-  let body: { error?: { message?: string }; choices?: OpenRouterChoice[]; model?: string; usage?: { cost?: number } };
+  let body: {
+    error?: { message?: string; code?: number | string; metadata?: { raw?: unknown; provider_name?: string; reasons?: unknown } };
+    choices?: OpenRouterChoice[];
+    model?: string;
+    usage?: { cost?: number };
+  };
   try {
     response = await fetch(OPENROUTER_URL, {
       method: "POST",
@@ -102,7 +138,9 @@ export async function chatCompletion(messages: ChatMessage[], options?: ChatOpti
   await recordCost(body.usage?.cost);
 
   if (!response.ok) {
-    throw new Error(body.error?.message || `OpenRouter request failed (${response.status}).`);
+    const message = openRouterError(body.error, response.status, model);
+    console.log(`[openrouter] ${model} failed: ${message.replace(/\n/g, " | ")}`);
+    throw new Error(message);
   }
 
   const choice = body.choices?.[0];
