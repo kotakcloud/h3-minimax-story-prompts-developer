@@ -145,6 +145,15 @@ shows each video in progress, from any story: `#10012 Title 2/5 · 7m` while it 
 video. Click one to open that story's Video step; the story you are on is outlined. It is checked live against ComfyUI
 every 5 s while something runs (20 s when idle), so it is right even when the story's own page is closed.
 
+### Duplicating a story
+
+The copy button on a story in the list asks **Copy up to**: Gist (the gist and its analysis), Cast (+ characters and
+location), Image (+ image prompt and reference images), Frames (+ frames), Prompts (+ prompt sets; the default, as
+before) or Video (+ its generated videos). Later steps start empty, and the copy opens on the step after the last one it
+kept. Settings (models, image and video settings) are always copied. Copied videos point to the same files as the
+original (removing a video from a story never deletes its file); comparisons are never copied. The copy's AI cost starts
+with what the kept steps cost in the original (counted per step from 5 Nov 2026).
+
 ### Story numbers
 
 Every story has a short number, #10001 and up, shown in the story list, the story header and the sidebar (hover it for

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { duplicateStory } from "@/lib/story-store";
-import { copyCostUpToFrames } from "@/lib/story-cost";
+import { copyCostUpTo } from "@/lib/story-cost";
+import { isStoryStep } from "@/lib/types";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -11,6 +12,7 @@ export async function POST(request: Request, context: RouteContext) {
   try {
     const body = (await request.json().catch(() => ({}))) as {
       fromFrames?: unknown;
+      upTo?: unknown;
       stepModels?: { frames?: unknown; prompts?: unknown };
       title?: unknown;
     };
@@ -19,9 +21,11 @@ export async function POST(request: Request, context: RouteContext) {
       body.stepModels && typeof body.stepModels === "object"
         ? { frames: text(body.stepModels.frames), prompts: text(body.stepModels.prompts) }
         : undefined;
-    const story = await duplicateStory(id, { fromFrames: body.fromFrames === true, stepModels, title: text(body.title) });
+    const fromFrames = body.fromFrames === true;
+    const upTo = fromFrames ? "frames" : typeof body.upTo === "string" && isStoryStep(body.upTo) ? body.upTo : "prompts";
+    const story = await duplicateStory(id, { fromFrames, upTo, stepModels, title: text(body.title) });
     if (!story) return NextResponse.json({ error: "Story not found." }, { status: 404 });
-    if (body.fromFrames === true) await copyCostUpToFrames(id, story.id);
+    await copyCostUpTo(id, story.id, upTo);
     return NextResponse.json({ story });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not duplicate the story.";

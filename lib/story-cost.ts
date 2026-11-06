@@ -18,6 +18,8 @@ export type StoryCost = {
   updatedAt: string;
   byStep?: Partial<Record<StoryStep, StepCost>>;
   copiedFrom?: string;
+  // The last step whose costs the copy took over.
+  copiedUpTo?: StoryStep;
 };
 
 const costsDir = path.join(process.cwd(), "data", "story-costs");
@@ -80,13 +82,13 @@ export async function recordCost(usd: unknown): Promise<void> {
   if (id) await addStoryCost(id, usd, step);
 }
 
-// A story branched from another at its frames starts with what the source's steps up to Frames cost (the part of the
-// source's costs counted per step; calls from before that split stay with the source only).
-export async function copyCostUpToFrames(sourceId: string, copyId: string): Promise<void> {
+// A copy of a story starts with what the source's steps it kept cost (the part of the source's costs counted per step;
+// calls from before that split stay with the source only).
+export async function copyCostUpTo(sourceId: string, copyId: string, upTo: StoryStep): Promise<void> {
   const file = costFile(copyId);
   const source = await readStoryCost(sourceId);
   if (!file || !source?.byStep) return;
-  const steps = STORY_STEPS.slice(0, STORY_STEPS.indexOf("frames") + 1);
+  const steps = STORY_STEPS.slice(0, STORY_STEPS.indexOf(upTo) + 1);
   const byStep: Partial<Record<StoryStep, StepCost>> = {};
   for (const step of steps) {
     const cost = source.byStep[step];
@@ -96,7 +98,7 @@ export async function copyCostUpToFrames(sourceId: string, copyId: string): Prom
   const calls = Object.values(byStep).reduce((sum, cost) => sum + (cost?.calls ?? 0), 0);
   if (!(usd > 0)) return;
   const now = new Date().toISOString();
-  await saveStoryCost(file, { usd, calls, since: now, updatedAt: now, byStep, copiedFrom: sourceId });
+  await saveStoryCost(file, { usd, calls, since: now, updatedAt: now, byStep, copiedFrom: sourceId, copiedUpTo: upTo });
 }
 
 export async function removeStoryCost(id: string): Promise<void> {

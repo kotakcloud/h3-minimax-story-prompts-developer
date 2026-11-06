@@ -3,7 +3,16 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import type { StepModels, Story, StoryStep, StorySummary, StoryType } from "./types";
 import { RECOMMENDED_MODEL } from "./models";
-import { DEFAULT_IMAGE_SETTINGS, DEFAULT_PROJECT_ID, DEFAULT_VIDEO_SETTINGS, isPromptStyle, isStoryStep, isStoryType } from "./types";
+import {
+  DEFAULT_IMAGE_SETTINGS,
+  DEFAULT_PROJECT_ID,
+  DEFAULT_VIDEO_SETTINGS,
+  STORY_STEPS,
+  isPromptStyle,
+  isStoryStep,
+  isStoryType,
+  storySteps,
+} from "./types";
 
 const storiesDir = path.join(process.cwd(), "data", "stories");
 
@@ -280,29 +289,49 @@ export async function addStory(id: string, fields: Partial<Story>): Promise<Stor
 // the original). Reference images are shared (same ComfyUI files), prompt sets and settings are copied.
 // With fromFrames, the copy stops at the Frames step: no prompt sets and no note, and it opens on Prompts (to try
 // another model on the same frames).
+// upTo: the last step whose work the copy keeps (gist, cast, image, frames, prompts, or video to keep the generated videos
+// too; default prompts). Later steps start empty; settings (models, image and video settings) are always kept. Copied
+// videos share the original's files (removing a video from a story never deletes its file); comparisons are never
+// copied, since deleting one deletes its file.
 export async function duplicateStory(
   id: string,
-  options: { fromFrames?: boolean; stepModels?: StepModels; title?: string } = {},
+  options: { fromFrames?: boolean; upTo?: StoryStep; stepModels?: StepModels; title?: string } = {},
 ): Promise<Story | null> {
   const source = await readStory(id);
   if (!source) return null;
   const now = new Date().toISOString();
+  const upTo: StoryStep = options.fromFrames ? "frames" : options.upTo === "export" ? "prompts" : options.upTo || "prompts";
+  const keeps = (step: StoryStep) => STORY_STEPS.indexOf(step) <= STORY_STEPS.indexOf(upTo);
+  const blank = emptyStory("", now);
   const copy: Story = {
     ...source,
     id: randomUUID(),
     title: options.title?.trim().slice(0, 200) || `${source.title} (copy)`,
     titleEdited: options.title?.trim() ? true : source.titleEdited,
-    videos: [],
+    videos: keeps("video") ? source.videos : [],
     comparisons: [],
     archived: false,
     createdAt: now,
     updatedAt: now,
   };
+  if (!keeps("cast")) Object.assign(copy, { characters: blank.characters, location: blank.location });
+  if (!keeps("image")) {
+    Object.assign(copy, {
+      imagePrompt: blank.imagePrompt,
+      imageNegative: blank.imageNegative,
+      imageLayout: blank.imageLayout,
+      referenceImages: blank.referenceImages,
+      selectedImageId: blank.selectedImageId,
+    });
+  }
+  if (!keeps("frames")) Object.assign(copy, { frames: blank.frames, framesApproved: true });
+  if (!keeps("prompts")) Object.assign(copy, { segments: blank.segments, promptRevisions: [], activeRevisionId: "" });
   if (options.stepModels) copy.stepModels = options.stepModels;
+  // The copy opens on the step after the last one it kept (where the work continues).
+  const steps = storySteps(copy);
+  const kept = steps.filter((step) => keeps(step));
+  copy.step = upTo === "video" ? "video" : steps[steps.indexOf(kept[kept.length - 1] ?? "gist") + 1] ?? upTo;
   if (options.fromFrames) {
-    copy.segments = [];
-    copy.promptRevisions = [];
-    copy.activeRevisionId = "";
     copy.note = "";
     copy.step = "prompts";
   }

@@ -9,7 +9,8 @@ import { ImportVideoFile } from "@/components/import-video-file";
 import { Money } from "@/components/money";
 import { StoryNote } from "@/components/story-note";
 import { VideoPlayer } from "@/components/video-player";
-import type { Project, StorySummary, StoryType } from "@/lib/types";
+import type { Project, StoryStep, StorySummary, StoryType } from "@/lib/types";
+import { DuplicateStory } from "@/components/duplicate-story";
 import { DEFAULT_PROJECT_ID, STORY_TYPES, storyPath } from "@/lib/types";
 import { RECOMMENDED_MODEL, storyModelsLabel } from "@/lib/models";
 import { StepModelSelect } from "@/components/step-model-select";
@@ -178,9 +179,13 @@ export default function Home() {
   }
 
   // Copy without the generated videos; the copy shows up at the top of the list.
-  async function duplicate(id: string) {
+  async function duplicate(id: string, upTo: StoryStep) {
     setError("");
-    const response = await request(`/api/stories/${id}/duplicate`, { method: "POST" });
+    const response = await request(`/api/stories/${id}/duplicate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ upTo }),
+    });
     const data = await response.json();
     if (!response.ok) {
       setError(data.error || "Could not duplicate the story.");
@@ -440,9 +445,11 @@ export default function Home() {
                 <IconLink href={storyPath(story.id, story.step)} label="Open in new tab" target="_blank">
                   {Icons.external}
                 </IconLink>
-                <IconButton label="Duplicate (without videos)" onClick={() => void duplicate(story.id)}>
-                  {Icons.copy}
-                </IconButton>
+                <DuplicateStory
+                  storyType={story.storyType}
+                  imported={story.imported}
+                  onDuplicate={(upTo) => void duplicate(story.id, upTo)}
+                />
                 <IconButton
                   label={story.archived ? "Unarchive" : "Archive"}
                   onClick={() => setArchived(story.id, !story.archived)}

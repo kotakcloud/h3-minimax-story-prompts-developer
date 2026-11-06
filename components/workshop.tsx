@@ -297,7 +297,9 @@ function costTooltip(cost: StoryCost): string {
     lines.push("By step (counted since 5 Nov 2026):");
     for (const step of steps) lines.push(`  ${step}: ${formatInr(cost.byStep![step]!.usd)}`);
   }
-  if (cost.copiedFrom) lines.push(`Includes the Gist to Frames costs of the story it was branched from (${cost.copiedFrom}).`);
+  if (cost.copiedFrom) {
+    lines.push(`Includes the costs up to ${stepLabel(cost.copiedUpTo || "frames")} of the story it was copied from (${cost.copiedFrom}).`);
+  }
   return lines.join("\n");
 }
 
