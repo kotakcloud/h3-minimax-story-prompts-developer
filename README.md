@@ -231,6 +231,13 @@ through a camera move in its first second or two. Every on-screen speaker's face
 Weak models (e.g. gemini-2.5-flash-lite) follow moves well but can skip a close framing; gemini-3.7-flash followed both.
 Changing the camera clears the current prompts, like any frame edit; a split keeps the frame's camera on every part.
 
+### Reviewing new prompts
+
+Right after **Write H3 prompts**, the Prompts step shows a blinking reminder to review the new prompts in Dialogue view
+(who says each line, the exact words, and whether each line fits its segment), and Dialogue view turns on. The Prompts tab
+blinks too. **Review** scrolls to Dialogue view and ends the reminder; **Skip** just ends it. Until one is pressed the
+reminder stays, also after leaving the page (it opens in Dialogue view again).
+
 ### What changed between prompt sets
 
 Each generation's *Prompts* row and the Prompts tab show a link like *vs set 5: 3 added · 2 removed · 4 updated*, comparing the

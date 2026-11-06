@@ -98,6 +98,7 @@ function emptyStory(id: string, now: string): Story {
     code: "",
     projectId: DEFAULT_PROJECT_ID,
     framesApproved: true,
+    promptsReviewed: true,
     stepModels: {},
     note: "",
     frameInstructions: "",
@@ -157,6 +158,7 @@ function asStory(value: unknown, fallbackId: string): Story {
     projectId: typeof raw.projectId === "string" && raw.projectId ? raw.projectId : DEFAULT_PROJECT_ID,
     // Stories from before the approval step count as approved.
     framesApproved: raw.framesApproved !== false,
+    promptsReviewed: raw.promptsReviewed !== false,
     note: typeof raw.note === "string" ? raw.note : "",
     code: typeof raw.code === "string" ? raw.code : "",
     stepModels: (() => {
@@ -325,7 +327,9 @@ export async function duplicateStory(
     });
   }
   if (!keeps("frames")) Object.assign(copy, { frames: blank.frames, framesApproved: true });
-  if (!keeps("prompts")) Object.assign(copy, { segments: blank.segments, promptRevisions: [], activeRevisionId: "" });
+  if (!keeps("prompts")) {
+    Object.assign(copy, { segments: blank.segments, promptRevisions: [], activeRevisionId: "", promptsReviewed: true });
+  }
   if (options.stepModels) copy.stepModels = options.stepModels;
   // The copy opens on the step after the last one it kept (where the work continues).
   const steps = storySteps(copy);

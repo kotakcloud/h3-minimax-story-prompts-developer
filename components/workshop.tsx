@@ -443,6 +443,8 @@ export function Workshop({
       const loaded = storyData.story as Story;
       skipSave.current = loaded.step === step;
       setStory({ ...loaded, step });
+      // New prompts still waiting for their review open in Dialogue view.
+      if (!loaded.promptsReviewed && loaded.segments.length > 0) setDialogueView(true);
       setStories(listData.stories || []);
       setProjects(projectData.projects || []);
     }
@@ -1300,7 +1302,11 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Prompt generation failed.");
       const segments = (data.segments || []) as PromptSegment[];
+      // A reminder to read the new prompts in Dialogue view, which opens for it. Saved with the prompt set (the save
+      // right after a new set is skipped).
+      if (storyRef.current) storyRef.current = { ...storyRef.current, promptsReviewed: false };
       await saveRevision(segments, true, story.selectedImageId ? story.promptStyle : undefined);
+      setDialogueView(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Prompt generation failed.");
     } finally {
@@ -1775,10 +1781,21 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                 key={item}
                 type="button"
                 onClick={() => goTo(item)}
-                title={item === "frames" && !story.framesApproved ? "The AI wrote these frames: review and approve them" : undefined}
+                title={
+                  item === "frames" && !story.framesApproved
+                    ? "The AI wrote these frames: review and approve them"
+                    : item === "prompts" && !story.promptsReviewed && story.segments.length > 0
+                      ? "New prompts: review them in Dialogue view"
+                      : undefined
+                }
                 className={`rounded-full px-4 py-1.5 text-sm ${
                   step === item ? "bg-foreground text-background" : "border border-line text-muted"
-                } ${item === "frames" && !story.framesApproved && story.frames.length > 0 ? "needs-review" : ""}`}
+                } ${
+                  (item === "frames" && !story.framesApproved && story.frames.length > 0) ||
+                  (item === "prompts" && !story.promptsReviewed && story.segments.length > 0)
+                    ? "needs-review"
+                    : ""
+                }`}
               >
                 {stepLabel(item)}
               </button>
@@ -2916,7 +2933,35 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
               </p>
             ) : (
               <>
-              <label className="mb-3 flex w-fit items-center gap-2 text-sm text-foreground">
+              {!story.promptsReviewed && (
+                <div className="needs-review mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/50 bg-amber-400/10 px-4 py-3 text-sm text-amber-200">
+                  <p>
+                    New prompts: make sure to review them in Dialogue view. Check who says each line, that the words are
+                    right, and that every line fits its segment.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDialogueView(true);
+                        patchStory({ promptsReviewed: true });
+                        document.getElementById("dialogue-view")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      }}
+                      className="rounded-full bg-amber-300 px-4 py-1.5 text-sm font-semibold text-black"
+                    >
+                      Review
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => patchStory({ promptsReviewed: true })}
+                      className="rounded-full border border-amber-400/60 px-4 py-1.5 text-sm text-amber-200"
+                    >
+                      Skip
+                    </button>
+                  </div>
+                </div>
+              )}
+              <label id="dialogue-view" className="mb-3 flex w-fit scroll-mt-24 items-center gap-2 text-sm text-foreground">
                 <input type="checkbox" checked={dialogueView} onChange={(event) => setDialogueView(event.target.checked)} />
                 Dialogue view
                 <span className="text-xs text-muted">only the spoken lines, to review</span>

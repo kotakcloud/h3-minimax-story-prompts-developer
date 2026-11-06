@@ -307,6 +307,8 @@ export type Story = {
   projectId: string;
   // False right after the AI wrote the frames, until they are approved or edited by hand.
   framesApproved: boolean;
+  // False right after Write H3 prompts, until the reminder to review them in Dialogue view is answered.
+  promptsReviewed: boolean;
   // A free note, written in the story list.
   note: string;
   // Extra instructions sent with Break into frames ("do this, don't do that").
