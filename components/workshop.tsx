@@ -3098,10 +3098,21 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                             <textarea
                               value={value}
                               onChange={(event) => setPromptDrafts((drafts) => ({ ...drafts, [segment.id]: event.target.value }))}
-                              rows={Math.min(40, value.split("\n").length + 1)}
+                              rows={3}
                               spellCheck={false}
                               aria-label={`Prompt ${index + 1}`}
-                              className={`w-full resize-y rounded-lg border bg-transparent p-2 font-mono text-xs leading-5 outline-none ${
+                              // As tall as its text (wrapped lines too), so it never scrolls on its own.
+                              ref={(element) => {
+                                if (!element) return;
+                                element.style.height = "auto";
+                                element.style.height = `${element.scrollHeight + 2}px`;
+                              }}
+                              onInput={(event) => {
+                                const element = event.currentTarget;
+                                element.style.height = "auto";
+                                element.style.height = `${element.scrollHeight + 2}px`;
+                              }}
+                              className={`w-full resize-none overflow-hidden rounded-lg border bg-transparent p-2 font-mono text-xs leading-5 outline-none ${
                                 edited ? "border-accent text-foreground" : "border-transparent text-muted hover:border-line focus:border-line"
                               }`}
                             />
