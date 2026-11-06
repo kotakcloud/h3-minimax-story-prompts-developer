@@ -80,7 +80,21 @@ function visibleRows(rows: DiffRow[], showAll: boolean) {
   return out;
 }
 
-function PromptDiffDialog({ diff, olderLabel, newerLabel, frames, onClose }: Props & { diff: SetDiff; onClose: () => void }) {
+// The same view with a confirm button: changes made by hand, saved only when confirmed.
+export function PromptDiffConfirm(props: Props & { onConfirm: () => void; onClose: () => void; busy?: boolean }) {
+  const diff = useMemo(() => diffPromptSets(props.older, props.newer), [props.older, props.newer]);
+  return <PromptDiffDialog {...props} diff={diff} />;
+}
+
+function PromptDiffDialog({
+  diff,
+  olderLabel,
+  newerLabel,
+  frames,
+  onClose,
+  onConfirm,
+  busy,
+}: Props & { diff: SetDiff; onClose: () => void; onConfirm?: () => void; busy?: boolean }) {
   const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
@@ -113,8 +127,18 @@ function PromptDiffDialog({ diff, olderLabel, newerLabel, frames, onClose }: Pro
               Show unchanged lines
             </label>
             <button type="button" onClick={onClose} className="rounded-full border border-line px-4 py-1.5 text-sm">
-              Close
+              {onConfirm ? "Keep editing" : "Close"}
             </button>
+            {onConfirm && (
+              <button
+                type="button"
+                onClick={onConfirm}
+                disabled={busy}
+                className="rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-accent-ink disabled:opacity-50"
+              >
+                {busy ? "Saving…" : "Confirm & save"}
+              </button>
+            )}
           </div>
         </div>
 

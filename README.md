@@ -275,6 +275,14 @@ through a camera move in its first second or two. Every on-screen speaker's face
 Weak models (e.g. gemini-2.5-flash-lite) follow moves well but can skip a close framing; gemini-3.7-flash followed both.
 Changing the camera clears the current prompts, like any frame edit; a split keeps the frame's camera on every part.
 
+### Editing prompts by hand
+
+On the Prompts step (outside Dialogue view) every prompt is an editable box. Edits are not saved as you type: an edited
+prompt is outlined (*Undo* drops its edit), and a bar says how many are edited, with **Discard** and **Review & save**.
+Review & save shows the saved prompts next to your edits, changed lines marked; **Confirm & save** turns them into a new
+prompt set (the earlier set stays), *Keep editing* goes back. Opening another prompt set asks before dropping unsaved
+edits, and so does leaving or reloading the page.
+
 ### Editing spoken lines (Dialogue view)
 
 In Dialogue view, **✎** next to a line opens its words for editing (✎ again drops the change; *Discard line edits* drops

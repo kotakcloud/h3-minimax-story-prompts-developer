@@ -11,7 +11,7 @@ import { ImportedDetails } from "@/components/imported-details";
 import { Lightbox, type Slide } from "@/components/lightbox";
 import { LoraDialog } from "@/components/lora-dialog";
 import { ModelPicker } from "@/components/model-picker";
-import { PromptDiffLink } from "@/components/prompt-diff";
+import { PromptDiffConfirm, PromptDiffLink } from "@/components/prompt-diff";
 import { VideoPlayer } from "@/components/video-player";
 import { framesFromAnalysis } from "@/lib/beats";
 import { applyLineDurations, applyLineTexts, timingComment, timingFixes, type LineDuration, type LineText } from "@/lib/dialogue";
@@ -348,6 +348,10 @@ export function Workshop({
   const [error, setError] = useState("");
   const [copiedId, setCopiedId] = useState("");
   const [updateOpen, setUpdateOpen] = useState(false);
+  // Prompts edited by hand on the Prompts step, by segment id: not saved until confirmed in the diff.
+  const [promptDrafts, setPromptDrafts] = useState<Record<string, string>>({});
+  const [promptReviewOpen, setPromptReviewOpen] = useState(false);
+  const [promptSaving, setPromptSaving] = useState(false);
   // A Prompts model picked on a story that has frames: asked whether to branch a new story or change this one.
   const [promptModelChoice, setPromptModelChoice] = useState<string | null>(null);
   const [castCommentOpen, setCastCommentOpen] = useState(false);
@@ -444,6 +448,7 @@ export function Workshop({
       const loaded = storyData.story as Story;
       skipSave.current = loaded.step === step;
       setStory({ ...loaded, step });
+      setPromptDrafts({});
       // New prompts still waiting for their review open in Dialogue view.
       if (!loaded.promptsReviewed && loaded.segments.length > 0) setDialogueView(true);
       setStories(listData.stories || []);
@@ -1354,6 +1359,8 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
   ) {
     const current = storyRef.current;
     if (!current) return;
+    // A new prompt set replaces the one the hand edits were made on.
+    setPromptDrafts({});
     const prior = current.promptRevisions.length
       ? current.promptRevisions
       : current.segments.length
@@ -1469,6 +1476,43 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
   }
 
   // Typed line lengths: a new prompt set with the timestamps moved, no AI involved.
+  // Unsaved prompt edits: leaving or reloading the page asks first.
+  const hasPromptDrafts = Object.keys(promptDrafts).length > 0;
+  useEffect(() => {
+    if (!hasPromptDrafts) return;
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [hasPromptDrafts]);
+
+  // The current prompt set with the hand edits in, or null when nothing differs.
+  function editedSegments(): PromptSegment[] | null {
+    const current = storyRef.current || story;
+    if (!current) return null;
+    const changed = current.segments.some((segment) => promptDrafts[segment.id] !== undefined && promptDrafts[segment.id] !== segment.prompt);
+    return changed
+      ? current.segments.map((segment) => (promptDrafts[segment.id] !== undefined ? { ...segment, prompt: promptDrafts[segment.id] } : segment))
+      : null;
+  }
+
+  // Confirmed in the diff: the hand edits become a new prompt set.
+  async function saveEditedPrompts() {
+    const current = storyRef.current;
+    const segments = editedSegments();
+    if (!current || !segments) return;
+    setPromptSaving(true);
+    setError("");
+    try {
+      await saveRevision(segments, true, activePromptStyle(current));
+      setPromptDrafts({});
+      setPromptReviewOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save the prompts.");
+    } finally {
+      setPromptSaving(false);
+    }
+  }
+
   async function updateLineDurations(edits: LineDuration[], texts: LineText[] = []) {
     const current = storyRef.current;
     if (!current) return;
@@ -2796,12 +2840,15 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                       type="button"
                       title={`Prompt set ${index + 1}${revision.language ? ` · dialogue in ${revision.language}` : ""}`}
                       aria-label={`Prompt set ${index + 1}`}
-                      onClick={() =>
+                      onClick={() => {
+                        if (revision.id === activeRevisionId) return;
+                        if (Object.keys(promptDrafts).length > 0 && !window.confirm("Drop your unsaved prompt edits and open this prompt set?")) return;
+                        setPromptDrafts({});
                         patchStory({
                           activeRevisionId: revision.id,
                           segments: revision.segments,
-                        })
-                      }
+                        });
+                      }}
                       className={`inline-flex h-8 min-w-8 items-center justify-center rounded-full px-2 text-xs ${
                         active
                           ? "bg-foreground text-background"
@@ -2980,6 +3027,49 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                   }
                 />
               ) : (
+              <>
+              {(() => {
+                const count = story.segments.filter(
+                  (segment) => promptDrafts[segment.id] !== undefined && promptDrafts[segment.id] !== segment.prompt,
+                ).length;
+                return count > 0 ? (
+                  <div className="sticky top-[calc(var(--nav-h)+0.5rem)] z-20 mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-accent/60 bg-card px-4 py-2 text-sm">
+                    <span>
+                      {count} {count === 1 ? "prompt" : "prompts"} edited, not saved
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm("Drop all unsaved prompt edits?")) setPromptDrafts({});
+                        }}
+                        className="rounded-full border border-line px-3 py-1 text-xs text-muted hover:text-foreground"
+                      >
+                        Discard
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPromptReviewOpen(true)}
+                        className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-ink"
+                      >
+                        Review &amp; save
+                      </button>
+                    </span>
+                  </div>
+                ) : null;
+              })()}
+              {promptReviewOpen && editedSegments() && (
+                <PromptDiffConfirm
+                  older={story.segments}
+                  newer={editedSegments() || story.segments}
+                  olderLabel="Saved"
+                  newerLabel="Your edits"
+                  frames={story.frames}
+                  busy={promptSaving}
+                  onClose={() => setPromptReviewOpen(false)}
+                  onConfirm={() => void saveEditedPrompts()}
+                />
+              )}
               <ol className="space-y-5">
                 {story.segments.map((segment, index) => {
                   const frame = story.frames.find((item) => item.id === segment.id);
@@ -2999,13 +3089,48 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                           {copiedId === segment.id ? Icons.check : Icons.copy}
                         </IconButton>
                       </div>
-                      <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-xs leading-5 text-muted">
-                        {segment.prompt}
-                      </pre>
+                      {(() => {
+                        const draft = promptDrafts[segment.id];
+                        const edited = draft !== undefined && draft !== segment.prompt;
+                        const value = draft ?? segment.prompt;
+                        return (
+                          <>
+                            <textarea
+                              value={value}
+                              onChange={(event) => setPromptDrafts((drafts) => ({ ...drafts, [segment.id]: event.target.value }))}
+                              rows={Math.min(40, value.split("\n").length + 1)}
+                              spellCheck={false}
+                              aria-label={`Prompt ${index + 1}`}
+                              className={`w-full resize-y rounded-lg border bg-transparent p-2 font-mono text-xs leading-5 outline-none ${
+                                edited ? "border-accent text-foreground" : "border-transparent text-muted hover:border-line focus:border-line"
+                              }`}
+                            />
+                            {edited && (
+                              <p className="mt-1 flex items-center gap-3 text-xs text-accent">
+                                Edited, not saved
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setPromptDrafts((drafts) => {
+                                      const next = { ...drafts };
+                                      delete next[segment.id];
+                                      return next;
+                                    })
+                                  }
+                                  className="text-muted underline underline-offset-2 hover:text-foreground"
+                                >
+                                  Undo
+                                </button>
+                              </p>
+                            )}
+                          </>
+                        );
+                      })()}
                     </li>
                   );
                 })}
               </ol>
+              </>
               )}
               </>
             )}
