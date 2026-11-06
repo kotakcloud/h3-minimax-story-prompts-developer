@@ -15,8 +15,8 @@ import { DEFAULT_PROJECT_ID, STORY_TYPES, storyPath } from "@/lib/types";
 import { DEFAULT_STEP_MODELS, RECOMMENDED_MODEL, storyModelsLabel } from "@/lib/models";
 import { StepModelSelect } from "@/components/step-model-select";
 
-// v2: choices saved before the Prompts default existed are not reused.
-const NEW_STEP_MODELS_KEY = "h3-new-story-step-models-v2";
+// v3: choices saved before the current Prompts default are not reused.
+const NEW_STEP_MODELS_KEY = "h3-new-story-step-models-v3";
 
 const LAST_PROJECT_KEY = "h3-last-project";
 

@@ -2,7 +2,7 @@
 // Same curated list as the Themed Transformation Video Pipeline, recommended model first.
 export const RECOMMENDED_MODEL = "google/gemini-3.7-flash";
 // New stories: the story's model is RECOMMENDED_MODEL, and the Prompts step uses its own model by default.
-export const DEFAULT_STEP_MODELS: { frames: string; prompts: string } = { frames: "", prompts: "deepseek/deepseek-v4-flash-0731" };
+export const DEFAULT_STEP_MODELS: { frames: string; prompts: string } = { frames: "", prompts: "google/gemini-2.5-flash-lite" };
 
 export const MODEL_OPTIONS: { id: string; label: string }[] = [
   { id: "google/gemini-3.7-flash", label: "recommended, ~$0.75 / $3.75 per M tokens" },
