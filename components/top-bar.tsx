@@ -1,6 +1,7 @@
 "use client";
 
 import { Money } from "@/components/money";
+import { VideoQueueTicker } from "@/components/video-queue-ticker";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -57,9 +58,12 @@ function UsageBadge() {
 export function TopBar() {
   return (
     <header className="topbar fixed inset-x-0 top-0 z-[45] flex items-center gap-4 border-b border-line bg-card px-5 sm:px-8">
-      <Link href="/" className="mr-auto truncate text-sm font-semibold tracking-tight">
-        <span className="text-accent">H3</span> Story Prompt Workshop
+      <Link href="/" className="shrink-0 truncate text-sm font-semibold tracking-tight">
+        <span className="text-accent">H3</span> <span className="hidden sm:inline">Story Prompt Workshop</span>
       </Link>
+      <div className="flex min-w-0 flex-1">
+        <VideoQueueTicker />
+      </div>
       <UsageBadge />
     </header>
   );

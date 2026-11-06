@@ -571,6 +571,21 @@ export type LongTakeStatus = {
   error: string;
 };
 
+// ComfyUI's whole queue: the prompt ids running now and waiting, in run order.
+export async function comfyQueue(): Promise<{ running: string[]; pending: string[] }> {
+  const queue = (await comfyJson(`${COMFYUI_URL}/queue`)) as {
+    queue_running?: [number, string][];
+    queue_pending?: [number, string][];
+  };
+  return {
+    running: (queue.queue_running || []).map((item) => item[1]),
+    pending: (queue.queue_pending || [])
+      .slice()
+      .sort((a, b) => a[0] - b[0])
+      .map((item) => item[1]),
+  };
+}
+
 export async function longTakeStatus(
   promptId: string,
   project: string,

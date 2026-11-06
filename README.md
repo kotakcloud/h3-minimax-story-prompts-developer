@@ -137,6 +137,14 @@ now, because a run takes a single reference image.
 - **Delete** (bin icon on a finished, failed or cancelled video) removes it from the story after a confirmation; the
   video file stays in ComfyUI's output folder (ComfyUI has no delete call).
 
+### Videos in progress (top bar)
+
+Every video goes into ComfyUI's one queue, so videos queued from different stories run one after another. The top bar
+shows each video in progress, from any story: `#10012 Title 2/5 · 7m` while it runs (segments done, minutes running),
+`queued 1` while it waits (its place in ComfyUI's queue), and `+N other ComfyUI jobs` for jobs that are not a story's
+video. Click one to open that story's Video step; the story you are on is outlined. It is checked live against ComfyUI
+every 5 s while something runs (20 s when idle), so it is right even when the story's own page is closed.
+
 ### Story numbers
 
 Every story has a short number, #10001 and up, shown in the story list, the story header and the sidebar (hover it for

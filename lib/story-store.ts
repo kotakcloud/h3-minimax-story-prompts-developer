@@ -18,7 +18,7 @@ function withCodeLock<T>(task: () => Promise<T>): Promise<T> {
   return run;
 }
 
-async function readAllStories(): Promise<Story[]> {
+export async function readAllStories(): Promise<Story[]> {
   await ensureDir();
   const names = (await readdir(storiesDir)).filter((name) => name.endsWith(".json"));
   const stories = await Promise.all(names.map((name) => readStory(name.replace(/\.json$/, ""))));

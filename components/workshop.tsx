@@ -975,6 +975,8 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
       const next: Story = { ...latest, videos: [run, ...latest.videos], step: "video" };
       skipSave.current = true;
       setStory(await persist(next));
+      // The queue ticker in the top bar shows it now instead of on its next refresh.
+      window.dispatchEvent(new Event("h3-video-queued"));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start the video.");
     } finally {
