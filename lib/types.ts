@@ -126,7 +126,7 @@ export type VideoSettings = {
   loras: { name: string; strength: number; enabled: boolean }[];
   // Test mode: render only the first N segments (0 = all).
   onlyFirst: number;
-  // New videos play a sound when they are done (each run keeps this as it was when queued).
+  // New videos play a sound when they are done (each run keeps its own tick, changeable while it runs).
   notifySound: boolean;
 };
 

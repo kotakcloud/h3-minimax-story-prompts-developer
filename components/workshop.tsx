@@ -739,7 +739,7 @@ export function Workshop({
   }
 
   // The owner's rating (1-5, 0 = none) and note on a finished video, saved with the story.
-  function rateVideo(runId: string, patch: { rating?: number; note?: string; collapsed?: boolean }) {
+  function rateVideo(runId: string, patch: { rating?: number; note?: string; collapsed?: boolean; notifySound?: boolean }) {
     const current = storyRef.current;
     if (!current) return;
     patchStory({ videos: current.videos.map((item) => (item.id === runId ? { ...item, ...patch } : item)) });
@@ -3566,6 +3566,26 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                                         width: run.status === "queued" ? "0%" : `${Math.max(4, (run.segmentsDone / run.segmentCount) * 100)}%`,
                                       }}
                                     />
+                                  </div>
+                                )}
+                                {/* Changeable while it runs: what happens when it ends uses the ticks as they are then. */}
+                                {active && (
+                                  <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-foreground">
+                                    <label className="flex items-center gap-2" title="For this video only; read when it ends">
+                                      <input
+                                        type="checkbox"
+                                        checked={Boolean(run.notifySound)}
+                                        onChange={(event) => rateVideo(run.id, { notifySound: event.target.checked })}
+                                      />
+                                      Play a sound when done
+                                    </label>
+                                    <label
+                                      className="flex items-center gap-2"
+                                      title="Same tick as under Generate video: when every video in progress here has ended, a 60 s countdown you can cancel, then this computer hibernates. Keep this page open."
+                                    >
+                                      <input type="checkbox" checked={hibernateTick} onChange={(event) => tickHibernate(event.target.checked)} />
+                                      Hibernate this machine when done
+                                    </label>
                                   </div>
                                 )}
                                 {collapsed ? (

@@ -106,7 +106,9 @@ now, because a run takes a single reference image.
   runs them one after another and each card shows its own place in the queue and progress. A queued video's timer and
   progress bar stay at zero until its turn comes; the time shown (and the time estimates) count from when it started.
 - **When done**: *Play a sound when done* is a setting saved with the story: every video queued while it is ticked plays
-  `public/notify-2.mp3` when it ends, unless you cancelled it. Changing the tick does not affect videos already queued. *Hibernate this machine when done* then starts a
+  `public/notify-2.mp3` when it ends, unless you cancelled it. Each video in progress shows both ticks again under its progress bar: change them
+  there while it runs, and what happens when it ends uses the ticks as they are then (sound per video, hibernate for the
+  page). *Hibernate this machine when done* then starts a
   60 s countdown with a Cancel button at the top of the page, and hibernates the computer running the app once ComfyUI has
   no jobs left, including jobs from other stories. It is used once and never saved, so tick it for each render. Keep the
   page open: the browser tab runs both, and a background tab can add up to a minute.
