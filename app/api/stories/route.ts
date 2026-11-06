@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { projectExists } from "@/lib/project-store";
+import { projectExists, readProject } from "@/lib/project-store";
 import { readStoryCost } from "@/lib/story-cost";
 import { DEFAULT_STEP_MODELS, parseModelChain } from "@/lib/models";
 import { createStory, listStories } from "@/lib/story-store";
@@ -35,7 +35,8 @@ export async function POST(request: Request) {
     // Without choices (an older page or a script): the default step models.
     const chosen = body.stepModels ?? DEFAULT_STEP_MODELS;
     const stepModels = { frames: stepModel(chosen.frames), prompts: stepModel(chosen.prompts) };
-    const story = await createStory(isStoryType(body.storyType) ? body.storyType : "regular", projectId, stepModels);
+    const videoSeed = (await readProject(projectId))?.videoSeed;
+    const story = await createStory(isStoryType(body.storyType) ? body.storyType : "regular", projectId, stepModels, videoSeed);
     return NextResponse.json({ story }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not create a story.";

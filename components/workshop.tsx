@@ -3334,6 +3334,20 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                         >
                           New seed
                         </button>
+                        {(() => {
+                          // The project's seed, when it has one and this story uses another.
+                          const projectSeed = projects.find((item) => item.id === story.projectId)?.videoSeed;
+                          return projectSeed !== undefined && projectSeed !== story.videoSettings.seed ? (
+                            <button
+                              type="button"
+                              onClick={() => updateVideoSettings({ seed: projectSeed })}
+                              title="The video seed set on this story's project"
+                              className="rounded-full border border-line px-3 py-1 text-foreground hover:border-accent"
+                            >
+                              Use project seed ({projectSeed})
+                            </button>
+                          ) : null;
+                        })()}
                       </div>
 
                       <div className="flex flex-wrap items-center gap-3">

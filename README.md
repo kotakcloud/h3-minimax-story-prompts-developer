@@ -223,6 +223,14 @@ cut lines into pieces across the new frames, at a natural break (a sentence end,
 its own and said by the same speaker. The app checks that the spoken words are all still there, exactly once and in order
 (punctuation at a cut may change), and asks once more if not.
 
+### Project video seed
+
+Under the project buttons, **Video seed** sets the seed new stories in the project start with (Enter or leaving the box
+saves it; *New seed* picks a random one; empty = none, so new stories keep the usual default). Each story can still change
+its own seed on the Video step, where **Use project seed (N)** shows when it differs. **Apply to all N stories** gives the
+project's seed to every story already in it, for their next videos (videos already made keep theirs). Close the stories'
+pages first: a page left open saves its own settings back.
+
 ### Project characters
 
 Under the project buttons, **Characters of <project>** takes the project's character designs: paste them, and every

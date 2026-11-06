@@ -43,6 +43,26 @@ function change<T>(task: (list: Project[]) => Promise<T>): Promise<T> {
   return next;
 }
 
+export async function readProject(id: string): Promise<Project | null> {
+  return (await readProjects()).find((project) => project.id === id) || null;
+}
+
+// The project's video seed (a whole number of 0 or more), or null to have none.
+export function setProjectSeed(id: string, seed: unknown): Promise<Project | null> {
+  const value = seed === null || seed === "" ? null : Number(seed);
+  if (value !== null && !(Number.isSafeInteger(value) && value >= 0)) {
+    return Promise.reject(new Error("The seed is a whole number of 0 or more."));
+  }
+  return change(async (list) => {
+    const project = list.find((item) => item.id === id);
+    if (!project) return null;
+    if (value === null) delete project.videoSeed;
+    else project.videoSeed = value;
+    await saveProjects(list);
+    return project;
+  });
+}
+
 export function listProjects(): Promise<Project[]> {
   return readProjects();
 }

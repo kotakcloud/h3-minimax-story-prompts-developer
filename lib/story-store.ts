@@ -267,6 +267,7 @@ export async function createStory(
   storyType: StoryType = "regular",
   projectId: string = DEFAULT_PROJECT_ID,
   stepModels: StepModels = {},
+  videoSeed?: number,
 ): Promise<Story> {
   await ensureDir();
   const now = new Date().toISOString();
@@ -278,6 +279,8 @@ export async function createStory(
     stepModels,
     gridFeed: storyType === "type-1" ? "panels" : "whole",
   };
+  // The project's video seed, when it has one.
+  if (videoSeed !== undefined) story.videoSettings = { ...story.videoSettings, seed: videoSeed };
   return takeCode(story);
 }
 
@@ -402,6 +405,15 @@ export async function setArchived(id: string, archived: boolean): Promise<Story 
 }
 
 // The story list's note; it does not count as an edit, so the story keeps its place in the list.
+// Gives every story of a project this video seed (the stories' other settings stay; their place in the list too).
+export async function setProjectStoriesSeed(projectId: string, seed: number): Promise<number> {
+  const stories = (await readAllStories()).filter((story) => story.projectId === projectId);
+  for (const story of stories) {
+    if (story.videoSettings.seed !== seed) await writeStory({ ...story, videoSettings: { ...story.videoSettings, seed } }, { touch: false });
+  }
+  return stories.length;
+}
+
 export async function setNote(id: string, note: string): Promise<Story | null> {
   const current = await readStory(id);
   if (!current) return null;

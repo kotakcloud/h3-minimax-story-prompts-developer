@@ -296,7 +296,15 @@ export const DEFAULT_IMAGE_SETTINGS: ImageSettings = {
 // A group of stories. Stories from before projects existed are in DEFAULT_PROJECT_ID.
 // characterText: the character designs pasted for the project; characters: the cards read from it (S numbers shared by
 // the project's stories).
-export type Project = { id: string; name: string; createdAt: string; characterText?: string; characters?: Character[] };
+// videoSeed: the video seed new stories in the project start with (each story can still change its own).
+export type Project = {
+  id: string;
+  name: string;
+  createdAt: string;
+  characterText?: string;
+  characters?: Character[];
+  videoSeed?: number;
+};
 export const DEFAULT_PROJECT_ID = "unknown";
 
 // A step's own AI model instead of the story's (blank or missing = the story's model).

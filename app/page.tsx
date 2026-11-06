@@ -12,6 +12,7 @@ import { VideoPlayer } from "@/components/video-player";
 import type { Project, StoryStep, StorySummary, StoryType } from "@/lib/types";
 import { DuplicateStory } from "@/components/duplicate-story";
 import { ProjectCharacters } from "@/components/project-characters";
+import { ProjectSeed } from "@/components/project-seed";
 import { DEFAULT_PROJECT_ID, STORY_TYPES, storyPath } from "@/lib/types";
 import { DEFAULT_STEP_MODELS, RECOMMENDED_MODEL, storyModelsLabel } from "@/lib/models";
 import { StepModelSelect } from "@/components/step-model-select";
@@ -125,6 +126,28 @@ export default function Home() {
   useEffect(() => {
     refresh().catch((err) => setError(err instanceof Error ? err.message : "Could not load stories."));
   }, []);
+
+  async function saveProjectSeed(id: string, videoSeed: number | null) {
+    setError("");
+    const response = await request(`/api/projects/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ videoSeed }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      setError(data.error || "Could not save the seed.");
+      return;
+    }
+    setProjects((list) => list.map((item) => (item.id === id ? data.project : item)));
+  }
+
+  async function applyProjectSeed(id: string) {
+    setError("");
+    const response = await request(`/api/projects/${encodeURIComponent(id)}/apply-seed`, { method: "POST" });
+    const data = await response.json();
+    if (!response.ok) setError(data.error || "Could not apply the seed.");
+  }
 
   async function saveProjectCharacters(id: string, characterText: string) {
     setError("");
@@ -320,6 +343,15 @@ export default function Home() {
             </>
           )}
         </div>
+        {project && (
+          <ProjectSeed
+            key={`seed-${project.id}`}
+            project={project}
+            storyCount={stories.filter((story) => story.projectId === project.id).length}
+            onSave={(seed) => saveProjectSeed(project.id, seed)}
+            onApply={() => applyProjectSeed(project.id)}
+          />
+        )}
         {project && (
           <ProjectCharacters key={project.id} project={project} projects={projects} onSave={(text) => saveProjectCharacters(project.id, text)} />
         )}
