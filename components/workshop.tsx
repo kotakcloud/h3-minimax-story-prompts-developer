@@ -368,13 +368,13 @@ export function Workshop({
   }));
   const [dialogueLanguage, setDialogueLanguage] = useState("Gujarati");
   const [dialogueView, setDialogueView] = useState(false);
-  // On the Prompts step, Ctrl+Shift+D (Cmd+Shift+D on a Mac) turns Dialogue view on or off, instead of the browser's
-  // "bookmark all tabs". A combination nobody types by accident, so it also works while a prompt box has the focus (not
-  // with a dialog open). By key position, so any keyboard layout works.
+  // On the Prompts step, Ctrl+Alt+D (Cmd+Option+D on a Mac) turns Dialogue view on or off. A combination nobody types
+  // by accident, so it also works while a prompt box has the focus (not with a dialog open). By key position, so any
+  // keyboard layout works.
   useEffect(() => {
     if (step !== "prompts") return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.code !== "KeyD" || !(event.ctrlKey || event.metaKey) || !event.shiftKey || event.altKey || event.repeat) return;
+      if (event.code !== "KeyD" || !(event.ctrlKey || event.metaKey) || !event.altKey || event.shiftKey || event.repeat) return;
       if (document.querySelector("dialog[open], [role='dialog']")) return;
       event.preventDefault();
       setDialogueView((on) => !on);
@@ -3025,10 +3025,10 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                   </div>
                 </div>
               )}
-              <label id="dialogue-view" title="Shortcut: Ctrl+Shift+D" className="mb-3 flex w-fit scroll-mt-24 items-center gap-2 text-sm text-foreground">
+              <label id="dialogue-view" title="Shortcut: Ctrl+Alt+D" className="mb-3 flex w-fit scroll-mt-24 items-center gap-2 text-sm text-foreground">
                 <input type="checkbox" checked={dialogueView} onChange={(event) => setDialogueView(event.target.checked)} />
                 Dialogue view
-                <kbd className="rounded border border-line px-1 text-[10px] text-muted">Ctrl+Shift+D</kbd>
+                <kbd className="rounded border border-line px-1 text-[10px] text-muted">Ctrl+Alt+D</kbd>
                 <span className="text-xs text-muted">only the spoken lines, to review</span>
               </label>
               {dialogueView ? (
