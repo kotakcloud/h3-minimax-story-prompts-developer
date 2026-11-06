@@ -137,6 +137,13 @@ now, because a run takes a single reference image.
 - **Delete** (bin icon on a finished, failed or cancelled video) removes it from the story after a confirmation; the
   video file stays in ComfyUI's output folder (ComfyUI has no delete call).
 
+### Spend (top right)
+
+The top bar shows what the OpenRouter key has spent. **↺** next to it resets the shown spend to 0 (after a confirm): it
+then shows *Spent since reset*, counted from that moment. OpenRouter's own total cannot be reset, so the app keeps the
+key's total at the reset in `data/spend-reset.json` (delete it to go back to the full total); hover the badge for the
+key's full total and when it was reset.
+
 ### Videos in progress (top bar)
 
 Every video goes into ComfyUI's one queue, so videos queued from different stories run one after another. The top bar

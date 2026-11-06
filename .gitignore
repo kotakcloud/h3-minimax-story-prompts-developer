@@ -52,3 +52,4 @@ openrouter api.md
 *.tsbuildinfo
 next-env.d.ts
 /data/custom-models.json*
+/data/spend-reset.json
