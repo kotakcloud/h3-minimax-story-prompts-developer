@@ -3117,26 +3117,6 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                           <p className="text-sm font-medium">
                             {index + 1}. {frame?.title || segment.id}
                           </p>
-                          <label className="mt-1 flex items-center gap-2 text-xs text-muted">
-                            Duration
-                            <DurationInput
-                              value={durationDrafts[segment.id] ?? segment.duration}
-                              min={4}
-                              max={15}
-                              onCommit={(duration) =>
-                                setDurationDrafts((drafts) => {
-                                  const next = { ...drafts };
-                                  if (duration === segment.duration) delete next[segment.id];
-                                  else next[segment.id] = duration;
-                                  return next;
-                                })
-                              }
-                              className={`py-0.5 text-xs ${
-                                durationDrafts[segment.id] !== undefined && durationDrafts[segment.id] !== segment.duration ? "border-accent" : ""
-                              }`}
-                            />
-                            s
-                          </label>
                         </div>
                         <IconButton
                           label={copiedId === segment.id ? "Copied" : "Copy prompt"}
@@ -3172,8 +3152,29 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                                 edited ? "border-accent text-foreground" : "border-transparent text-muted hover:border-line focus:border-line"
                               }`}
                             />
+                            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                            <label className="flex items-center gap-2 text-xs text-muted">
+                              Duration
+                              <DurationInput
+                                value={durationDrafts[segment.id] ?? segment.duration}
+                                min={4}
+                                max={15}
+                                onCommit={(duration) =>
+                                  setDurationDrafts((drafts) => {
+                                    const next = { ...drafts };
+                                    if (duration === segment.duration) delete next[segment.id];
+                                    else next[segment.id] = duration;
+                                    return next;
+                                  })
+                                }
+                                className={`py-0.5 text-xs ${
+                                  durationDrafts[segment.id] !== undefined && durationDrafts[segment.id] !== segment.duration ? "border-accent" : ""
+                                }`}
+                              />
+                              s
+                            </label>
                             {edited && (
-                              <p className="mt-1 flex items-center gap-3 text-xs text-accent">
+                              <p className="flex items-center gap-3 text-xs text-accent">
                                 Edited, not saved
                                 <button
                                   type="button"
@@ -3197,6 +3198,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                                 </button>
                               </p>
                             )}
+                            </div>
                           </>
                         );
                       })()}
