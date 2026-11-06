@@ -304,6 +304,8 @@ export type Project = {
   characterText?: string;
   characters?: Character[];
   videoSeed?: number;
+  // Archived projects are folded away in the project list (their stories stay as they are).
+  archived?: boolean;
 };
 export const DEFAULT_PROJECT_ID = "unknown";
 

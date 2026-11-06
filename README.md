@@ -223,6 +223,13 @@ cut lines into pieces across the new frames, at a natural break (a sentence end,
 its own and said by the same speaker. The app checks that the spoken words are all still there, exactly once and in order
 (punctuation at a cut may change), and asks once more if not.
 
+### Project list
+
+Each project is a card: its stories (and how many are archived), how many have a video, what their AI calls cost, when
+one last changed, and its character list and video seed if it has them. Click a card to open the project. **Archive**
+(next to Rename) folds the open project away: it moves to *Archived projects (N)*, where it can be opened or
+**Unarchive**d; its stories stay as they are. "unknown" cannot be archived (new stories without a project go there).
+
 ### Project video seed
 
 Under the project buttons, **Video seed** sets the seed new stories in the project start with (Enter or leaving the box

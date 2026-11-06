@@ -1,16 +1,23 @@
 import { NextResponse } from "next/server";
-import { renameProject, setProjectCharacters, setProjectSeed } from "@/lib/project-store";
+import { renameProject, setProjectArchived, setProjectCharacters, setProjectSeed } from "@/lib/project-store";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 // PATCH { name } renames the project; { characterText } saves its character designs and the cards read from them;
-// { videoSeed } sets the video seed new stories start with (null = none).
+// { videoSeed } sets the video seed new stories start with (null = none); { archived } archives or brings it back.
 export async function PATCH(request: Request, context: RouteContext) {
   const { id } = await context.params;
   try {
-    const body = (await request.json().catch(() => ({}))) as { name?: unknown; characterText?: unknown; videoSeed?: unknown };
+    const body = (await request.json().catch(() => ({}))) as {
+      name?: unknown;
+      characterText?: unknown;
+      videoSeed?: unknown;
+      archived?: unknown;
+    };
     const project =
-      body.videoSeed !== undefined
+      body.archived !== undefined
+        ? await setProjectArchived(id, body.archived)
+        : body.videoSeed !== undefined
         ? await setProjectSeed(id, body.videoSeed)
         : body.characterText !== undefined
           ? await setProjectCharacters(id, body.characterText)

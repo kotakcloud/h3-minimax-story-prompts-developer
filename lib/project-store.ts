@@ -63,6 +63,19 @@ export function setProjectSeed(id: string, seed: unknown): Promise<Project | nul
   });
 }
 
+// Archives (or brings back) a project. "unknown" stays, since new stories without a project go there.
+export function setProjectArchived(id: string, archived: unknown): Promise<Project | null> {
+  if (id === DEFAULT_PROJECT_ID && archived === true) return Promise.reject(new Error("The unknown project cannot be archived."));
+  return change(async (list) => {
+    const project = list.find((item) => item.id === id);
+    if (!project) return null;
+    if (archived === true) project.archived = true;
+    else delete project.archived;
+    await saveProjects(list);
+    return project;
+  });
+}
+
 export function listProjects(): Promise<Project[]> {
   return readProjects();
 }

@@ -13,6 +13,7 @@ import type { Project, StoryStep, StorySummary, StoryType } from "@/lib/types";
 import { DuplicateStory } from "@/components/duplicate-story";
 import { ProjectCharacters } from "@/components/project-characters";
 import { ProjectSeed } from "@/components/project-seed";
+import { ProjectCard } from "@/components/project-card";
 import { DEFAULT_PROJECT_ID, STORY_TYPES, storyPath } from "@/lib/types";
 import { DEFAULT_STEP_MODELS, RECOMMENDED_MODEL, storyModelsLabel } from "@/lib/models";
 import { StepModelSelect } from "@/components/step-model-select";
@@ -89,6 +90,8 @@ export default function Home() {
     setProjects(projectData.projects || []);
   }
 
+  const [showArchivedProjects, setShowArchivedProjects] = useState(false);
+  const archivedProjects = projects.filter((item) => item.archived);
   // A project that no longer exists (or none chosen yet) falls back to the first one.
   const project = projects.find((item) => item.id === projectId) || projects[0];
   const activeProjectId = project?.id || DEFAULT_PROJECT_ID;
@@ -126,6 +129,26 @@ export default function Home() {
   useEffect(() => {
     refresh().catch((err) => setError(err instanceof Error ? err.message : "Could not load stories."));
   }, []);
+
+  async function archiveProject(id: string, archived: boolean) {
+    const target = projects.find((item) => item.id === id);
+    if (archived && !window.confirm(`Archive the project "${target?.name || id}"? It is folded away in the list; its stories stay.`)) return;
+    setError("");
+    const response = await request(`/api/projects/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ archived }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      setError(data.error || "Could not archive the project.");
+      return;
+    }
+    const next = projects.map((item) => (item.id === id ? data.project : item));
+    setProjects(next);
+    // An archived project closes: the first project still shown opens instead.
+    if (archived && id === activeProjectId) openProject(next.find((item) => !item.archived)?.id || DEFAULT_PROJECT_ID);
+  }
 
   async function saveProjectSeed(id: string, videoSeed: number | null) {
     setError("");
@@ -276,22 +299,20 @@ export default function Home() {
           Stories are stored on the computer running this server. Open this same address from any device on the Wi-Fi to see
           the same list.
         </p>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          {projects.map((item) =>
-            editing === item.id ? null : (
-              <button
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {projects
+            .filter((item) => !item.archived || item.id === activeProjectId)
+            .map((item) => (
+              <ProjectCard
                 key={item.id}
-                type="button"
-                onClick={() => openProject(item.id)}
-                aria-pressed={item.id === activeProjectId}
-                className={`rounded-full px-4 py-1.5 text-sm ${
-                  item.id === activeProjectId ? "bg-foreground text-background" : "border border-line text-muted"
-                }`}
-              >
-                {item.name} <span className="text-xs opacity-70">{countIn(item.id)}</span>
-              </button>
-            ),
-          )}
+                project={item}
+                stories={stories.filter((story) => story.projectId === item.id)}
+                active={item.id === activeProjectId}
+                onOpen={() => openProject(item.id)}
+              />
+            ))}
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           {editing ? (
             <form
               className="flex items-center gap-2"
@@ -340,9 +361,47 @@ export default function Home() {
                   Rename
                 </button>
               )}
+              {project && project.id !== DEFAULT_PROJECT_ID && (
+                <button
+                  type="button"
+                  onClick={() => void archiveProject(project.id, !project.archived)}
+                  title={project.archived ? "Show this project in the list again" : "Fold this project away in the list; its stories stay as they are"}
+                  className="px-2 py-1.5 text-sm text-muted underline-offset-2 hover:text-foreground hover:underline"
+                >
+                  {project.archived ? "Unarchive" : "Archive"}
+                </button>
+              )}
+              {archivedProjects.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowArchivedProjects(!showArchivedProjects)}
+                  aria-expanded={showArchivedProjects}
+                  className="ml-auto px-2 py-1.5 text-sm text-muted hover:text-foreground"
+                >
+                  {showArchivedProjects ? "▾" : "▸"} Archived projects ({archivedProjects.length})
+                </button>
+              )}
             </>
           )}
         </div>
+        {showArchivedProjects && archivedProjects.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {archivedProjects.map((item) => (
+              <span key={item.id} className="flex items-center gap-1 rounded-full border border-dashed border-line px-3 py-1 text-sm text-muted">
+                <button type="button" onClick={() => openProject(item.id)} className="hover:text-foreground">
+                  {item.name} <span className="text-xs opacity-70">{countIn(item.id)}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void archiveProject(item.id, false)}
+                  className="ml-1 text-xs text-accent hover:underline"
+                >
+                  Unarchive
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
         {project && (
           <ProjectSeed
             key={`seed-${project.id}`}
