@@ -19,6 +19,7 @@ import {
   undefinedSubjectsFix,
 } from "@/lib/prompts";
 import { isFreshShot, storyboardInstructions, type GridFeed } from "@/lib/grid";
+import { cameraInstruction, cameraMisses, cameraRequirement } from "@/lib/camera";
 import type { BreakdownResult, PromptSegment, StoryLocation } from "@/lib/types";
 
 export const maxDuration = 300;
@@ -155,6 +156,8 @@ export async function POST(request: Request) {
         duration: fitDuration(clampDuration(frame.duration), frame.summary || ""),
         ...(frame.panel ? { panel: Math.round(Number(frame.panel)) } : {}),
         ...(frame.join === "cut" || frame.join === "continuous" ? { join: frame.join } : {}),
+        // The owner's camera choice, as the words the AI gets.
+        ...(cameraInstruction(frame) ? { camera: cameraInstruction(frame) } : {}),
       })),
     };
     const grid =
@@ -234,6 +237,7 @@ export async function POST(request: Request) {
               "",
               `CHARACTER LOCK:\n${JSON.stringify(breakdown.characters, null, 2)}`,
             ];
+        const camera = cameraInstruction(frames[index] || {});
         const user = [
           ...lines,
           ...(storyboard.length ? ["", ...storyboard] : []),
@@ -242,6 +246,7 @@ export async function POST(request: Request) {
           `ALL FRAMES (context only):\n${JSON.stringify(breakdown.frames, null, 2)}`,
           "",
           `FRAMES (write this one only):\n${JSON.stringify([frame], null, 2)}`,
+          ...(camera ? ["", cameraRequirement(camera)] : []),
         ].join("\n");
         const generate = async (request: string) => {
           const data = await withBackupRequest(
@@ -272,12 +277,15 @@ export async function POST(request: Request) {
         const voiceOnly = breakdown.characters.filter((character) => character.voiceOnly).map((character) => character.id);
         const speakers = [...new Set(segments.flatMap((segment) => speakerProblems(segment.prompt, voiceOnly)))];
         const missing = reference ? segments.flatMap((segment) => missingLines(frame.summary, segment.prompt)) : [];
-        const clean = hits.length === 0 && times.length === 0 && ghosts.length === 0 && !noBoard;
+        // The owner's camera choice has to be in the prompt.
+        const cameraMissing = [...new Set(segments.flatMap((segment) => cameraMisses(frames[index] || {}, segment.prompt)))];
+        const clean = hits.length === 0 && times.length === 0 && ghosts.length === 0 && !noBoard && cameraMissing.length === 0;
         if (clean && short.length === 0 && speakers.length === 0 && missing.length === 0) return segments;
         if (missing.length) console.log(`[prompts] frame ${frame.id}: ${missing.length} spoken line(s) left out; rewriting`);
         if (speakers.length) console.log(`[prompts] frame ${frame.id}: ${speakers.join(", ")}; rewriting`);
         if (short.length) console.log(`[prompts] frame ${frame.id}: ${short.length} spoken line(s) cut off; rewriting`);
         if (noBoard) console.log(`[prompts] frame ${frame.id}: storyboard line missing; rewriting`);
+        if (cameraMissing.length) console.log(`[prompts] frame ${frame.id}: camera choice left out (${cameraMissing.join(", ")}); rewriting`);
         if (hits.length) console.log(`[prompts] frame ${frame.id}: on-screen text (${hits.join(", ")}); rewriting`);
         if (times.length) console.log(`[prompts] frame ${frame.id}: timestamps in a V2 prompt (${times.join(", ")}); rewriting`);
         if (ghosts.length) console.log(`[prompts] frame ${frame.id}: undefined subjects in a V2 prompt (${ghosts.join(", ")}); rewriting`);
@@ -289,6 +297,9 @@ export async function POST(request: Request) {
           short.length ? dialogueTimingFix(short) : "",
           speakers.length ? speakerFix(speakers) : "",
           missing.length ? missingLinesFix(missing) : "",
+          cameraMissing.length
+            ? `CORRECTION: the prompt leaves out the owner's camera choice (${cameraMissing.join(", ")}). Name it plainly in the prompt.\n${cameraRequirement(camera)}`
+            : "",
         ].filter(Boolean);
         return generate(`${user}
 

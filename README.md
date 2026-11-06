@@ -194,6 +194,22 @@ cut lines into pieces across the new frames, at a natural break (a sentence end,
 its own and said by the same speaker. The app checks that the spoken words are all still there, exactly once and in order
 (punctuation at a cut may change), and asks once more if not.
 
+### Camera for a frame
+
+Under each frame's text, **Camera** has two lists, both starting on *Let the AI choose*:
+- **Shot**: how much we see (wide, full, medium, medium close-up, close-up, extreme close-up, two-shot, over the
+  shoulder) or where the camera is (eye level, low angle looking up, high angle looking down, from straight above,
+  through a character's eyes).
+- **Move**: still, slowly move closer, slowly move back, turn to follow (pan), walk along (tracking), circle around,
+  handheld.
+
+Each choice shows a one-line plain explanation under the lists. They are used when the prompts are written (and kept by
+Update with comment unless the comment asks for another camera): the AI must name them in the prompt, and is asked once
+more if it left one out. A segment that has to open on the reference image or the previous shot reaches the chosen shot
+through a camera move in its first second or two. Every on-screen speaker's face still stays in frame while they speak.
+Weak models (e.g. gemini-2.5-flash-lite) follow moves well but can skip a close framing; gemini-3.7-flash followed both.
+Changing the camera clears the current prompts, like any frame edit; a split keeps the frame's camera on every part.
+
 ### What changed between prompt sets
 
 Each generation's *Prompts* row and the Prompts tab show a link like *vs set 5: 3 added · 2 removed · 4 updated*, comparing the

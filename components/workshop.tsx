@@ -18,6 +18,7 @@ import { applyLineDurations, timingComment, timingFixes, type LineDuration } fro
 import { playDoneSound } from "@/lib/done-sound";
 import { modelLabel, stepModel, storyModelsLabel } from "@/lib/models";
 import { StepModelSelect } from "@/components/step-model-select";
+import { CameraPicker } from "@/components/camera-picker";
 import { Money } from "@/components/money";
 import { formatInr } from "@/lib/money";
 import type { StoryCost } from "@/lib/story-cost";
@@ -1572,6 +1573,8 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
           summary: part.summary,
           duration: part.duration,
           ...(frame.panel ? { panel: frame.panel } : {}),
+          ...(frame.cameraShot ? { cameraShot: frame.cameraShot } : {}),
+          ...(frame.cameraMove ? { cameraMove: frame.cameraMove } : {}),
           ...(k === 0 ? (frame.join ? { join: frame.join } : {}) : frame.join || frame.panel ? { join: "continuous" as const } : {}),
         });
       });
@@ -2674,6 +2677,11 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                       onChange={(event) => updateFrame(frame.id, { summary: event.target.value })}
                       rows={4}
                       className="w-full resize-y bg-transparent text-sm leading-6 outline-none"
+                    />
+                    <CameraPicker
+                      shot={frame.cameraShot}
+                      move={frame.cameraMove}
+                      onChange={(next) => updateFrame(frame.id, next)}
                     />
                   </li>
                 ))}

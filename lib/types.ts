@@ -199,6 +199,9 @@ export type Frame = {
   // The panel was filled in by "+" on an earlier frame, not chosen for this frame: a later "+" may change it.
   panelAuto?: boolean;
   join?: "cut" | "continuous";
+  // The owner's camera for this frame (ids from lib/camera.ts); missing = the AI chooses.
+  cameraShot?: string;
+  cameraMove?: string;
 };
 
 export type BreakdownResult = {

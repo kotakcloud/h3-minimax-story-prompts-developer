@@ -17,6 +17,7 @@ import {
 } from "@/lib/prompts";
 import { isFreshShot, storyboardInstructions, type GridFeed } from "@/lib/grid";
 import type { Character, Frame, PromptSegment } from "@/lib/types";
+import { cameraInstruction } from "@/lib/camera";
 
 export const maxDuration = 300;
 
@@ -143,7 +144,17 @@ export async function POST(request: Request) {
       `CHARACTER LOCK:\n${JSON.stringify(body.characters || [], null, 2)}`,
       ...(analysisBlock(body.analysis) ? ["", `STORY ANALYSIS:\n${analysisBlock(body.analysis)}`] : []),
       "",
-      `FRAMES:\n${JSON.stringify(body.frames || [], null, 2)}`,
+      // The owner's camera choices go in as the words the AI gets, and still apply when updating.
+      `FRAMES:\n${JSON.stringify(
+        (body.frames || []).map(({ cameraShot, cameraMove, ...frame }) => {
+          const camera = cameraInstruction({ cameraShot, cameraMove });
+          return camera
+            ? { ...frame, camera: `${camera} (chosen by the owner: keep it unless the comment asks to change the camera)` }
+            : frame;
+        }),
+        null,
+        2,
+      )}`,
       "",
       `TARGET PROMPTS:\n${JSON.stringify(targets, null, 2)}`,
       ...storyboard,
