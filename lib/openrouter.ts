@@ -1,4 +1,5 @@
 import { parseModelChain } from "./models";
+import { rememberModel } from "./custom-models";
 import { recordCost } from "./story-cost";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -112,6 +113,8 @@ export async function chatCompletion(messages: ChatMessage[], options?: ChatOpti
     );
   }
 
+  // A typed-in model that just worked joins the model list (the one of the chain that answered).
+  await rememberModel(models.find((id) => id === body.model) || models[0]);
   return content;
 }
 

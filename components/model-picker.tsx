@@ -2,22 +2,14 @@
 
 import { MoneyText } from "@/components/money";
 import { withInr } from "@/lib/money";
-import { useEffect, useState } from "react";
+import { useModelOptions } from "@/components/use-model-options";
 import { MAX_MODELS, MODEL_OPTIONS, RECOMMENDED_MODEL, isWeakChain, parseModelChain } from "@/lib/models";
 
 // Free text with a suggestion list (not a <select>): any OpenRouter id, or a comma-separated
 // fallback chain of up to three. Blank = the .env default.
 export function ModelPicker({ value, onChange }: { value: string; onChange: (value: string) => void }) {
-  const [defaults, setDefaults] = useState<string[]>([]);
-
-  useEffect(() => {
-    fetch("/api/openrouter-models")
-      .then((response) => response.json())
-      .then((data: { defaultModels?: unknown }) => {
-        if (Array.isArray(data?.defaultModels)) setDefaults(data.defaultModels.filter((id) => typeof id === "string"));
-      })
-      .catch(() => {});
-  }, []);
+  // The built-in models plus the ones added after they worked.
+  const { defaults, options } = useModelOptions();
 
   const typed = parseModelChain(value);
   const chain = typed.error ? [] : typed.models.length > 0 ? typed.models : defaults;
@@ -42,7 +34,7 @@ export function ModelPicker({ value, onChange }: { value: string; onChange: (val
         />
       </label>
       <datalist id="openrouter-models">
-        {MODEL_OPTIONS.map((option) => (
+        {options.map((option) => (
           <option key={option.id} value={option.id} label={withInr(option.label)}>
             {withInr(option.label)}
           </option>

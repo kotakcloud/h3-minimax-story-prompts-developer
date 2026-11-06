@@ -51,3 +51,4 @@ openrouter api.md
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+/data/custom-models.json*

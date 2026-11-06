@@ -182,6 +182,14 @@ The new story's AI cost starts with what the original's Gist, Cast, Image and Fr
 so it shows what that model's version really cost. Costs are split by step from 5 Nov 2026; calls before that are
 only in the original's total and are not carried over. Hover the AI cost in the story header to see the split.
 
+### Model boxes and models you add
+
+Every model box (the sidebar's, the Frames and Prompts ones, and the two next to *New story type*) is free text with a
+list: pick a model (each shows its price per million tokens in ₹ and $) or type any OpenRouter id. The Frames and Prompts
+boxes apply a typed model on Enter or when you leave the box; blank (or *× story model*) means the story's model. A model
+that is not in the built-in list is added to every list after the first AI call with it succeeds, with its OpenRouter
+price (kept in `data/custom-models.json`; delete an entry there to drop it).
+
 ### Extra instructions for the frames
 
 At the top of the Frames step, *Extra instructions for Break into frames* takes your own instructions for the AI ("keep every
