@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { diffPromptSets, diffWords, type DiffRow, type SetDiff, type WordPart } from "@/lib/prompt-diff";
 import type { Frame, PromptSegment } from "@/lib/types";
 
@@ -85,7 +85,10 @@ export function visibleRows(rows: DiffRow[], showAll: boolean) {
 }
 
 // The same view with a confirm button: changes made by hand, saved only when confirmed.
-export function PromptDiffConfirm(props: Props & { onConfirm: () => void; onClose: () => void; busy?: boolean }) {
+// `extra`: more controls shown above the diff (e.g. what to do after saving).
+export function PromptDiffConfirm(
+  props: Props & { onConfirm: () => void; onClose: () => void; busy?: boolean; extra?: ReactNode },
+) {
   const diff = useMemo(() => diffPromptSets(props.older, props.newer), [props.older, props.newer]);
   return <PromptDiffDialog {...props} diff={diff} />;
 }
@@ -98,7 +101,8 @@ function PromptDiffDialog({
   onClose,
   onConfirm,
   busy,
-}: Props & { diff: SetDiff; onClose: () => void; onConfirm?: () => void; busy?: boolean }) {
+  extra,
+}: Props & { diff: SetDiff; onClose: () => void; onConfirm?: () => void; busy?: boolean; extra?: ReactNode }) {
   const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
@@ -145,6 +149,7 @@ function PromptDiffDialog({
             )}
           </div>
         </div>
+        {extra && <div className="border-b border-line px-4 py-3">{extra}</div>}
 
         <div className="overflow-y-auto p-4">
           <div className="sticky -top-4 z-10 -mx-4 mb-3 grid grid-cols-2 gap-x-2 bg-card px-4 py-2 text-xs font-medium text-foreground">

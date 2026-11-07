@@ -372,6 +372,8 @@ export function Workshop({
   const [durationDrafts, setDurationDrafts] = useState<Record<string, number>>({});
   const [promptReviewOpen, setPromptReviewOpen] = useState(false);
   const [promptSaving, setPromptSaving] = useState(false);
+  // In Review & save: after saving, render the changed segments (from the one before) as a Veda Turbo DEV video.
+  const [rerunAfterSave, setRerunAfterSave] = useState(true);
   // A Prompts model picked on a story that has frames: asked whether to branch a new story or change this one.
   const [promptModelChoice, setPromptModelChoice] = useState<string | null>(null);
   const [castCommentOpen, setCastCommentOpen] = useState(false);
@@ -927,18 +929,19 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     }
   }
 
-  async function runVideo() {
+  // overrides: settings for this one run only (not saved on the story). True when the video was queued.
+  async function runVideo(overrides: Partial<Story["videoSettings"]> = {}): Promise<boolean> {
     const current = storyRef.current || story;
-    if (!current) return;
+    if (!current) return false;
     const image = current.referenceImages.find((item) => item.id === current.selectedImageId);
     if (!image) {
       setError("Select a reference image on the Image step first.");
-      return;
+      return false;
     }
     setBusy("video");
     setError("");
     try {
-      const settings = current.videoSettings;
+      const settings = { ...current.videoSettings, ...overrides };
       const ultra = settings.ultraFast && settings.devMode && isFastEngine(settings.engine);
       // Test mode: only a range of segments; enhancement LoRAs from the LoRA popup.
       const range = renderRange(settings, current.segments.length);
@@ -1029,8 +1032,10 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
       setStory(await persist(next));
       // The queue ticker in the top bar shows it now instead of on its next refresh.
       window.dispatchEvent(new Event("h3-video-queued"));
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start the video.");
+      return false;
     } finally {
       setBusy(null);
     }
@@ -1544,11 +1549,22 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     );
   }
 
-  // Confirmed in the diff: the hand edits become a new prompt set.
+  // The segments a re-run after saving the hand edits covers: from the one before the first changed segment to the
+  // last changed one (5 of 10 changed → 4-5). Null when nothing changed.
+  function rerunRange(): { from: number; to: number } | null {
+    const current = storyRef.current || story;
+    if (!current) return null;
+    const changed = current.segments.flatMap((segment, index) => (segmentEdited(segment) ? [index + 1] : []));
+    if (changed.length === 0) return null;
+    return { from: Math.max(1, changed[0] - 1), to: changed[changed.length - 1] };
+  }
+
+  // Confirmed in the diff: the hand edits become a new prompt set, and (when ticked) the changed part is rendered.
   async function saveEditedPrompts() {
     const current = storyRef.current;
     const segments = editedSegments();
     if (!current || !segments) return;
+    const range = rerunAfterSave && current.selectedImageId ? rerunRange() : null;
     setPromptSaving(true);
     setError("");
     try {
@@ -1556,6 +1572,16 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
       setPromptDrafts({});
       setDurationDrafts({});
       setPromptReviewOpen(false);
+      if (range) {
+        const queued = await runVideo({
+          engine: "veda-turbo",
+          devMode: true,
+          ultraFast: false,
+          onlyFrom: range.from,
+          onlyFirst: range.to,
+        });
+        if (queued) router.push(storyPath(storyId, "video"));
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save the prompts.");
     } finally {
@@ -3104,7 +3130,10 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                       </button>
                       <button
                         type="button"
-                        onClick={() => setPromptReviewOpen(true)}
+                        onClick={() => {
+                          setRerunAfterSave(true);
+                          setPromptReviewOpen(true);
+                        }}
                         className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-ink"
                       >
                         Review &amp; save
@@ -3123,6 +3152,22 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                   busy={promptSaving}
                   onClose={() => setPromptReviewOpen(false)}
                   onConfirm={() => void saveEditedPrompts()}
+                  extra={(() => {
+                    const range = rerunRange();
+                    if (!range) return null;
+                    const label = range.from === range.to ? `segment ${range.from}` : `segments ${range.from}-${range.to}`;
+                    return story.selectedImageId ? (
+                      <label className="flex items-center gap-2 text-sm text-foreground">
+                        <input type="checkbox" checked={rerunAfterSave} onChange={(event) => setRerunAfterSave(event.target.checked)} />
+                        Re-run video for {label} after saving
+                        <span className="text-xs text-muted">
+                          Veda Turbo · DEV, from the segment before the first change; opens the Video step
+                        </span>
+                      </label>
+                    ) : (
+                      <p className="text-xs text-muted">No reference image selected, so no video re-run after saving.</p>
+                    );
+                  })()}
                 />
               )}
               <ol className="space-y-5">
@@ -3571,7 +3616,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                       <div className="flex flex-wrap items-center gap-3">
                         <button
                           type="button"
-                          onClick={runVideo}
+                          onClick={() => void runVideo()}
                           disabled={busy !== null || !image || story.segments.length === 0 || gridLongTake}
                           className="rounded-full bg-accent px-6 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50"
                         >
