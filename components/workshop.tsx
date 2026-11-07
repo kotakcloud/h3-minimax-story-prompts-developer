@@ -376,6 +376,18 @@ export function Workshop({
   const [deletedDrafts, setDeletedDrafts] = useState<string[]>([]);
   const [promptReviewOpen, setPromptReviewOpen] = useState(false);
   const [promptSaving, setPromptSaving] = useState(false);
+  // The pinned title row and step tabs: its height goes in --story-head-h, so bars pinned below it (Review & save) stay
+  // in sight instead of sliding under it. It changes when the title wraps.
+  const storyHeadObserver = useRef<ResizeObserver | null>(null);
+  const watchStoryHead = useCallback((element: HTMLDivElement | null) => {
+    storyHeadObserver.current?.disconnect();
+    storyHeadObserver.current = null;
+    if (!element) return;
+    const update = () => document.documentElement.style.setProperty("--story-head-h", `${element.offsetHeight}px`);
+    update();
+    storyHeadObserver.current = new ResizeObserver(update);
+    storyHeadObserver.current.observe(element);
+  }, []);
   // In Review & save: after saving, render the changed segments (from the one before) as a Veda Turbo DEV Ultra fast video.
   const [rerunAfterSave, setRerunAfterSave] = useState(true);
   // A video that just finished with an auto-play tick: its player starts it (in picture in picture for "pip").
@@ -1948,7 +1960,9 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
 
       <main className="px-5 pb-8 sm:px-8">
         {/* Title row and step tabs stay pinned under the fixed top bar. */}
-        <div className="sticky top-[var(--nav-h)] z-30 -mx-5 mb-6 border-b border-line bg-background px-5 pt-4 shadow-[0_6px_14px_rgba(0,0,0,0.35)] sm:-mx-8 sm:px-8">
+        <div
+          ref={watchStoryHead}
+          className="sticky top-[var(--nav-h)] z-30 -mx-5 mb-6 border-b border-line bg-background px-5 pt-4 shadow-[0_6px_14px_rgba(0,0,0,0.35)] sm:-mx-8 sm:px-8">
           <header className="mb-3 flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
               <p className="truncate font-mono text-xs text-muted">
@@ -3215,7 +3229,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                   deleted ? `${deleted} deleted` : "",
                 ].filter(Boolean);
                 return parts.length > 0 ? (
-                  <div className="sticky top-[calc(var(--nav-h)+0.5rem)] z-20 mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-accent/60 bg-card px-4 py-2 text-sm">
+                  <div className="sticky top-[calc(var(--nav-h)+var(--story-head-h,8.5rem)+0.5rem)] z-20 mb-3 shadow-lg flex flex-wrap items-center justify-between gap-2 rounded-xl border border-accent/60 bg-card px-4 py-2 text-sm">
                     <span>{parts.join(" · ")}, not saved</span>
                     <span className="flex items-center gap-2">
                       <button
