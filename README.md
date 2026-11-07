@@ -295,9 +295,9 @@ is saved with the prompt edits through Review & save, which shows it as `8s → 
 
 When a reference image is selected, Review & save also offers **Re-run video for segments 4-5 after saving** (ticked by
 default): it covers the segment before the first changed one up to the last changed one (segment 5 of 10 changed →
-4-5). On **Confirm & save** the new prompt set is saved, those segments are sent to ComfyUI as a Veda Turbo DEV video
-(for this run only; the Video step's settings stay as they are), and the Video step opens. That video has *Auto-play
-in picture in picture* on, so when it is done it plays floating over the Prompts step. Untick it to only save.
+4-5). On **Confirm & save** the new prompt set is saved, those segments are sent to ComfyUI as a Veda Turbo DEV Ultra fast
+video (for this run only; the Video step's settings stay as they are), and the Video step opens. It never auto-plays,
+whatever the Auto-play ticks say. Untick it to only save.
 
 ### Editing spoken lines (Dialogue view)
 

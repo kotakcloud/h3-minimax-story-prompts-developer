@@ -372,7 +372,7 @@ export function Workshop({
   const [durationDrafts, setDurationDrafts] = useState<Record<string, number>>({});
   const [promptReviewOpen, setPromptReviewOpen] = useState(false);
   const [promptSaving, setPromptSaving] = useState(false);
-  // In Review & save: after saving, render the changed segments (from the one before) as a Veda Turbo DEV video.
+  // In Review & save: after saving, render the changed segments (from the one before) as a Veda Turbo DEV Ultra fast video.
   const [rerunAfterSave, setRerunAfterSave] = useState(true);
   // A video that just finished with an auto-play tick: its player starts it (in picture in picture for "pip").
   const [autoStartRun, setAutoStartRun] = useState<{ id: string; mode: "play" | "pip" } | null>(null);
@@ -1591,11 +1591,12 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
         const queued = await runVideo({
           engine: "veda-turbo",
           devMode: true,
-          ultraFast: false,
+          ultraFast: true,
           onlyFrom: range.from,
           onlyFirst: range.to,
-          // Watch the new take floating while reading the prompts.
-          autoPlayPip: true,
+          // A quick check only: no auto-play, whatever the story's ticks say.
+          autoPlay: false,
+          autoPlayPip: false,
         });
         if (queued) router.push(storyPath(storyId, "video"));
       }
@@ -3178,7 +3179,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                         <input type="checkbox" checked={rerunAfterSave} onChange={(event) => setRerunAfterSave(event.target.checked)} />
                         Re-run video for {label} after saving
                         <span className="text-xs text-muted">
-                          Veda Turbo · DEV, from the segment before the first change; opens the Video step
+                          Veda Turbo · DEV · Ultra fast, from the segment before the first change; opens the Video step
                         </span>
                       </label>
                     ) : (
