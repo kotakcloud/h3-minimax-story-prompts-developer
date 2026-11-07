@@ -305,6 +305,13 @@ Each generation's *Prompts* row and the Prompts tab show a link like *vs set 5: 
 set with the one before it. Click it for a side-by-side view, segment by segment, with the changed words highlighted and
 unchanged lines folded away (*Show unchanged lines* brings them back). Lines are compared by text, with no AI involved.
 
+### Compare text
+
+**Compare** in the top bar opens `/compare`: two full-height boxes, Left (older) and Right (newer). **Compare** shows them
+side by side like the prompt-set diff: added, removed and updated lines, with the changed words marked (blank lines are
+ignored; *Show unchanged lines* shows everything). **Swap** switches the two sides, **Clear** empties them. The texts are
+kept in this browser until cleared. Nothing is sent anywhere.
+
 ### Dialogue view
 
 On the Prompts tab, tick **Dialogue view** (or press **Ctrl+Shift+Q**, also while typing in a box) to see only the spoken lines of the current prompt set, segment by segment:

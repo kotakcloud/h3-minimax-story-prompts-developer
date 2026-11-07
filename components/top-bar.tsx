@@ -103,6 +103,9 @@ export function TopBar() {
       <div className="flex min-w-0 flex-1">
         <VideoQueueTicker />
       </div>
+      <Link href="/compare" title="Compare two texts side by side" className="shrink-0 text-xs text-muted hover:text-foreground">
+        Compare
+      </Link>
       <UsageBadge />
     </header>
   );

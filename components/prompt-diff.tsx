@@ -51,7 +51,7 @@ function Words({ parts, tint }: { parts: WordPart[]; tint: string }) {
   );
 }
 
-function Row({ row }: { row: DiffRow }) {
+export function Row({ row }: { row: DiffRow }) {
   const words = useMemo(() => (row.kind === "updated" ? diffWords(row.left || "", row.right || "") : null), [row]);
   const cell = "min-w-0 whitespace-pre-wrap break-words rounded px-2 py-1 font-mono text-xs leading-5";
   const removed = row.kind === "removed" || row.kind === "updated";
@@ -69,7 +69,7 @@ function Row({ row }: { row: DiffRow }) {
 }
 
 // Changed rows with a little context; long unchanged stretches fold into one note.
-function visibleRows(rows: DiffRow[], showAll: boolean) {
+export function visibleRows(rows: DiffRow[], showAll: boolean) {
   const keep = rows.map(
     (_row, index) =>
       showAll || rows.slice(Math.max(0, index - CONTEXT_LINES), index + CONTEXT_LINES + 1).some((row) => row.kind !== "same"),

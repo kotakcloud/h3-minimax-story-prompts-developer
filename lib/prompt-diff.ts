@@ -74,6 +74,13 @@ export function diffPromptSets(older: PromptSegment[], newer: PromptSegment[]): 
   return { segments, added: total("added"), removed: total("removed"), updated: total("updated") };
 }
 
+// Two free texts, line by line (blank lines ignored), as on the Compare text page.
+export function diffTexts(left: string, right: string): DiffCounts & { rows: DiffRow[] } {
+  const rows = diffLines(promptLines(left), promptLines(right));
+  const count = (kind: DiffRow["kind"]) => rows.filter((row) => row.kind === kind).length;
+  return { rows, added: count("added"), removed: count("removed"), updated: count("updated") };
+}
+
 // The words that differ inside an updated line, for highlighting.
 export function diffWords(left: string, right: string): { left: WordPart[]; right: WordPart[] } {
   const a = left.split(/(\s+)/);
