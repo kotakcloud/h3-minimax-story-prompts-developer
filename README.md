@@ -284,6 +284,12 @@ through a camera move in its first second or two. Every on-screen speaker's face
 Weak models (e.g. gemini-2.5-flash-lite) follow moves well but can skip a close framing; gemini-3.7-flash followed both.
 Changing the camera clears the current prompts, like any frame edit; a split keeps the frame's camera on every part.
 
+### Prompt sets
+
+Every write, update or saved edit makes a new prompt set; the earlier ones stay. Next to the Prompts model, **‹ ›** step
+to the previous or next set and the list picks any of them (newest first, with when it was made and its language). The
+link after it says what changed from the set before, and opens the side-by-side view.
+
 ### Editing prompts by hand
 
 On the Prompts step (outside Dialogue view) every prompt is an editable box. Edits are not saved as you type: an edited

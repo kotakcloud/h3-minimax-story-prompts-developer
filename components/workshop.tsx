@@ -3018,36 +3018,63 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                     </div>
                   </div>
                 )}
-                {revisions.map((revision, index) => {
-                  const active = revision.id === activeRevisionId;
-                  return (
-                    <button
-                      key={revision.id}
-                      type="button"
-                      title={`Prompt set ${index + 1}${revision.language ? ` · dialogue in ${revision.language}` : ""}`}
-                      aria-label={`Prompt set ${index + 1}`}
-                      onClick={() => {
-                        if (revision.id === activeRevisionId) return;
-                        if (hasPromptDrafts && !window.confirm("Drop your unsaved prompt edits and open this prompt set?")) return;
-                        setPromptDrafts({});
-                        setDurationDrafts({});
-                        setSegmentsDraft(null);
-                        setDeletedDrafts([]);
-                        patchStory({
-                          activeRevisionId: revision.id,
-                          segments: revision.segments,
-                        });
-                      }}
-                      className={`inline-flex h-8 min-w-8 items-center justify-center rounded-full px-2 text-xs ${
-                        active
-                          ? "bg-foreground text-background"
-                          : "border border-line text-muted"
-                      }`}
-                    >
-                      {index + 1}
-                    </button>
-                  );
-                })}
+                {revisions.length > 0 &&
+                  (() => {
+                    // One picker instead of a button per set: arrows step through them, the list has them all.
+                    const index = revisions.findIndex((revision) => revision.id === activeRevisionId);
+                    const open = (target: number) => {
+                      const revision = revisions[target];
+                      if (!revision || revision.id === activeRevisionId) return;
+                      if (hasPromptDrafts && !window.confirm("Drop your unsaved prompt edits and open this prompt set?")) return;
+                      setPromptDrafts({});
+                      setDurationDrafts({});
+                      setSegmentsDraft(null);
+                      setDeletedDrafts([]);
+                      patchStory({ activeRevisionId: revision.id, segments: revision.segments });
+                    };
+                    const when = (iso: string) => {
+                      const date = new Date(iso);
+                      return Number.isNaN(date.getTime())
+                        ? ""
+                        : date.toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+                    };
+                    const arrow = "inline-flex h-7 w-7 items-center justify-center rounded-full border border-line text-sm text-muted hover:text-foreground disabled:opacity-30 disabled:hover:text-muted";
+                    return (
+                      <span className="flex items-center gap-1 normal-case tracking-normal">
+                        <button type="button" className={arrow} disabled={index <= 0} onClick={() => open(index - 1)} aria-label="Previous prompt set" title="Previous prompt set">
+                          ‹
+                        </button>
+                        <select
+                          value={index}
+                          onChange={(event) => open(Number(event.target.value))}
+                          aria-label="Prompt set"
+                          title="Prompt set"
+                          className="h-7 rounded-full border border-line bg-card px-3 text-xs text-foreground"
+                        >
+                          {revisions
+                            .map((revision, number) => (
+                              <option key={revision.id} value={number}>
+                                {`Set ${number + 1} of ${revisions.length}`}
+                                {revision.createdAt ? ` · ${when(revision.createdAt)}` : ""}
+                                {revision.language ? ` · ${revision.language}` : ""}
+                                {number === revisions.length - 1 ? " · newest" : ""}
+                              </option>
+                            ))
+                            .reverse()}
+                        </select>
+                        <button
+                          type="button"
+                          className={arrow}
+                          disabled={index >= revisions.length - 1}
+                          onClick={() => open(index + 1)}
+                          aria-label="Next prompt set"
+                          title="Next prompt set"
+                        >
+                          ›
+                        </button>
+                      </span>
+                    );
+                  })()}
                 {(() => {
                   const index = revisions.findIndex((revision) => revision.id === activeRevisionId);
                   return index > 0 ? (
