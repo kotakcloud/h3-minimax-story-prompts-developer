@@ -21,6 +21,7 @@ import { StepModelSelect } from "@/components/step-model-select";
 import { CameraPicker } from "@/components/camera-picker";
 import { DurationInput } from "@/components/duration-input";
 import { SegmentRangeInput } from "@/components/segment-range-input";
+import { duplicateSegmentId, frameFor, segmentTitle } from "@/lib/segment-ids";
 import { CharacterIdsEditor } from "@/components/character-ids-editor";
 import { renumberCharacters } from "@/lib/character-ids";
 import { Money } from "@/components/money";
@@ -370,6 +371,9 @@ export function Workshop({
   const [promptDrafts, setPromptDrafts] = useState<Record<string, string>>({});
   // Segment lengths changed by hand on the Prompts step (seconds), saved with the prompt edits.
   const [durationDrafts, setDurationDrafts] = useState<Record<string, number>>({});
+  // Duplicate and Delete before Review & save: the block list with the added copies, and the blocks marked deleted.
+  const [segmentsDraft, setSegmentsDraft] = useState<PromptSegment[] | null>(null);
+  const [deletedDrafts, setDeletedDrafts] = useState<string[]>([]);
   const [promptReviewOpen, setPromptReviewOpen] = useState(false);
   const [promptSaving, setPromptSaving] = useState(false);
   // In Review & save: after saving, render the changed segments (from the one before) as a Veda Turbo DEV Ultra fast video.
@@ -490,6 +494,8 @@ export function Workshop({
       setStory({ ...loaded, step });
       setPromptDrafts({});
       setDurationDrafts({});
+      setSegmentsDraft(null);
+      setDeletedDrafts([]);
       // New prompts still waiting for their review open in Dialogue view.
       if (!loaded.promptsReviewed && loaded.segments.length > 0) setDialogueView(true);
       setStories(listData.stories || []);
@@ -962,7 +968,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
         body: JSON.stringify({
           storyId: current.id,
           segments: renderSegments.map((segment) => {
-            const frame = current.frames.find((item) => item.id === segment.id);
+            const frame = frameFor(current.frames, segment.id);
             return {
               duration: segment.duration,
               prompt: segment.prompt,
@@ -1418,6 +1424,8 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     // A new prompt set replaces the one the hand edits were made on.
     setPromptDrafts({});
     setDurationDrafts({});
+    setSegmentsDraft(null);
+    setDeletedDrafts([]);
     const prior = current.promptRevisions.length
       ? current.promptRevisions
       : current.segments.length
@@ -1534,7 +1542,8 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
 
   // Typed line lengths: a new prompt set with the timestamps moved, no AI involved.
   // Unsaved prompt edits: leaving or reloading the page asks first.
-  const hasPromptDrafts = Object.keys(promptDrafts).length + Object.keys(durationDrafts).length > 0;
+  const hasPromptDrafts =
+    Object.keys(promptDrafts).length + Object.keys(durationDrafts).length + deletedDrafts.length > 0 || segmentsDraft !== null;
   useEffect(() => {
     if (!hasPromptDrafts) return;
     const warn = (event: BeforeUnloadEvent) => event.preventDefault();
@@ -1546,9 +1555,11 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
   function editedSegments(): PromptSegment[] | null {
     const current = storyRef.current || story;
     if (!current) return null;
-    const changed = current.segments.some((segment) => segmentEdited(segment));
+    const changed = segmentsDraft !== null || deletedDrafts.length > 0 || current.segments.some((segment) => segmentEdited(segment));
     return changed
-      ? current.segments.map((segment) => ({
+      ? (segmentsDraft ?? current.segments)
+          .filter((segment) => !deletedDrafts.includes(segment.id))
+          .map((segment) => ({
           ...segment,
           prompt: promptDrafts[segment.id] ?? segment.prompt,
           duration: durationDrafts[segment.id] ?? segment.duration,
@@ -1566,12 +1577,75 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
 
   // The segments a re-run after saving the hand edits covers: from the one before the first changed segment to the
   // last changed one (5 of 10 changed → 4-5). Null when nothing changed.
+  // A duplicated block counts as changed; a deleted one marks the segment that now follows it (or the last one).
   function rerunRange(): { from: number; to: number } | null {
     const current = storyRef.current || story;
     if (!current) return null;
-    const changed = current.segments.flatMap((segment, index) => (segmentEdited(segment) ? [index + 1] : []));
+    const changed: number[] = [];
+    let number = 0;
+    let afterDeleted = false;
+    for (const segment of segmentsDraft ?? current.segments) {
+      if (deletedDrafts.includes(segment.id)) {
+        afterDeleted = true;
+        continue;
+      }
+      number += 1;
+      if (afterDeleted || isNewSegment(segment) || segmentEdited(segment)) changed.push(number);
+      afterDeleted = false;
+    }
+    if (afterDeleted && number > 0) changed.push(number);
     if (changed.length === 0) return null;
     return { from: Math.max(1, changed[0] - 1), to: changed[changed.length - 1] };
+  }
+
+  // A block added with Duplicate and not saved yet.
+  function isNewSegment(segment: PromptSegment) {
+    const current = storyRef.current || story;
+    return Boolean(current && !current.segments.some((item) => item.id === segment.id));
+  }
+
+  // Duplicate: a copy of the block (with its unsaved edits) right below it, unsaved until Review & save.
+  function duplicateSegment(segment: PromptSegment) {
+    const current = storyRef.current;
+    if (!current) return;
+    const list = segmentsDraft ?? current.segments;
+    const frame = frameFor(current.frames, segment.id);
+    const panel = segment.panel ?? frame?.panel;
+    const join = segment.join ?? frame?.join;
+    const copy: PromptSegment = {
+      ...segment,
+      id: duplicateSegmentId(segment.id),
+      prompt: promptDrafts[segment.id] ?? segment.prompt,
+      duration: durationDrafts[segment.id] ?? segment.duration,
+      ...(panel ? { panel } : {}),
+      ...(join ? { join } : {}),
+    };
+    const at = list.findIndex((item) => item.id === segment.id);
+    setSegmentsDraft([...list.slice(0, at + 1), copy, ...list.slice(at + 1)]);
+    window.setTimeout(
+      () => document.getElementById(`prompt-${copy.id}`)?.scrollIntoView({ block: "center", behavior: "smooth" }),
+      50,
+    );
+  }
+
+  // Delete: a duplicate not saved yet just goes; a saved block is marked deleted until Review & save (Undo restores it).
+  function deleteSegment(segment: PromptSegment) {
+    const current = storyRef.current;
+    if (!current) return;
+    if (!isNewSegment(segment)) {
+      setDeletedDrafts((ids) => (ids.includes(segment.id) ? ids : [...ids, segment.id]));
+      return;
+    }
+    const list = (segmentsDraft ?? current.segments).filter((item) => item.id !== segment.id);
+    const same = list.length === current.segments.length && list.every((item, index) => item.id === current.segments[index].id);
+    setSegmentsDraft(same ? null : list);
+    const drop = <T,>(drafts: Record<string, T>) => {
+      const next = { ...drafts };
+      delete next[segment.id];
+      return next;
+    };
+    setPromptDrafts(drop);
+    setDurationDrafts(drop);
   }
 
   // Confirmed in the diff: the hand edits become a new prompt set, and (when ticked) the changed part is rendered.
@@ -1586,6 +1660,8 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
       await saveRevision(segments, true, activePromptStyle(current));
       setPromptDrafts({});
       setDurationDrafts({});
+      setSegmentsDraft(null);
+      setDeletedDrafts([]);
       setPromptReviewOpen(false);
       if (range) {
         const queued = await runVideo({
@@ -2941,6 +3017,8 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                         if (hasPromptDrafts && !window.confirm("Drop your unsaved prompt edits and open this prompt set?")) return;
                         setPromptDrafts({});
                         setDurationDrafts({});
+                        setSegmentsDraft(null);
+                        setDeletedDrafts([]);
                         patchStory({
                           activeRevisionId: revision.id,
                           segments: revision.segments,
@@ -3127,12 +3205,18 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
               ) : (
               <>
               {(() => {
-                const count = story.segments.filter((segment) => segmentEdited(segment)).length;
-                return count > 0 ? (
+                const list = segmentsDraft ?? story.segments;
+                const count = list.filter((segment) => segmentEdited(segment) && !deletedDrafts.includes(segment.id) && !isNewSegment(segment)).length;
+                const added = list.filter((segment) => isNewSegment(segment)).length;
+                const deleted = deletedDrafts.length;
+                const parts = [
+                  count ? `${count} ${count === 1 ? "prompt" : "prompts"} edited` : "",
+                  added ? `${added} duplicated` : "",
+                  deleted ? `${deleted} deleted` : "",
+                ].filter(Boolean);
+                return parts.length > 0 ? (
                   <div className="sticky top-[calc(var(--nav-h)+0.5rem)] z-20 mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-accent/60 bg-card px-4 py-2 text-sm">
-                    <span>
-                      {count} {count === 1 ? "prompt" : "prompts"} edited, not saved
-                    </span>
+                    <span>{parts.join(" · ")}, not saved</span>
                     <span className="flex items-center gap-2">
                       <button
                         type="button"
@@ -3140,6 +3224,8 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                           if (window.confirm("Drop all unsaved prompt edits?")) {
                             setPromptDrafts({});
                             setDurationDrafts({});
+                            setSegmentsDraft(null);
+                            setDeletedDrafts([]);
                           }
                         }}
                         className="rounded-full border border-line px-3 py-1 text-xs text-muted hover:text-foreground"
@@ -3189,22 +3275,63 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                 />
               )}
               <ol className="space-y-5">
-                {story.segments.map((segment, index) => {
-                  const frame = story.frames.find((item) => item.id === segment.id);
+                {(() => {
+                  // Numbered as they will be once saved: deleted blocks get no number.
+                  let number = 0;
+                  return (segmentsDraft ?? story.segments).map((segment) => {
+                  const title = segmentTitle(story.frames, segment.id);
+                  if (deletedDrafts.includes(segment.id)) {
+                    return (
+                      <li
+                        key={segment.id}
+                        id={`prompt-${segment.id}`}
+                        className="flex flex-wrap items-center gap-3 rounded-2xl border border-dashed border-red-400/50 bg-card px-4 py-2 text-sm"
+                      >
+                        <span className="text-muted line-through">{title}</span>
+                        <span className="text-xs text-red-300">Deleted, not saved</span>
+                        <button
+                          type="button"
+                          onClick={() => setDeletedDrafts((ids) => ids.filter((id) => id !== segment.id))}
+                          className="text-xs text-muted underline underline-offset-2 hover:text-foreground"
+                        >
+                          Undo
+                        </button>
+                      </li>
+                    );
+                  }
+                  number += 1;
+                  const index = number - 1;
+                  const isNew = isNewSegment(segment);
                   return (
-                    <li key={segment.id} id={`prompt-${segment.id}`} className="scroll-mt-24 rounded-2xl border border-line bg-card p-4">
+                    <li
+                      key={segment.id}
+                      id={`prompt-${segment.id}`}
+                      className={`scroll-mt-24 rounded-2xl border bg-card p-4 ${isNew ? "border-accent/60" : "border-line"}`}
+                    >
                       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                         <div>
                           <p className="text-sm font-medium">
-                            {index + 1}. {frame?.title || segment.id}
+                            {index + 1}. {title}
+                            {isNew && <span className="ml-2 text-xs font-normal text-accent">New, not saved</span>}
                           </p>
                         </div>
-                        <IconButton
-                          label={copiedId === segment.id ? "Copied" : "Copy prompt"}
-                          onClick={() => copyPrompt(segment)}
-                        >
-                          {copiedId === segment.id ? Icons.check : Icons.copy}
-                        </IconButton>
+                        <div className="flex items-center gap-1">
+                          <IconButton
+                            label={copiedId === segment.id ? "Copied" : "Copy prompt"}
+                            onClick={() => copyPrompt({ ...segment, prompt: promptDrafts[segment.id] ?? segment.prompt })}
+                          >
+                            {copiedId === segment.id ? Icons.check : Icons.copy}
+                          </IconButton>
+                          <IconButton label="Duplicate: a copy right below, to change (saved with Review & save)" onClick={() => duplicateSegment(segment)}>
+                            {Icons.duplicate}
+                          </IconButton>
+                          <IconButton
+                            label={isNew ? "Delete this copy" : "Delete this segment (saved with Review & save; Undo brings it back)"}
+                            onClick={() => deleteSegment(segment)}
+                          >
+                            {Icons.trash}
+                          </IconButton>
+                        </div>
                       </div>
                       {(() => {
                         const draft = promptDrafts[segment.id];
@@ -3285,7 +3412,8 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                       })()}
                     </li>
                   );
-                })}
+                  });
+                })()}
               </ol>
               </>
               )}
@@ -4166,7 +4294,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
         options={story.segments.map((segment, index) => ({
           id: segment.id,
           number: index + 1,
-          title: story.frames.find((frame) => frame.id === segment.id)?.title || `Prompt ${index + 1}`,
+          title: segmentTitle(story.frames, segment.id, `Prompt ${index + 1}`),
         }))}
         busy={busy === "update"}
         onClose={() => {

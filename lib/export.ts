@@ -1,4 +1,5 @@
 import type { Frame, PromptSegment } from "./types";
+import { segmentTitle } from "./segment-ids";
 
 export function buildExportPayload(title: string, segments: PromptSegment[]) {
   return {
@@ -18,8 +19,7 @@ export function buildMarkdownExport(
   const heading = title.trim() || "Untitled story";
   const body = segments
     .map((segment, index) => {
-      const frame = frames.find((item) => item.id === segment.id);
-      const name = frame?.title || `Segment ${index + 1}`;
+      const name = segmentTitle(frames, segment.id, `Segment ${index + 1}`);
       return `## ${index + 1}. ${name} (${segment.duration}s)\n\n${segment.prompt.trim()}`;
     })
     .join("\n\n---\n\n");

@@ -1,4 +1,5 @@
 import type { Story } from "@/lib/types";
+import { frameFor } from "@/lib/segment-ids";
 
 // Video tab of an imported story: what the file brought along from the earlier steps.
 export function ImportedDetails({ story }: { story: Story }) {
@@ -34,7 +35,7 @@ export function ImportedDetails({ story }: { story: Story }) {
       ))}
       <ol className="mt-3 space-y-1">
         {story.segments.map((segment, index) => {
-          const frame = story.frames.find((item) => item.id === segment.id);
+          const frame = frameFor(story.frames, segment.id);
           return (
             <li key={`${segment.id}-${index}`}>
               <details>

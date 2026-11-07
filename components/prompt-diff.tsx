@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { diffPromptSets, diffWords, type DiffRow, type SetDiff, type WordPart } from "@/lib/prompt-diff";
 import type { Frame, PromptSegment } from "@/lib/types";
+import { segmentTitle } from "@/lib/segment-ids";
 
 // How many unchanged lines stay visible around a change.
 const CONTEXT_LINES = 1;
@@ -158,7 +159,7 @@ function PromptDiffDialog({
           </div>
           <div className="space-y-5">
             {diff.segments.map((segment, index) => {
-              const title = frames.find((frame) => frame.id === segment.id)?.title || segment.id;
+              const title = segmentTitle(frames, segment.id);
               const changed = segment.added + segment.removed + segment.updated > 0;
               const seconds =
                 segment.leftDuration === segment.rightDuration
@@ -169,7 +170,11 @@ function PromptDiffDialog({
                   <p className="mb-1 text-sm font-medium">
                     {index + 1}. {title} <span className="text-xs font-normal text-muted">· {seconds}</span>
                     <span className="ml-2 text-xs font-normal text-muted">
-                      {changed
+                      {segment.leftDuration === undefined
+                        ? "new segment"
+                        : segment.rightDuration === undefined
+                          ? "deleted"
+                          : changed
                         ? `${segment.added} added · ${segment.removed} removed · ${segment.updated} updated`
                         : segment.leftDuration !== segment.rightDuration
                           ? "length changed"

@@ -293,6 +293,13 @@ prompt set (the earlier set stays), *Keep editing* goes back. Opening another pr
 edits, and so does leaving or reloading the page. Each prompt's **Duration** box (4–15 s) is edited the same way: a changed length
 is saved with the prompt edits through Review & save, which shows it as `8s → 10s`.
 
+Next to each prompt's copy button, **Duplicate** puts a copy of the block (with its unsaved edits) right below it, marked
+*New, not saved*, to change as you like; **Delete** marks a block *Deleted, not saved* (*Undo* brings it back), and on an
+unsaved copy just removes it. Both are saved with the other edits through Review & save, which lists the copy as *new
+segment* and the removed one as *deleted*. A copy keeps the title, panel and join of the frame it came from (shown as
+"(copy)"); no frame is added or removed. The re-run range counts a copy as changed, and a deleted block as a change to
+the segment that now follows it.
+
 When a reference image is selected, Review & save also offers **Re-run video for segments 4-5 after saving** (ticked by
 default): it covers the segment before the first changed one up to the last changed one (segment 5 of 10 changed →
 4-5). On **Confirm & save** the new prompt set is saved, those segments are sent to ComfyUI as a Veda Turbo DEV Ultra fast

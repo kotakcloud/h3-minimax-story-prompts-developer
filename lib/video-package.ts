@@ -1,4 +1,5 @@
 import { isVideoEngine } from "./engines";
+import { frameFor } from "./segment-ids";
 import type { Character, Frame, PromptSegment, PromptStyle, ReferenceImage, Story, StoryLocation, StoryType, VideoSettings } from "./types";
 import { DEFAULT_VIDEO_SETTINGS, activePromptStyle, isPromptStyle, isStoryType } from "./types";
 
@@ -120,7 +121,7 @@ export async function buildVideoPackage(
       },
     ],
     segments: story.segments.map((segment) => {
-      const frame = story.frames.find((item) => item.id === segment.id);
+      const frame = frameFor(story.frames, segment.id);
       const panel = segment.panel ?? frame?.panel;
       const join = segment.join ?? frame?.join;
       return {

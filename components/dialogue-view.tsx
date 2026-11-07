@@ -11,6 +11,7 @@ import {
   type LineText,
 } from "@/lib/dialogue";
 import type { Character, Frame, PromptSegment } from "@/lib/types";
+import { segmentTitle } from "@/lib/segment-ids";
 
 function clock(value: number) {
   return `${Math.floor(value / 60)}:${(value % 60).toFixed(1).padStart(4, "0")}`;
@@ -130,7 +131,7 @@ export function DialogueView({
             <li key={segment.id} id={`dialogue-${segment.id}`} className="scroll-mt-24 rounded-2xl border border-line bg-card p-4">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <p className="text-sm font-medium">
-                  {index + 1}. {frames.find((item) => item.id === segment.id)?.title || segment.id}
+                  {index + 1}. {segmentTitle(frames, segment.id)}
                 </p>
                 <p className={`text-xs ${tight ? "text-amber-300" : "text-muted"}`}>
                   {segment.duration}s

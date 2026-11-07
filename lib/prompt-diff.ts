@@ -54,7 +54,13 @@ function diffLines(left: string[], right: string[]): DiffRow[] {
 }
 
 export function diffPromptSets(older: PromptSegment[], newer: PromptSegment[]): SetDiff {
-  const ids = [...new Set([...newer.map((segment) => segment.id), ...older.map((segment) => segment.id)])];
+  // The newer order, with each removed segment back after the one it followed.
+  const ids = newer.map((segment) => segment.id);
+  older.forEach((segment, index) => {
+    if (ids.includes(segment.id)) return;
+    const before = index > 0 ? ids.indexOf(older[index - 1].id) : -1;
+    ids.splice(before + 1, 0, segment.id);
+  });
   const segments = ids.map((id) => {
     const left = older.find((segment) => segment.id === id);
     const right = newer.find((segment) => segment.id === id);

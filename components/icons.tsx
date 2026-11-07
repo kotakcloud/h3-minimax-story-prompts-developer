@@ -79,6 +79,13 @@ export const Icons = {
       <path d="M5 16V5h11" />
     </Svg>
   ),
+  duplicate: (
+    <Svg>
+      <rect x="8" y="8" width="11" height="11" rx="2" />
+      <path d="M5 16V5h11" />
+      <path d="M13.5 11v5M11 13.5h5" />
+    </Svg>
+  ),
   check: (
     <Svg>
       <path d="m5 12 5 5 9-10" />
