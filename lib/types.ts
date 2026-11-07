@@ -129,6 +129,9 @@ export type VideoSettings = {
   onlyFrom: number;
   // New videos play a sound when they are done (each run keeps its own tick, changeable while it runs).
   notifySound: boolean;
+  // New videos start playing when they are done (on this story's page), or play in picture in picture.
+  autoPlay: boolean;
+  autoPlayPip: boolean;
 };
 
 export type VideoRunStatus = "queued" | "running" | "done" | "error" | "cancelled";
@@ -141,6 +144,9 @@ export type VideoRun = {
   ultraFast?: boolean;
   // Queued with "Play a sound when done".
   notifySound?: boolean;
+  // Play when done (opens the Video step), or play in picture in picture.
+  autoPlay?: boolean;
+  autoPlayPip?: boolean;
   seed: number;
   engine?: VideoEngine;
   megapixels?: number;
@@ -286,6 +292,8 @@ export const DEFAULT_VIDEO_SETTINGS: VideoSettings = {
   onlyFirst: 0,
   onlyFrom: 0,
   notifySound: false,
+  autoPlay: false,
+  autoPlayPip: false,
 };
 
 // Story V2 is proven with 3–8 s segments only (Themed Transformation Pipeline renders).

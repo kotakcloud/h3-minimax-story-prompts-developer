@@ -26,10 +26,23 @@ let windowRefused = false;
 // window (embedded browsers do), the video's own picture-in-picture is used. Browsers with neither (Firefox) do not
 // show the button.
 // onFloat: called when the video goes into picture in picture (the floating window keeps playing when the page moves on).
-export function VideoPlayer({ onFloat, ...props }: VideoHTMLAttributes<HTMLVideoElement> & { onFloat?: () => void }) {
+// autoStart: play it now ("play"), or play it in picture in picture ("pip"); onAutoStarted is called once that is done.
+// Browsers only open picture in picture after a click or key press, so when the window is refused the next click or
+// key press anywhere on the page opens it.
+export function VideoPlayer({
+  onFloat,
+  autoStart,
+  onAutoStarted,
+  ...props
+}: VideoHTMLAttributes<HTMLVideoElement> & {
+  onFloat?: () => void;
+  autoStart?: "play" | "pip";
+  onAutoStarted?: () => void;
+}) {
   const video = useRef<HTMLVideoElement>(null);
   const [floating, setFloating] = useState(false);
   const [retry, setRetry] = useState(false);
+  const [waitingForClick, setWaitingForClick] = useState(false);
   const supported = typeof document !== "undefined" && (documentPip() !== null || document.pictureInPictureEnabled);
 
   useEffect(() => {
@@ -75,11 +88,85 @@ export function VideoPlayer({ onFloat, ...props }: VideoHTMLAttributes<HTMLVideo
     });
   }
 
+  // Picture in picture without the button: the floating window where there is one, else the video's own. False when
+  // the browser refused (usually: no click or key press just before).
+  async function enterPip(element: HTMLVideoElement): Promise<boolean> {
+    const pip = windowRefused ? null : documentPip();
+    if (pip) {
+      // Read before asking: a refusal uses up the click.
+      const afterClick = navigator.userActivation?.isActive ?? false;
+      try {
+        await floatWindow(pip, element);
+        return true;
+      } catch {
+        // Refused even right after a click: this browser does not allow the window (the Claude app's pane). That
+        // click is used up, so the video's own picture in picture waits for the next one.
+        if (afterClick) {
+          windowRefused = true;
+          return false;
+        }
+      }
+    }
+    try {
+      await element.requestPictureInPicture();
+      onFloat?.();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  useEffect(() => {
+    const element = video.current;
+    if (!autoStart || !element) return;
+    let stopped = false;
+    let armed: (() => void) | null = null;
+    const start = async () => {
+      if (stopped) return;
+      element.scrollIntoView({ block: "center", behavior: "smooth" });
+      // With sound when the page allows it, else muted (the controls unmute it).
+      await element.play().catch(async () => {
+        element.muted = true;
+        await element.play().catch(() => {});
+      });
+      if (autoStart === "pip" && !(await enterPip(element)) && !stopped) {
+        setWaitingForClick(true);
+        // Each click or key press tries again until the browser opens it (a refused floating window uses one up).
+        const go = async () => {
+          if (!(await enterPip(element))) return;
+          disarm();
+          setWaitingForClick(false);
+          onAutoStarted?.();
+        };
+        const disarm = () => {
+          window.removeEventListener("pointerdown", go, true);
+          window.removeEventListener("keydown", go, true);
+          armed = null;
+        };
+        window.addEventListener("pointerdown", go, true);
+        window.addEventListener("keydown", go, true);
+        armed = disarm;
+        // Done once the click opens it (onAutoStarted then), so the waiting listener stays until then.
+        return;
+      }
+      onAutoStarted?.();
+    };
+    if (element.readyState >= 1) void start();
+    else element.addEventListener("loadedmetadata", () => void start(), { once: true });
+    return () => {
+      stopped = true;
+      armed?.();
+    };
+    // Runs once per request to start; the handlers it uses do not change what it does.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart]);
+
   async function toggle() {
     const element = video.current;
     if (!element) return;
     const pip = windowRefused ? null : documentPip();
     setRetry(false);
+    setWaitingForClick(false);
     try {
       if (pip && floating && pip.window) {
         pip.window.close();
@@ -109,9 +196,17 @@ export function VideoPlayer({ onFloat, ...props }: VideoHTMLAttributes<HTMLVideo
             type="button"
             onClick={() => void toggle()}
             title="Play in a small floating window that stays on top, also when you switch tabs"
-            className="rounded-full border border-line px-3 py-1 text-xs text-foreground"
+            className={`rounded-full border px-3 py-1 text-xs text-foreground ${
+              waitingForClick && !floating ? "animate-pulse border-accent" : "border-line"
+            }`}
           >
-            {floating ? "Back to page" : retry ? "Click again" : "Picture in picture"}
+            {floating
+              ? "Back to page"
+              : retry
+                ? "Click again"
+                : waitingForClick
+                  ? "Click anywhere for picture in picture"
+                  : "Picture in picture"}
           </button>
         </div>
       )}

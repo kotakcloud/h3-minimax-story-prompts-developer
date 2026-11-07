@@ -112,6 +112,12 @@ now, because a run takes a single reference image.
   60 s countdown with a Cancel button at the top of the page, and hibernates the computer running the app once ComfyUI has
   no jobs left, including jobs from other stories. It is used once and never saved, so tick it for each render. Keep the
   page open: the browser tab runs both, and a background tab can add up to a minute.
+- **Auto-play / Auto-play in picture in picture**: settings saved with the story, copied onto each new video (and
+  changeable per video while it runs). When a video with the tick is done and this story is open, the Video step opens
+  and the video plays (with sound when the browser allows, else muted). With *in picture in picture* it also goes into
+  the floating window and the page switches to the Prompts step, so you can read the prompts while it plays. Browsers
+  only open that window right after a click or key press: then its button blinks *Click anywhere for picture in
+  picture*, and the next click or key press anywhere on the page opens it (in the Claude app's browser pane it takes two).
 - **Only segments**: tick it and type a range to render only those segments of the prompt set, to try a look or redo
   a part before rendering a long story: `3-6` renders segments 3 to 6, `4` only segment 4, `3-` from 3 to the end, `-4`
   the first four. The time estimate follows the range, and the run's details say "test: segments 3–6 of M" (or
@@ -290,7 +296,8 @@ is saved with the prompt edits through Review & save, which shows it as `8s → 
 When a reference image is selected, Review & save also offers **Re-run video for segments 4-5 after saving** (ticked by
 default): it covers the segment before the first changed one up to the last changed one (segment 5 of 10 changed →
 4-5). On **Confirm & save** the new prompt set is saved, those segments are sent to ComfyUI as a Veda Turbo DEV video
-(for this run only; the Video step's settings stay as they are), and the Video step opens. Untick it to only save.
+(for this run only; the Video step's settings stay as they are), and the Video step opens. That video has *Auto-play
+in picture in picture* on, so when it is done it plays floating over the Prompts step. Untick it to only save.
 
 ### Editing spoken lines (Dialogue view)
 

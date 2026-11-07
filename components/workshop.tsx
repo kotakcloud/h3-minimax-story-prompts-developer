@@ -374,6 +374,10 @@ export function Workshop({
   const [promptSaving, setPromptSaving] = useState(false);
   // In Review & save: after saving, render the changed segments (from the one before) as a Veda Turbo DEV video.
   const [rerunAfterSave, setRerunAfterSave] = useState(true);
+  // A video that just finished with an auto-play tick: its player starts it (in picture in picture for "pip").
+  const [autoStartRun, setAutoStartRun] = useState<{ id: string; mode: "play" | "pip" } | null>(null);
+  const stepRef = useRef(step);
+  stepRef.current = step;
   // A Prompts model picked on a story that has frames: asked whether to branch a new story or change this one.
   const [promptModelChoice, setPromptModelChoice] = useState<string | null>(null);
   const [castCommentOpen, setCastCommentOpen] = useState(false);
@@ -792,7 +796,10 @@ export function Workshop({
   }
 
   // The owner's rating (1-5, 0 = none) and note on a finished video, saved with the story.
-  function rateVideo(runId: string, patch: { rating?: number; note?: string; collapsed?: boolean; notifySound?: boolean }) {
+  function rateVideo(
+    runId: string,
+    patch: { rating?: number; note?: string; collapsed?: boolean; notifySound?: boolean; autoPlay?: boolean; autoPlayPip?: boolean },
+  ) {
     const current = storyRef.current;
     if (!current) return;
     patchStory({ videos: current.videos.map((item) => (item.id === runId ? { ...item, ...patch } : item)) });
@@ -1000,6 +1007,8 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
         devMode: settings.devMode,
         ...(ultra ? { ultraFast: true } : {}),
         ...(settings.notifySound ? { notifySound: true } : {}),
+        ...(settings.autoPlay ? { autoPlay: true } : {}),
+        ...(settings.autoPlayPip ? { autoPlayPip: true } : {}),
         seed: settings.seed,
         engine: settings.engine,
         ...(v2
@@ -1149,10 +1158,16 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
       .map((id) => storyRef.current?.videos.find((run) => run.id === id))
       .filter((run) => run && run.status !== "cancelled");
     if (ended.some((run) => run?.notifySound)) playDoneSound();
+    // Auto-play: the newest finished video with the tick, on the Video step.
+    const autoRun = ended.find((run) => run?.status === "done" && run.video && (run.autoPlay || run.autoPlayPip));
+    if (autoRun) {
+      setAutoStartRun({ id: autoRun.id, mode: autoRun.autoPlayPip ? "pip" : "play" });
+      if (stepRef.current !== "video") router.push(storyPath(storyId, "video"));
+    }
     if (!activeRunKey && ended.length > 0 && readHibernateTick(storyId)) {
       window.setTimeout(() => setHibernateAt(Date.now() + HIBERNATE_COUNTDOWN_MS), 0);
     }
-  }, [activeRunKey, storyId]);
+  }, [activeRunKey, storyId, router]);
 
   // Counts against the clock: timers in a background tab can run as little as once a minute.
   useEffect(() => {
@@ -1579,6 +1594,8 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
           ultraFast: false,
           onlyFrom: range.from,
           onlyFirst: range.to,
+          // Watch the new take floating while reading the prompts.
+          autoPlayPip: true,
         });
         if (queued) router.push(storyPath(storyId, "video"));
       }
@@ -3644,6 +3661,25 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                           />
                           Play a sound when done
                         </label>
+                        <label className="flex items-center gap-2" title="When a new video is done, the Video step opens and it plays (keep this story open)">
+                          <input
+                            type="checkbox"
+                            checked={settings.autoPlay}
+                            onChange={(event) => updateVideoSettings({ autoPlay: event.target.checked })}
+                          />
+                          Auto-play
+                        </label>
+                        <label
+                          className="flex items-center gap-2"
+                          title="When a new video is done, it plays in picture in picture, so you can watch it on the Prompts step. Browsers often want a click first: then the next click or key press anywhere opens it."
+                        >
+                          <input
+                            type="checkbox"
+                            checked={settings.autoPlayPip}
+                            onChange={(event) => updateVideoSettings({ autoPlayPip: event.target.checked })}
+                          />
+                          Auto-play in picture in picture
+                        </label>
                         <label
                           className="flex items-center gap-2"
                           title="When every video in progress here has ended: a 60 s countdown you can cancel, then this computer hibernates. It waits while ComfyUI has other jobs. Keep this page open. The tick is used once."
@@ -3940,6 +3976,25 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                                       />
                                       Play a sound when done
                                     </label>
+                                    <label className="flex items-center gap-2" title="For this video only: when it is done, the Video step opens and it plays">
+                                      <input
+                                        type="checkbox"
+                                        checked={Boolean(run.autoPlay)}
+                                        onChange={(event) => rateVideo(run.id, { autoPlay: event.target.checked })}
+                                      />
+                                      Auto-play
+                                    </label>
+                                    <label
+                                      className="flex items-center gap-2"
+                                      title="For this video only: when it is done, it plays in picture in picture (if the browser asks for a click first, the next click or key press anywhere opens it)"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={Boolean(run.autoPlayPip)}
+                                        onChange={(event) => rateVideo(run.id, { autoPlayPip: event.target.checked })}
+                                      />
+                                      Auto-play in picture in picture
+                                    </label>
                                     <label
                                       className="flex items-center gap-2"
                                       title="Same tick as under Generate video: when every video in progress here has ended, a 60 s countdown you can cancel, then this computer hibernates. Keep this page open."
@@ -4005,6 +4060,8 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                                       className="mt-2 w-full rounded-xl border border-line"
                                       // Watch it floating while reading the prompts.
                                       onFloat={() => goTo("prompts")}
+                                      autoStart={autoStartRun?.id === run.id ? autoStartRun.mode : undefined}
+                                      onAutoStarted={() => setAutoStartRun(null)}
                                     />
                                     <p className="mt-2 break-all text-xs text-muted">
                                       ComfyUI output: {run.video.subfolder}\{run.video.filename}

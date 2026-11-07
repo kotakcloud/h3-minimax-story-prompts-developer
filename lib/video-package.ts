@@ -170,6 +170,8 @@ function parseSettings(value: unknown): VideoPackage["settings"] {
     onlyFirst: Math.max(0, Math.floor(number(raw.onlyFirst, 0))),
     onlyFrom: Math.max(0, Math.floor(number(raw.onlyFrom, 0))),
     notifySound: raw.notifySound === true,
+    autoPlay: raw.autoPlay === true,
+    autoPlayPip: raw.autoPlayPip === true,
     gridFeed: raw.gridFeed === "panels" ? "panels" : "whole",
   };
 }
