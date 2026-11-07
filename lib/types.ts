@@ -124,8 +124,9 @@ export type VideoSettings = {
   v2DevSteps: number;
   // Enhancement LoRAs chosen in the LoRA popup (enabled or not, so strengths are remembered).
   loras: { name: string; strength: number; enabled: boolean }[];
-  // Test mode: render only the first N segments (0 = all).
+  // Test mode: render only segments onlyFrom..onlyFirst (1-based; onlyFirst 0 = all, onlyFrom 0 = from the first).
   onlyFirst: number;
+  onlyFrom: number;
   // New videos play a sound when they are done (each run keeps its own tick, changeable while it runs).
   notifySound: boolean;
 };
@@ -160,6 +161,8 @@ export type VideoRun = {
   // Enhancement LoRAs used, and how many of the prompt set's segments were rendered.
   loras?: { name: string; strength: number }[];
   totalSegments?: number;
+  // 1-based number of the first segment rendered, when the test range did not start at 1.
+  firstSegment?: number;
   // The owner's own rating (1-5 stars) and note.
   rating?: number;
   note?: string;
@@ -281,6 +284,7 @@ export const DEFAULT_VIDEO_SETTINGS: VideoSettings = {
   v2DevSteps: 10,
   loras: [],
   onlyFirst: 0,
+  onlyFrom: 0,
   notifySound: false,
 };
 

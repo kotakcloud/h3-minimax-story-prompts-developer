@@ -11,7 +11,7 @@ Local workshop for turning a story gist into MiniMax H3 prompts and rendering th
 | ![Frames read from the grid](docs/screenshots/frames-from-grid.png) | ![Prompts](docs/screenshots/prompts.png) |
 | **Frames**: one frame per panel, with panel and cut/continue join; prompt style and H3 tips. | **Prompts**: paste-ready H3 prompts, prompt sets (1, 2, 3 = Gujarati), language versions and updates. |
 | ![Video tab](docs/screenshots/video.png) | ![Comparison](docs/screenshots/comparison.png) |
-| **Video**: workflow, DEV/FULL, LoRAs, test with the first N segments, and every generation with its details. | **Comparisons**: generations stitched side by side with their settings, here English vs Gujarati. |
+| **Video**: workflow, DEV/FULL, LoRAs, test with a range of segments (e.g. 3-6), and every generation with its details. | **Comparisons**: generations stitched side by side with their settings, here English vs Gujarati. |
 
 
 Stories are saved as JSON files under `data/stories/` on this machine. Each story has its own URL with an id and step:
@@ -112,8 +112,10 @@ now, because a run takes a single reference image.
   60 s countdown with a Cancel button at the top of the page, and hibernates the computer running the app once ComfyUI has
   no jobs left, including jobs from other stories. It is used once and never saved, so tick it for each render. Keep the
   page open: the browser tab runs both, and a background tab can add up to a minute.
-- **Skip segments after N**: tick it and set N to render only the first N segments of the prompt set, to try a look
-  before rendering a long story. The run's details say "test: first N of M".
+- **Only segments**: tick it and type a range to render only those segments of the prompt set, to try a look or redo
+  a part before rendering a long story: `3-6` renders segments 3 to 6, `4` only segment 4, `3-` from 3 to the end, `-4`
+  the first four. The time estimate follows the range, and the run's details say "test: segments 3–6 of M" (or
+  "first N of M").
 - **LoRAs · edit** opens the enhancement-LoRA popup. It lists what ComfyUI has in `models/loras/minimax-h3`, scanned
   fresh every time it opens (new files show up without a restart). Tick a LoRA and set its strength (-2..2); speed
   LoRAs are marked and hidden by default (*Hide speed LoRAs*; an enabled one stays visible), since the fast

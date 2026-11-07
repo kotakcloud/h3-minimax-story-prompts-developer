@@ -20,6 +20,7 @@ import { modelLabel, stepModel, storyModelsLabel } from "@/lib/models";
 import { StepModelSelect } from "@/components/step-model-select";
 import { CameraPicker } from "@/components/camera-picker";
 import { DurationInput } from "@/components/duration-input";
+import { SegmentRangeInput } from "@/components/segment-range-input";
 import { CharacterIdsEditor } from "@/components/character-ids-editor";
 import { renumberCharacters } from "@/lib/character-ids";
 import { Money } from "@/components/money";
@@ -254,7 +255,7 @@ function runLabelLines(run: VideoRun, story: Story, letter: string): string[] {
     [
       setNumber > 0 ? `set ${setNumber}${revision?.language ? ` (${revision.language})` : ""}` : "set deleted",
       durations.length ? `${durations.reduce((sum, value) => sum + value, 0)} s` : "",
-      run.totalSegments && run.totalSegments > run.segmentCount ? `first ${run.segmentCount} of ${run.totalSegments}` : "",
+      rangeLabel(run),
       `seed ${run.seed}`,
     ]
       .filter(Boolean)
@@ -315,6 +316,22 @@ function apiStep(url: string): StoryStep | null {
   if (path === "/api/breakdown" || path === "/api/grid/frames" || path === "/api/frames/split") return "frames";
   if (path === "/api/prompts" || path.startsWith("/api/prompts/")) return "prompts";
   return null;
+}
+
+// The 1-based segments a video renders: the test range when set, else all of them.
+function renderRange(settings: Story["videoSettings"], count: number) {
+  const to = settings.onlyFirst > 0 ? Math.min(settings.onlyFirst, count) : count;
+  const from = Math.min(Math.max(1, settings.onlyFrom || 1), Math.max(1, to));
+  return { from, to };
+}
+
+// "first 3 of 10" or "segments 3–6 of 10" for a test render; "" when it rendered everything.
+function rangeLabel(run: VideoRun) {
+  const first = run.firstSegment || 1;
+  if (!run.totalSegments || (first === 1 && run.totalSegments <= run.segmentCount)) return "";
+  if (first === 1) return `first ${run.segmentCount} of ${run.totalSegments}`;
+  const last = first + run.segmentCount - 1;
+  return `${first === last ? `segment ${first}` : `segments ${first}–${last}`} of ${run.totalSegments}`;
 }
 
 export function Workshop({
@@ -923,9 +940,9 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     try {
       const settings = current.videoSettings;
       const ultra = settings.ultraFast && settings.devMode && isFastEngine(settings.engine);
-      // Test mode: only the first N segments; enhancement LoRAs from the LoRA popup.
-      const limit = settings.onlyFirst > 0 ? Math.min(settings.onlyFirst, current.segments.length) : current.segments.length;
-      const renderSegments = current.segments.slice(0, limit);
+      // Test mode: only a range of segments; enhancement LoRAs from the LoRA popup.
+      const range = renderRange(settings, current.segments.length);
+      const renderSegments = current.segments.slice(range.from - 1, range.to);
       const loras = (settings.loras || [])
         .filter((lora) => lora.enabled)
         .map((lora) => ({ name: lora.name, strength: lora.strength }));
@@ -990,6 +1007,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
           : fast || longTake),
         segmentCount: renderSegments.length,
         totalSegments: current.segments.length,
+        ...(range.from > 1 ? { firstSegment: range.from } : {}),
         ...(loras.length ? { loras } : {}),
         revisionId: current.activeRevisionId,
         promptStyle: activePromptStyle(current),
@@ -3282,7 +3300,11 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                 segment.prompt.trimStart().startsWith("subject_definitions"),
               );
               const running = story.videos.some((run) => run.status === "queued" || run.status === "running");
-              const totalVideoSeconds = story.segments.reduce((sum, segment) => sum + segment.duration, 0);
+              // Only the segments the test range renders.
+              const shownRange = renderRange(story.videoSettings, story.segments.length);
+              const totalVideoSeconds = story.segments
+                .slice(shownRange.from - 1, shownRange.to)
+                .reduce((sum, segment) => sum + segment.duration, 0);
               const settings = story.videoSettings;
               const v2 = settings.engine === "story-v2";
               const fastEngine = isFastEngine(settings.engine) ? settings.engine : null;
@@ -3486,30 +3508,28 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                         </label>
                         <label
                           className="flex flex-col gap-1"
-                          title="Test mode: render only the first N segments of the prompt set (0 or off = all)."
+                          title="Test mode: render only some segments, e.g. 3-6 (off = all)."
                         >
                           <span className="flex items-center gap-1">
                             <input
                               type="checkbox"
-                              checked={settings.onlyFirst > 0}
+                              checked={settings.onlyFirst > 0 || settings.onlyFrom > 1}
                               onChange={(event) =>
-                                updateVideoSettings({ onlyFirst: event.target.checked ? Math.min(2, story.segments.length || 2) : 0 })
+                                updateVideoSettings(
+                                  event.target.checked
+                                    ? { onlyFrom: 1, onlyFirst: Math.min(2, story.segments.length || 2) }
+                                    : { onlyFrom: 0, onlyFirst: 0 },
+                                )
                               }
                             />
-                            Skip segments after
+                            Only segments
                           </span>
-                          <input
-                            type="number"
-                            min={1}
-                            max={Math.max(1, story.segments.length)}
-                            disabled={settings.onlyFirst === 0}
-                            value={settings.onlyFirst || ""}
-                            placeholder="all"
-                            onChange={(event) => {
-                              const next = Math.round(Number(event.target.value));
-                              if (Number.isFinite(next) && next >= 1) updateVideoSettings({ onlyFirst: next });
-                            }}
-                            className="w-20 rounded-md border border-line bg-background px-2 py-1 text-foreground disabled:opacity-50"
+                          <SegmentRangeInput
+                            from={shownRange.from}
+                            to={shownRange.to}
+                            count={story.segments.length}
+                            disabled={settings.onlyFirst === 0 && settings.onlyFrom <= 1}
+                            onCommit={(range) => updateVideoSettings({ onlyFrom: range.from, onlyFirst: range.to })}
                           />
                         </label>
                         <label className="flex flex-col gap-1">
@@ -3715,9 +3735,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                                     durations.length
                                       ? `${durations.length} segments (${durations.join(" + ")} = ${durations.reduce((sum, value) => sum + value, 0)} s)`
                                       : `${run.segmentCount} segments`,
-                                    run.totalSegments && run.totalSegments > run.segmentCount
-                                      ? `test: first ${run.segmentCount} of ${run.totalSegments}`
-                                      : "",
+                                    rangeLabel(run) ? `test: ${rangeLabel(run)}` : "",
                                   ]
                                     .filter(Boolean)
                                     .join(" · ")}
