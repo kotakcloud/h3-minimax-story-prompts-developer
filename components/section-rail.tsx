@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-// A column of small numbers fixed at the left edge: each scrolls to its section (by element id); the one on screen is
+// A column of small numbers fixed at the left edge (just right of the story sidebar, whose width is --sidebar-w): each scrolls to its section (by element id); the one on screen is
 // lit. Hidden when there is nothing to jump between.
 export function SectionRail({ ids, label = "Jump to prompt" }: { ids: string[]; label?: string }) {
   const [current, setCurrent] = useState("");
@@ -36,7 +36,7 @@ export function SectionRail({ ids, label = "Jump to prompt" }: { ids: string[]; 
   return (
     <nav
       aria-label={label}
-      className="fixed left-1 top-1/2 z-30 flex max-h-[70vh] -translate-y-1/2 flex-col gap-1 overflow-y-auto rounded-full border border-line bg-card/90 p-1 shadow-lg backdrop-blur md:left-[248px] [scrollbar-width:none]"
+      className="fixed left-1 top-1/2 z-30 flex max-h-[70vh] -translate-y-1/2 flex-col gap-1 overflow-y-auto rounded-full border border-line bg-card/90 p-1 shadow-lg backdrop-blur md:left-[calc(var(--sidebar-w,240px)+0.5rem)] [scrollbar-width:none]"
     >
       {ids.map((id, index) => (
         <button

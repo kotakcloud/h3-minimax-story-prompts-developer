@@ -1951,7 +1951,9 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
   return (
     <div
       className={`min-h-[calc(100vh-var(--nav-h))] md:grid ${
-        sidebarOpen ? "md:grid-cols-[200px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)]" : "md:grid-cols-[44px_minmax(0,1fr)]"
+        sidebarOpen
+          ? "md:grid-cols-[200px_minmax(0,1fr)] md:[--sidebar-w:200px] xl:grid-cols-[240px_minmax(0,1fr)] xl:[--sidebar-w:240px]"
+          : "md:grid-cols-[44px_minmax(0,1fr)] md:[--sidebar-w:44px]"
       }`}
     >
       <aside className="border-b border-line bg-card md:border-b-0 md:border-r">
