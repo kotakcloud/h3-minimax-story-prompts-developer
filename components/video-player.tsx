@@ -20,6 +20,13 @@ const FLOAT_WIDTH = 480;
 // Set once this browser refuses the floating window (the Claude app's browser pane does), for every player on the page.
 let windowRefused = false;
 
+// Closes any picture in picture this page opened: the floating window, or a video's own. Its video goes back to the
+// page at the position it reached.
+export function closePictureInPicture() {
+  documentPip()?.window?.close();
+  if (typeof document !== "undefined" && document.pictureInPictureElement) void document.exitPictureInPicture().catch(() => {});
+}
+
 // A video with a Picture-in-picture button, so it keeps playing in a small floating window while you scroll, switch
 // tabs or use another app. Where the browser has document picture-in-picture (Chrome, Brave, Edge) a copy of the video
 // plays in that window and hands its position back when the window closes; otherwise, or when the browser refuses the

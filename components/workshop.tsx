@@ -12,7 +12,7 @@ import { Lightbox, type Slide } from "@/components/lightbox";
 import { LoraDialog } from "@/components/lora-dialog";
 import { ModelPicker } from "@/components/model-picker";
 import { PromptDiffConfirm, PromptDiffLink } from "@/components/prompt-diff";
-import { VideoPlayer } from "@/components/video-player";
+import { closePictureInPicture, VideoPlayer } from "@/components/video-player";
 import { framesFromAnalysis } from "@/lib/beats";
 import { applyLineDurations, applyLineTexts, timingComment, timingFixes, type LineDuration, type LineText } from "@/lib/dialogue";
 import { playDoneSound } from "@/lib/done-sound";
@@ -3803,7 +3803,11 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                       <div className="flex flex-wrap items-center gap-3">
                         <button
                           type="button"
-                          onClick={() => void runVideo()}
+                          onClick={() => {
+                            // A new take: the one floating from before closes.
+                            closePictureInPicture();
+                            void runVideo();
+                          }}
                           disabled={busy !== null || !image || story.segments.length === 0 || gridLongTake}
                           className="rounded-full bg-accent px-6 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50"
                         >
