@@ -159,6 +159,14 @@ function asStory(value: unknown, fallbackId: string): Story {
     // Stories from before the approval step count as approved.
     framesApproved: raw.framesApproved !== false,
     promptsReviewed: raw.promptsReviewed !== false,
+    reviewedPrompts:
+      raw.reviewedPrompts && typeof raw.reviewedPrompts === "object"
+        ? Object.fromEntries(
+            Object.entries(raw.reviewedPrompts as Record<string, unknown>).filter(
+              (entry): entry is [string, string] => typeof entry[1] === "string",
+            ),
+          )
+        : undefined,
     note: typeof raw.note === "string" ? raw.note : "",
     code: typeof raw.code === "string" ? raw.code : "",
     stepModels: (() => {
@@ -331,7 +339,7 @@ export async function duplicateStory(
   }
   if (!keeps("frames")) Object.assign(copy, { frames: blank.frames, framesApproved: true });
   if (!keeps("prompts")) {
-    Object.assign(copy, { segments: blank.segments, promptRevisions: [], activeRevisionId: "", promptsReviewed: true });
+    Object.assign(copy, { segments: blank.segments, promptRevisions: [], activeRevisionId: "", promptsReviewed: true, reviewedPrompts: undefined });
   }
   if (options.stepModels) copy.stepModels = options.stepModels;
   // The copy opens on the step after the last one it kept (where the work continues).

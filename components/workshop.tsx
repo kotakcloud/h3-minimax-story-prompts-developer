@@ -1694,6 +1694,21 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     return { from: Math.max(1, changed[0] - 1), to: changed[changed.length - 1] };
   }
 
+  // Reviewed up to here: the saved prompts up to and including this one count as reviewed (later ones do not).
+  function reviewThrough(segment: PromptSegment | null) {
+    const current = storyRef.current;
+    if (!current) return;
+    const index = segment ? current.segments.findIndex((item) => item.id === segment.id) : -1;
+    patchStory({
+      reviewedPrompts: Object.fromEntries(current.segments.slice(0, index + 1).map((item) => [item.id, item.prompt])),
+    });
+  }
+
+  function isReviewed(segment: PromptSegment) {
+    const reviewed = (storyRef.current || story)?.reviewedPrompts?.[segment.id];
+    return reviewed !== undefined && reviewed === segment.prompt;
+  }
+
   // A block added with Duplicate and not saved yet.
   function isNewSegment(segment: PromptSegment) {
     const current = storyRef.current || story;
@@ -3490,20 +3505,43 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                   number += 1;
                   const index = number - 1;
                   const isNew = isNewSegment(segment);
+                  const reviewed = !isNew && isReviewed(segment);
+                  const savedIndex = story.segments.findIndex((item) => item.id === segment.id);
                   return (
                     <li
                       key={segment.id}
                       id={`prompt-${segment.id}`}
-                      className={`scroll-mt-24 rounded-2xl border bg-card p-4 ${isNew ? "border-accent/60" : "border-line"}`}
+                      className={`scroll-mt-24 rounded-2xl border p-4 ${
+                        isNew ? "border-accent/60 bg-card" : reviewed ? "border-emerald-500/40 bg-emerald-950/30" : "border-line bg-card"
+                      }`}
                     >
                       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                         <div>
                           <p className="text-sm font-medium">
                             {index + 1}. {title}
                             {isNew && <span className="ml-2 text-xs font-normal text-accent">New, not saved</span>}
+                            {reviewed && <span className="ml-2 text-xs font-normal text-emerald-400">✓ Reviewed</span>}
                           </p>
                         </div>
                         <div className="flex items-center gap-1">
+                          {!isNew && (
+                            <button
+                              type="button"
+                              onClick={() => reviewThrough(reviewed ? story.segments[savedIndex - 1] ?? null : segment)}
+                              title={
+                                reviewed
+                                  ? "Mark this one and the ones after it as not reviewed"
+                                  : "Mark this prompt and every one above it as reviewed (an edited prompt drops out on its own)"
+                              }
+                              className={`mr-1 rounded-full border px-2.5 py-1 text-xs ${
+                                reviewed
+                                  ? "border-line text-muted hover:text-foreground"
+                                  : "border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/10"
+                              }`}
+                            >
+                              <span className="text-xs">{reviewed ? "Unmark from here" : "Reviewed up to here"}</span>
+                            </button>
+                          )}
                           <IconButton
                             label={copiedId === segment.id ? "Copied" : "Copy prompt"}
                             onClick={() => copyPrompt({ ...segment, prompt: promptDrafts[segment.id] ?? segment.prompt })}

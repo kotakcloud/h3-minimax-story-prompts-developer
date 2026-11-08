@@ -333,6 +333,9 @@ export type Story = {
   framesApproved: boolean;
   // False right after Write H3 prompts, until the reminder to review them in Dialogue view is answered.
   promptsReviewed: boolean;
+  // Reviewed up to here (Prompts step): segment id → its prompt when marked. A segment shows as reviewed while its
+  // saved prompt is still that text, so an edited one drops out on its own.
+  reviewedPrompts?: Record<string, string>;
   // A free note, written in the story list.
   note: string;
   // Extra instructions sent with Break into frames ("do this, don't do that").
