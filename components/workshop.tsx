@@ -1911,7 +1911,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     story.activeRevisionId || revisions[revisions.length - 1]?.id || "";
 
   return (
-    <div className="min-h-[calc(100vh-var(--nav-h))] md:grid md:grid-cols-[240px_1fr]">
+    <div className="min-h-[calc(100vh-var(--nav-h))] md:grid md:grid-cols-[200px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)]">
       <aside className="border-b border-line bg-card md:border-b-0 md:border-r">
         <div className="sticky top-[var(--nav-h)] space-y-4 p-4">
           <Link
@@ -2332,7 +2332,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
               </p>
             )}
 
-            <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
               <div className="space-y-4 rounded-2xl border border-line bg-card p-4">
                 <label className="block text-xs uppercase tracking-wider text-muted">
                   Prompt
@@ -3591,16 +3591,17 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
 
                   <ImportedDetails story={story} />
 
-                  <div className="mb-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                  {/* Side by side only when both halves have room (narrow windows stack them). */}
+                  <div className="mb-6 grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                     <div className="space-y-4 rounded-2xl border border-line bg-card p-4">
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-3">
                         {image ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={imageSrc(image)} alt="Reference image" className="h-20 w-auto rounded-lg border border-line" />
+                          <img src={imageSrc(image)} alt="Reference image" className="h-20 w-auto max-w-full rounded-lg border border-line object-contain" />
                         ) : (
                           <p className="text-sm text-red-200">No reference image selected. Pick one on the Image step.</p>
                         )}
-                        <div className="text-xs leading-5 text-muted">
+                        <div className="min-w-[12rem] flex-1 text-xs leading-5 text-muted">
                           <p>{story.segments.length} segments: {story.segments.map((segment) => `${segment.duration}s`).join(" · ")}</p>
                           {!refPrompts && story.segments.length > 0 && (
                             <p className="text-amber-300">
@@ -3658,13 +3659,13 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                       )}
 
                       <div className="flex flex-wrap items-end gap-4 text-xs text-muted">
-                        <label className="flex items-center gap-2 text-sm text-foreground">
+                        <label className="flex flex-wrap items-center gap-x-2 text-sm text-foreground">
                           <input
                             type="checkbox"
                             checked={story.videoSettings.devMode}
                             onChange={(event) => updateVideoSettings({ devMode: event.target.checked })}
                           />
-                          DEV MODE
+                          <span className="whitespace-nowrap">DEV MODE</span>
                           <span className="text-xs text-muted">
                             {fastEngine
                               ? `${ultra ? "preview" : settings.devMode ? "draft" : "full"} · ${fastCanvas.width}×${fastCanvas.height} · ${ultra ? ULTRA_STEPS[fastEngine] : FAST_ENGINE_STEPS[fastEngine]} steps · single pass`
@@ -3685,7 +3686,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                               checked={settings.ultraFast}
                               onChange={(event) => updateVideoSettings({ ultraFast: event.target.checked })}
                             />
-                            ULTRA FAST
+                            <span className="whitespace-nowrap">ULTRA FAST</span>
                           </label>
                         )}
                         {v2 && (
