@@ -3525,22 +3525,21 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                         </div>
                         <div className="flex items-center gap-1">
                           {!isNew && (
-                            <button
-                              type="button"
-                              onClick={() => reviewThrough(reviewed ? story.segments[savedIndex - 1] ?? null : segment)}
-                              title={
+                            <IconButton
+                              label={
                                 reviewed
-                                  ? "Mark this one and the ones after it as not reviewed"
-                                  : "Mark this prompt and every one above it as reviewed (an edited prompt drops out on its own)"
+                                  ? "Unmark from here: this prompt and the ones after it are no longer reviewed"
+                                  : "Reviewed up to here: marks this prompt and every one above it as reviewed (an edited prompt drops out on its own)"
                               }
-                              className={`mr-1 rounded-full border px-2.5 py-1 text-xs ${
+                              onClick={() => reviewThrough(reviewed ? story.segments[savedIndex - 1] ?? null : segment)}
+                              className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${
                                 reviewed
-                                  ? "border-line text-muted hover:text-foreground"
-                                  : "border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/10"
+                                  ? "border-emerald-500/60 bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/10"
+                                  : "border-line text-muted hover:border-emerald-500/60 hover:text-emerald-300"
                               }`}
                             >
-                              <span className="text-xs">{reviewed ? "Unmark from here" : "Reviewed up to here"}</span>
-                            </button>
+                              {Icons.reviewed}
+                            </IconButton>
                           )}
                           <IconButton
                             label={copiedId === segment.id ? "Copied" : "Copy prompt"}

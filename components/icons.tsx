@@ -98,6 +98,12 @@ export const Icons = {
       <path d="m11 6-6 6 6 6" />
     </Svg>
   ),
+  reviewed: (
+    <Svg>
+      <path d="m3 13 4 4 8-9" />
+      <path d="m11 15.5 1.5 1.5 8.5-9" />
+    </Svg>
+  ),
   check: (
     <Svg>
       <path d="m5 12 5 5 9-10" />
