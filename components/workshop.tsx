@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Fragment, useCallback, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, type ReactNode, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useLoggedFetch } from "@/components/debug-log";
 import { IconButton, Icons } from "@/components/icons";
 import { DialogueView } from "@/components/dialogue-view";
@@ -320,6 +320,28 @@ function apiStep(url: string): StoryStep | null {
 }
 
 // The 1-based segments a video renders: the test range when set, else all of them.
+// The sidebar starts open on wide windows (the same width that puts the Video halves side by side) and closed on
+// narrow ones; the button's choice is kept per kind of window.
+const WIDE_QUERY = "(min-width: 1280px)";
+const SIDEBAR_KEY = "h3-sidebar";
+function subscribeWide(onChange: () => void) {
+  // Resize too: some browsers (and emulated sizes) skip the media query's change event.
+  const query = window.matchMedia(WIDE_QUERY);
+  query.addEventListener("change", onChange);
+  window.addEventListener("resize", onChange);
+  return () => {
+    query.removeEventListener("change", onChange);
+    window.removeEventListener("resize", onChange);
+  };
+}
+function readSidebarChoice(): { wide?: boolean; narrow?: boolean } {
+  try {
+    return JSON.parse(window.localStorage.getItem(SIDEBAR_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
 function renderRange(settings: Story["videoSettings"], count: number) {
   const to = settings.onlyFirst > 0 ? Math.min(settings.onlyFirst, count) : count;
   const from = Math.min(Math.max(1, settings.onlyFrom || 1), Math.max(1, to));
@@ -375,6 +397,18 @@ export function Workshop({
   const [segmentsDraft, setSegmentsDraft] = useState<PromptSegment[] | null>(null);
   const [deletedDrafts, setDeletedDrafts] = useState<string[]>([]);
   const [promptReviewOpen, setPromptReviewOpen] = useState(false);
+  const wideWindow = useSyncExternalStore(subscribeWide, () => window.matchMedia(WIDE_QUERY).matches, () => true);
+  const [sidebarChoice, setSidebarChoice] = useState(() => (typeof window === "undefined" ? {} : readSidebarChoice()));
+  const sidebarOpen = (wideWindow ? sidebarChoice.wide : sidebarChoice.narrow) ?? wideWindow;
+  function toggleSidebar() {
+    const next = { ...sidebarChoice, [wideWindow ? "wide" : "narrow"]: !sidebarOpen };
+    setSidebarChoice(next);
+    try {
+      window.localStorage.setItem(SIDEBAR_KEY, JSON.stringify(next));
+    } catch {
+      // Not kept: it opens the default way next time.
+    }
+  }
   const [promptSaving, setPromptSaving] = useState(false);
   // The pinned title row and step tabs: its height goes in --story-head-h, so bars pinned below it (Review & save) stay
   // in sight instead of sliding under it. It changes when the title wraps.
@@ -1911,16 +1945,40 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     story.activeRevisionId || revisions[revisions.length - 1]?.id || "";
 
   return (
-    <div className="min-h-[calc(100vh-var(--nav-h))] md:grid md:grid-cols-[200px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)]">
+    <div
+      className={`min-h-[calc(100vh-var(--nav-h))] md:grid ${
+        sidebarOpen ? "md:grid-cols-[200px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)]" : "md:grid-cols-[44px_minmax(0,1fr)]"
+      }`}
+    >
       <aside className="border-b border-line bg-card md:border-b-0 md:border-r">
+        {!sidebarOpen ? (
+          <div className="sticky top-[var(--nav-h)] flex p-1.5 md:justify-center md:pt-4">
+            <IconButton
+              label="Show the sidebar (model, other stories)"
+              onClick={toggleSidebar}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-line text-muted hover:text-foreground"
+            >
+              {Icons.sidebar}
+            </IconButton>
+          </div>
+        ) : (
         <div className="sticky top-[var(--nav-h)] space-y-4 p-4">
-          <Link
-            href={`/?project=${encodeURIComponent(story.projectId)}`}
-            title="Back to this project's stories"
-            className="block truncate text-xs uppercase tracking-[0.18em] text-accent"
-          >
-            ← {projects.find((project) => project.id === story.projectId)?.name || "Stories"}
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/?project=${encodeURIComponent(story.projectId)}`}
+              title="Back to this project's stories"
+              className="block min-w-0 flex-1 truncate text-xs uppercase tracking-[0.18em] text-accent"
+            >
+              ← {projects.find((project) => project.id === story.projectId)?.name || "Stories"}
+            </Link>
+            <IconButton
+              label="Hide the sidebar"
+              onClick={toggleSidebar}
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted hover:text-foreground"
+            >
+              {Icons.sidebar}
+            </IconButton>
+          </div>
           <ModelPicker value={story.aiModel} onChange={(aiModel) => patchStory({ aiModel })} />
           <div>
             <p className="text-xs text-muted">Open another in this project</p>
@@ -1958,6 +2016,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
             </ul>
           </div>
         </div>
+        )}
       </aside>
 
       <main className="px-5 pb-8 sm:px-8">

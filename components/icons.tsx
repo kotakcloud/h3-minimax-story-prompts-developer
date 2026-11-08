@@ -86,6 +86,12 @@ export const Icons = {
       <path d="M13.5 11v5M11 13.5h5" />
     </Svg>
   ),
+  sidebar: (
+    <Svg>
+      <rect x="4" y="5" width="16" height="14" rx="2" />
+      <path d="M9 5v14" />
+    </Svg>
+  ),
   check: (
     <Svg>
       <path d="m5 12 5 5 9-10" />
