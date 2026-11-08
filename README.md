@@ -145,7 +145,7 @@ now, because a run takes a single reference image.
 - **Picture in picture**: the button under a generation or comparison video plays it in a small floating window that stays
   on top while you scroll, switch browser tabs or use another app, and the page switches to the Prompts step so you can
   read the prompts while it plays (close the floating window to stop it). Chrome,
-  Brave and Edge open it as a window of its own; elsewhere the video's own picture-in-picture is used, and Firefox does not show it. **Generate video** /
+  Brave and Edge open it as a window of its own; elsewhere the video's own picture-in-picture is used, and Firefox does not show it. For a test render (only some segments), the Prompts step scrolls to its first segment. **Generate video** /
   **Queue another video**, and the re-run from Review & save, close a floating video from before.
 - **Full-screen view**: click a generation's reference thumbnail (or the big image on the Image tab) to open it full
   screen; ← / → step through the story's images and a storyboard grid's panels, Esc or a click outside closes.

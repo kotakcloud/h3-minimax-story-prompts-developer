@@ -326,6 +326,9 @@ const WIDE_QUERY = "(min-width: 1280px)";
 const SIDEBAR_KEY = "h3-sidebar";
 // Set by the Review & save re-run: the Video step it opens shows the Generate video box closed (once).
 const VIDEO_FORM_CLOSED_KEY = "h3-video-form-closed";
+// Set when a test render (some segments only) goes into picture in picture: "<story id>:<segment number>", so the
+// Prompts step it switches to scrolls to that render's first segment.
+const SCROLL_SEGMENT_KEY = "h3-scroll-to-segment";
 function subscribeWide(onChange: () => void) {
   // Resize too: some browsers (and emulated sizes) skip the media query's change event.
   const query = window.matchMedia(WIDE_QUERY);
@@ -634,6 +637,31 @@ export function Workshop({
   function patchStory(patch: Partial<Story>) {
     setStory((current) => (current ? { ...current, ...patch } : current));
   }
+
+  // Opened from a floating test render: scroll to its first segment (below the pinned title and tabs).
+  const promptsReady = step === "prompts" && Boolean(story);
+  useEffect(() => {
+    if (!promptsReady) return;
+    let note: string | null = null;
+    try {
+      note = window.sessionStorage.getItem(SCROLL_SEGMENT_KEY);
+      window.sessionStorage.removeItem(SCROLL_SEGMENT_KEY);
+    } catch {
+      return;
+    }
+    const [noteStory, number] = (note || "").split(":");
+    const segment = noteStory === storyId ? storyRef.current?.segments[Number(number) - 1] : undefined;
+    if (!segment) return;
+    const timer = window.setTimeout(() => {
+      const element =
+        document.getElementById(`prompt-${segment.id}`) || document.getElementById(`dialogue-${segment.id}`);
+      if (!element) return;
+      const style = getComputedStyle(document.documentElement);
+      const pinned = (parseFloat(style.getPropertyValue("--nav-h")) || 56) + (parseFloat(style.getPropertyValue("--story-head-h")) || 140);
+      window.scrollTo({ top: element.getBoundingClientRect().top + window.scrollY - pinned - 12, behavior: "smooth" });
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [promptsReady, storyId]);
 
   async function goTo(next: StoryStep) {
     if (story && story.step !== next) {
@@ -4382,8 +4410,17 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                                     <VideoPlayer
                                       src={imageSrc({ ...run.video, id: run.id } as ReferenceImage)}
                                       className="mt-2 w-full rounded-xl border border-line"
-                                      // Watch it floating while reading the prompts.
-                                      onFloat={() => goTo("prompts")}
+                                      // Watch it floating while reading the prompts (from its first segment, for a test render).
+                                      onFloat={() => {
+                                        if (rangeLabel(run)) {
+                                          try {
+                                            window.sessionStorage.setItem(SCROLL_SEGMENT_KEY, `${storyId}:${run.firstSegment || 1}`);
+                                          } catch {
+                                            // The Prompts step opens at the top.
+                                          }
+                                        }
+                                        void goTo("prompts");
+                                      }}
                                       autoStart={autoStartRun?.id === run.id ? autoStartRun.mode : undefined}
                                       onAutoStarted={() => setAutoStartRun(null)}
                                     />
