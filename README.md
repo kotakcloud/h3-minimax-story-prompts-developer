@@ -298,7 +298,7 @@ link after it says what changed from the set before, and opens the side-by-side 
 
 ### Editing prompts by hand
 
-On the Prompts step (outside Dialogue view) every prompt is an editable box. Edits are not saved as you type: an edited
+On the Prompts step (outside Dialogue view) every prompt is an editable box. Its text is smaller (13 px) on windows narrower than 1280 px. Edits are not saved as you type: an edited
 prompt is outlined (*Undo* drops its edit), and a bar says how many are edited, with **Discard** and **Review & save**.
 Review & save shows the saved prompts next to your edits, changed lines marked; **Confirm & save** turns them into a new
 prompt set (the earlier set stays), *Keep editing* goes back. Opening another prompt set asks before dropping unsaved

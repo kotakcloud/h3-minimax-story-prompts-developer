@@ -3544,7 +3544,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                                 element.style.height = "auto";
                                 element.style.height = `${element.scrollHeight + 2}px`;
                               }}
-                              className={`w-full resize-none overflow-hidden rounded-lg border bg-transparent p-2 font-mono text-xs leading-5 outline-none ${
+                              className={`prompt-text w-full resize-none overflow-hidden rounded-lg border bg-transparent p-2 outline-none ${
                                 edited ? "border-accent text-foreground" : "border-transparent text-muted hover:border-line focus:border-line"
                               }`}
                             />

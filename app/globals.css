@@ -40,6 +40,19 @@ button {
   cursor: pointer;
 }
 
+/* The prompt boxes on the Prompts step (the rules above would override a size class): smaller text on windows
+   narrower than 1280 px, where the sidebar also starts hidden. */
+.prompt-text {
+  font-size: 16px;
+  line-height: 24px;
+}
+@media (max-width: 1279px) {
+  .prompt-text {
+    font-size: 13px;
+    line-height: 20px;
+  }
+}
+
 /* Author display rules (Tailwind's flex etc.) otherwise beat the UA [hidden] rule. */
 [hidden] {
   display: none !important;
