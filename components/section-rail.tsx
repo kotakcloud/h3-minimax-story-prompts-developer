@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 
 // A column of small numbers fixed at the left edge (just right of the story sidebar, whose width is --sidebar-w): each scrolls to its section (by element id); the one on screen is
 // lit. Hidden when there is nothing to jump between.
-export function SectionRail({ ids, label = "Jump to prompt" }: { ids: string[]; label?: string }) {
+// marked: ids shown in green (reviewed prompts).
+export function SectionRail({ ids, label = "Jump to prompt", marked = [] }: { ids: string[]; label?: string; marked?: string[] }) {
   const [current, setCurrent] = useState("");
   const key = ids.join("|");
 
@@ -46,8 +47,13 @@ export function SectionRail({ ids, label = "Jump to prompt" }: { ids: string[]; 
           onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })}
           aria-label={`${label} ${index + 1}`}
           aria-current={current === id ? "true" : undefined}
+          title={marked.includes(id) ? "Reviewed" : undefined}
           className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
-            current === id ? "bg-accent font-semibold text-accent-ink" : "text-muted hover:bg-background hover:text-foreground"
+            current === id
+              ? "bg-accent font-semibold text-accent-ink"
+              : marked.includes(id)
+                ? "bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30"
+                : "text-muted hover:bg-background hover:text-foreground"
           }`}
         >
           {index + 1}

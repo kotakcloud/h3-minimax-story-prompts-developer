@@ -3115,7 +3115,10 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
         {step === "prompts" && (
           <section className={story.segments.length > 1 ? "pl-9 md:pl-8" : ""}>
             {/* Numbers at the left edge that jump to each prompt (in Dialogue view too). */}
-            <SectionRail ids={story.segments.map((segment) => `${dialogueView ? "dialogue" : "prompt"}-${segment.id}`)} />
+            <SectionRail
+              ids={story.segments.map((segment) => `${dialogueView ? "dialogue" : "prompt"}-${segment.id}`)}
+              marked={story.segments.filter((segment) => isReviewed(segment)).map((segment) => `${dialogueView ? "dialogue" : "prompt"}-${segment.id}`)}
+            />
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-sm font-medium uppercase tracking-wider text-muted">H3 prompts</h2>

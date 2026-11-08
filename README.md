@@ -294,7 +294,8 @@ Changing the camera clears the current prompts, like any frame edit; a split kee
 
 Each prompt block on the Prompts step has a double-tick button, **Reviewed up to here** (the name shows on hover): it
 marks that prompt and every one above it as reviewed (green, with ✓ Reviewed); the ones below stop being marked. On a
-reviewed block the button is green and means **Unmark from here** (that one and the ones after it). The marks are saved with the story (`reviewedPrompts`: segment id → the
+reviewed block the button is green and means **Unmark from here** (that one and the ones after it). Reviewed
+prompts are green in the numbered rail at the left too. The marks are saved with the story (`reviewedPrompts`: segment id → the
 prompt it had), so a prompt whose saved text changes later (an edit, an update, another prompt set) drops out on its
 own while the others stay reviewed.
 
