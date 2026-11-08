@@ -141,7 +141,7 @@ now, because a run takes a single reference image.
   on top while you scroll, switch browser tabs or use another app, and the page switches to the Prompts step so you can
   read the prompts while it plays (close the floating window to stop it). Chrome,
   Brave and Edge open it as a window of its own; elsewhere the video's own picture-in-picture is used, and Firefox does not show it. **Generate video** /
-  **Queue another video** closes a floating video from before.
+  **Queue another video**, and the re-run from Review & save, close a floating video from before.
 - **Full-screen view**: click a generation's reference thumbnail (or the big image on the Image tab) to open it full
   screen; ← / → step through the story's images and a storyboard grid's panels, Esc or a click outside closes.
 - **Delete** (bin icon on a finished, failed or cancelled video) removes it from the story after a confirmation; the

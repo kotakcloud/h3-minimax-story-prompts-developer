@@ -1676,6 +1676,8 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
       setDeletedDrafts([]);
       setPromptReviewOpen(false);
       if (range) {
+        // A new take: the one floating from before closes (as with Queue another video).
+        closePictureInPicture();
         const queued = await runVideo({
           engine: "veda-turbo",
           devMode: true,
