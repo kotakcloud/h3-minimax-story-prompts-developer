@@ -92,6 +92,12 @@ export const Icons = {
       <path d="M9 5v14" />
     </Svg>
   ),
+  back: (
+    <Svg>
+      <path d="M19 12H5" />
+      <path d="m11 6-6 6 6 6" />
+    </Svg>
+  ),
   check: (
     <Svg>
       <path d="m5 12 5 5 9-10" />

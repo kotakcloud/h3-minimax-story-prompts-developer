@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useCallback, type ReactNode, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useLoggedFetch } from "@/components/debug-log";
-import { IconButton, Icons } from "@/components/icons";
+import { IconButton, IconLink, Icons } from "@/components/icons";
 import { DialogueView } from "@/components/dialogue-view";
 import { ImportVideoFile } from "@/components/import-video-file";
 import { ImportedDetails } from "@/components/imported-details";
@@ -1956,7 +1956,14 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     >
       <aside className="border-b border-line bg-card md:border-b-0 md:border-r">
         {!sidebarOpen ? (
-          <div className="sticky top-[var(--nav-h)] flex p-1.5 md:justify-center md:pt-4">
+          <div className="sticky top-[var(--nav-h)] flex gap-1.5 p-1.5 md:flex-col md:items-center md:pt-4">
+            <IconLink
+              href={`/?project=${encodeURIComponent(story.projectId)}`}
+              label={`Back to ${projects.find((project) => project.id === story.projectId)?.name || "the project"}'s stories`}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-line text-accent hover:border-accent"
+            >
+              {Icons.back}
+            </IconLink>
             <IconButton
               label="Show the sidebar (model, other stories)"
               onClick={toggleSidebar}

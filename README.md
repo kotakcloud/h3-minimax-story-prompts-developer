@@ -55,7 +55,7 @@ everything it has: prompts, videos, comparisons, cost). New stories and imported
 into the open project, and a duplicate stays in its story's project. Stories made before projects existed are in
 **unknown**, which can be renamed too. The list remembers the last project you opened (`/?project=<id>` opens one
 directly). On a story's page the sidebar lists only that project's stories, and its top link goes back to the project.
-The panel icon at its top hides the sidebar to a thin strip (the same icon brings it back). It starts open on windows
+The panel icon at its top hides the sidebar to a thin strip with a ← (back to the project) and the same icon to bring it back. It starts open on windows
 at least 1280 px wide and hidden on narrower ones; your choice is remembered in this browser, separately for wide and
 narrow windows. Narrower windows also stack the Video and Image steps' two halves.
 Under each story title (in the list, on the story page and in its sidebar) is the AI model that writes the story's text; the list and the sidebar also show each story's AI cost, and the list the stars of its latest video
