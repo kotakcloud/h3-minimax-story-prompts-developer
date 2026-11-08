@@ -324,6 +324,8 @@ function apiStep(url: string): StoryStep | null {
 // narrow ones; the button's choice is kept per kind of window.
 const WIDE_QUERY = "(min-width: 1280px)";
 const SIDEBAR_KEY = "h3-sidebar";
+// Set by the Review & save re-run: the Video step it opens shows the Generate video box closed (once).
+const VIDEO_FORM_CLOSED_KEY = "h3-video-form-closed";
 function subscribeWide(onChange: () => void) {
   // Resize too: some browsers (and emulated sizes) skip the media query's change event.
   const query = window.matchMedia(WIDE_QUERY);
@@ -428,6 +430,22 @@ export function Workshop({
   const [rerunAfterSave, setRerunAfterSave] = useState(true);
   // A video that just finished with an auto-play tick: its player starts it (in picture in picture for "pip").
   const [autoStartRun, setAutoStartRun] = useState<{ id: string; mode: "play" | "pip" } | null>(null);
+  // The Video step's Generate video box: open each time the page opens, except right after the Review & save re-run,
+  // which leaves a note (the step change reloads this component) so it opens closed with the new take in view.
+  const [videoFormOpen, setVideoFormOpen] = useState(() => {
+    try {
+      return typeof window === "undefined" || window.sessionStorage.getItem(VIDEO_FORM_CLOSED_KEY) !== storyId;
+    } catch {
+      return true;
+    }
+  });
+  useEffect(() => {
+    try {
+      window.sessionStorage.removeItem(VIDEO_FORM_CLOSED_KEY);
+    } catch {
+      // Nothing kept.
+    }
+  }, []);
   const stepRef = useRef(step);
   stepRef.current = step;
   // A Prompts model picked on a story that has frames: asked whether to branch a new story or change this one.
@@ -1726,7 +1744,14 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
           autoPlay: false,
           autoPlayPip: false,
         });
-        if (queued) router.push(storyPath(storyId, "video"));
+        if (queued) {
+          try {
+            window.sessionStorage.setItem(VIDEO_FORM_CLOSED_KEY, storyId);
+          } catch {
+            // It opens the usual way (open).
+          }
+          router.push(storyPath(storyId, "video"));
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save the prompts.");
@@ -3684,8 +3709,36 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                   <ImportedDetails story={story} />
 
                   {/* Side by side only when both halves have room (narrow windows stack them). */}
-                  <div className="mb-6 grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-                    <div className="space-y-4 rounded-2xl border border-line bg-card p-4">
+                  <div className={`mb-6 grid gap-5 ${videoFormOpen ? "xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]" : ""}`}>
+                    <div className={`rounded-2xl border border-line bg-card ${videoFormOpen ? "space-y-4 p-4" : "px-4 py-2.5"}`}>
+                      <button
+                        type="button"
+                        onClick={() => setVideoFormOpen((open) => !open)}
+                        aria-expanded={videoFormOpen}
+                        className="flex w-full items-center gap-2 text-left text-xs uppercase tracking-wider text-muted hover:text-foreground"
+                      >
+                        <span className={`inline-block transition-transform ${videoFormOpen ? "rotate-90" : ""}`}>▸</span>
+                        Generate video
+                        {!videoFormOpen && (
+                          <span className="min-w-0 flex-1 truncate normal-case tracking-normal text-muted/80">
+                            {(() => {
+                              const range = renderRange(settings, story.segments.length);
+                              const only = range.from > 1 || range.to < story.segments.length;
+                              return [
+                                engineInfo(settings.engine).short,
+                                ultra ? "ULTRA FAST" : settings.devMode ? "DEV" : "FULL",
+                                only ? `segments ${range.from}-${range.to} of ${story.segments.length}` : `${story.segments.length} segments`,
+                                `seed ${settings.seed}`,
+                                running ? "a video is running" : "",
+                              ]
+                                .filter(Boolean)
+                                .join(" · ");
+                            })()}
+                          </span>
+                        )}
+                      </button>
+                      {videoFormOpen && (
+                      <>
                       <div className="flex flex-wrap items-center gap-3">
                         {image ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -3957,6 +4010,8 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                           Hibernate this machine when done
                         </label>
                       </div>
+                      </>
+                      )}
                     </div>
 
                     <div>
