@@ -36,7 +36,8 @@ export function SectionRail({ ids, label = "Jump to prompt" }: { ids: string[]; 
   return (
     <nav
       aria-label={label}
-      className="fixed left-1 top-1/2 z-30 flex max-h-[70vh] -translate-y-1/2 flex-col gap-1 overflow-y-auto rounded-full border border-line bg-card/90 p-1 shadow-lg backdrop-blur md:left-[calc(var(--sidebar-w,240px)+0.5rem)] [scrollbar-width:none]"
+      // Starts below the pinned title and tabs (--story-head-h) and stops above the debug bar at the bottom.
+      className="fixed left-1 top-[calc(var(--nav-h)+var(--story-head-h,8.5rem)+1rem)] z-30 flex max-h-[calc(100vh-var(--nav-h)-var(--story-head-h,8.5rem)-5rem)] flex-col gap-0.5 overflow-y-auto rounded-full border border-line bg-card/90 p-1 text-[10px] shadow-lg backdrop-blur md:left-[calc(var(--sidebar-w,240px)+0.5rem)] [scrollbar-width:none]"
     >
       {ids.map((id, index) => (
         <button
@@ -45,7 +46,7 @@ export function SectionRail({ ids, label = "Jump to prompt" }: { ids: string[]; 
           onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })}
           aria-label={`${label} ${index + 1}`}
           aria-current={current === id ? "true" : undefined}
-          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs ${
+          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
             current === id ? "bg-accent font-semibold text-accent-ink" : "text-muted hover:bg-background hover:text-foreground"
           }`}
         >
