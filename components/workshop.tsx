@@ -397,6 +397,8 @@ export function Workshop({
   const [segmentsDraft, setSegmentsDraft] = useState<PromptSegment[] | null>(null);
   const [deletedDrafts, setDeletedDrafts] = useState<string[]>([]);
   const [promptReviewOpen, setPromptReviewOpen] = useState(false);
+  // The Image step's generate form (prompt, negative, layout, settings): closed until opened.
+  const [imageFormOpen, setImageFormOpen] = useState(false);
   const wideWindow = useSyncExternalStore(subscribeWide, () => window.matchMedia(WIDE_QUERY).matches, () => true);
   const [sidebarChoice, setSidebarChoice] = useState(() => (typeof window === "undefined" ? {} : readSidebarChoice()));
   const sidebarOpen = (wideWindow ? sidebarChoice.wide : sidebarChoice.narrow) ?? wideWindow;
@@ -732,6 +734,8 @@ export function Workshop({
       };
       skipSave.current = true;
       setStory(await persist(next));
+      // Show what was written.
+      setImageFormOpen(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Image prompt generation failed.");
     } finally {
@@ -2391,8 +2395,26 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
               </p>
             )}
 
-            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-              <div className="space-y-4 rounded-2xl border border-line bg-card p-4">
+            <div className={`grid gap-5 ${imageFormOpen ? "xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]" : ""}`}>
+              <div className={`rounded-2xl border border-line bg-card ${imageFormOpen ? "space-y-4 p-4" : "px-4 py-2.5"}`}>
+                <button
+                  type="button"
+                  onClick={() => setImageFormOpen((open) => !open)}
+                  aria-expanded={imageFormOpen}
+                  className="flex w-full items-center gap-2 text-left text-xs uppercase tracking-wider text-muted hover:text-foreground"
+                >
+                  <span className={`inline-block transition-transform ${imageFormOpen ? "rotate-90" : ""}`}>▸</span>
+                  Generate image
+                  {!imageFormOpen && (
+                    <span className="min-w-0 flex-1 truncate normal-case tracking-normal text-muted/80">
+                      {story.imagePrompt.trim()
+                        ? `${story.imageSettings.aspectRatio} · ${story.imageSettings.megapixels} MP · seed ${story.imageSettings.seed} · ${story.imagePrompt.trim().slice(0, 140)}`
+                        : "no image prompt yet"}
+                    </span>
+                  )}
+                </button>
+                {imageFormOpen && (
+                <>
                 <label className="block text-xs uppercase tracking-wider text-muted">
                   Prompt
                   <textarea
@@ -2485,6 +2507,8 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                     <p className="text-xs text-muted">The first run loads the model and can take a minute.</p>
                   )}
                 </div>
+                </>
+                )}
               </div>
 
               <div
