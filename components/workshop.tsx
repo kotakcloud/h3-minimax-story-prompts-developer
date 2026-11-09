@@ -3520,6 +3520,17 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                 {(() => {
                   // Numbered as they will be once saved: deleted blocks get no number.
                   let number = 0;
+                  // The picture each segment's video gets: its own storyboard panel ("one panel per segment"), else the
+                  // selected reference image (as runVideo and /api/video pick it).
+                  const refImage = story.referenceImages.find((item) => item.id === story.selectedImageId);
+                  const segmentPicture = (segment: PromptSegment): { src: string; slide: number; label: string } | null => {
+                    if (!refImage) return null;
+                    const panel = segment.panel ?? frameFor(story.frames, segment.id)?.panel ?? 0;
+                    const own = refImage.grid && story.gridFeed === "panels" && panel >= 1 ? refImage.grid.panels[panel - 1] : undefined;
+                    return own
+                      ? { src: imageSrc({ ...refImage, ...own }), slide: panel, label: `Panel ${panel}` }
+                      : { src: imageSrc(refImage), slide: 0, label: refImage.grid ? "Whole storyboard" : "Reference image" };
+                  };
                   return (segmentsDraft ?? story.segments).map((segment) => {
                   const title = segmentTitle(story.frames, segment.id);
                   if (deletedDrafts.includes(segment.id)) {
@@ -3557,7 +3568,24 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                       }`}
                     >
                       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                        <div>
+                        <div className="flex items-center gap-3">
+                          {(() => {
+                            const picture = segmentPicture(segment);
+                            return (
+                              picture &&
+                              refImage && (
+                                <button
+                                  type="button"
+                                  onClick={() => setViewer({ slides: imageSlides(refImage), index: picture.slide })}
+                                  title={`${picture.label}: the picture this segment's video starts from (click to enlarge)`}
+                                  className="shrink-0 overflow-hidden rounded-md border border-line hover:border-accent"
+                                >
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={picture.src} alt={picture.label} loading="lazy" className="h-14 w-auto max-w-28 object-cover" />
+                                </button>
+                              )
+                            );
+                          })()}
                           <p className="text-sm font-medium">
                             {index + 1}. {title}
                             {isNew && <span className="ml-2 text-xs font-normal text-accent">New, not saved</span>}

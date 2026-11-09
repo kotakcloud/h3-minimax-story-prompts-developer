@@ -299,6 +299,12 @@ prompts are green in the numbered rail at the left too. The marks are saved with
 prompt it had), so a prompt whose saved text changes later (an edit, an update, another prompt set) drops out on its
 own while the others stay reviewed.
 
+### Picture on prompt blocks
+
+Each prompt block shows a small thumbnail of the picture its video segment starts from: its own storyboard panel when
+the grid feed is "one panel per segment", otherwise the selected reference image (the whole grid). Click it to see it
+large in the viewer. No thumbnail shows until a reference image is selected.
+
 ### Notes on prompt blocks
 
 Each prompt block has a note button (a page icon) for internal notes. It opens a note box above the prompt; the note
