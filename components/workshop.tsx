@@ -3393,7 +3393,8 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
               </p>
             ) : (
               story.segments.length > 0 &&
-              !story.segments.every((segment) => segment.prompt.trimStart().startsWith("subject_definitions")) && (
+              // A stray markdown backtick from the model before the first heading does not make it text-only.
+              !story.segments.every((segment) => segment.prompt.trimStart().replace(/^`+/, "").startsWith("subject_definitions")) && (
                 <p className="mb-4 rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-2 text-xs text-amber-300">
                   These prompts were written without a reference image (text-only). Regenerate them to get reference-image
                   prompts for the video.

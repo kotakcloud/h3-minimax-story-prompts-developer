@@ -15,3 +15,14 @@ export function clampDuration(value: unknown, fallback = 8): number {
   if (!Number.isFinite(n)) return fallback;
   return Math.min(15, Math.max(4, Math.round(n)));
 }
+
+// A model sometimes wraps one prompt in markdown (a code fence or a stray backtick). The prompt is the text inside.
+export function unwrapPrompt(text: string): string {
+  return text
+    .trim()
+    .replace(/^```[a-z]*\s*\n?/i, "")
+    .replace(/\n?\s*```$/, "")
+    .replace(/^`+/, "")
+    .replace(/`+$/, "")
+    .trim();
+}

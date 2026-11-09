@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { chatJson } from "@/lib/openrouter";
 import { parseModelChain } from "@/lib/models";
+import { unwrapPrompt } from "@/lib/parse";
 import { cutOffLines, speakerProblems } from "@/lib/dialogue";
 import {
   analysisBlock,
@@ -52,7 +53,7 @@ function normalize(data: unknown, targets: Target[]): PromptSegment[] {
   return targets.map((target, index) => {
     const row = byId.get(target.id) ?? rows[index];
     const record = row && typeof row === "object" ? (row as Record<string, unknown>) : {};
-    const prompt = asString(record.prompt);
+    const prompt = unwrapPrompt(asString(record.prompt));
     if (!prompt) {
       throw new Error(`Missing updated prompt for ${target.id}.`);
     }

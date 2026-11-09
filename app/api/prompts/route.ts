@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { chatJson } from "@/lib/openrouter";
 import { parseModelChain } from "@/lib/models";
 import { cutOffLines, fitDuration, missingLines, speakerProblems } from "@/lib/dialogue";
-import { clampDuration } from "@/lib/parse";
+import { clampDuration, unwrapPrompt } from "@/lib/parse";
 import {
   analysisBlock,
   dialogueTimingFix,
@@ -98,7 +98,7 @@ function normalize(data: unknown, fallback: BreakdownResult): PromptSegment[] {
   const segments = fallback.frames.map((frame, index) => {
     const row = byId.get(frame.id) ?? rows[index];
     const record = row && typeof row === "object" ? (row as Record<string, unknown>) : {};
-    const prompt = asString(record.prompt);
+    const prompt = unwrapPrompt(asString(record.prompt));
     if (!prompt) {
       throw new Error(`Missing H3 prompt for frame ${frame.id}.`);
     }
