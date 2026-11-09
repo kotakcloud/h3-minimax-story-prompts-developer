@@ -5,6 +5,9 @@ const WORDS_PER_SECOND = 2.2;
 const SILENCE_SECONDS = 2.5;
 // H3 clips are 4–15 s.
 export const MAX_CLIP_SECONDS = 15;
+// New frames (breakdown, beats, split, storyboard grid) are planned at most this long. Longer clips cost a lot more
+// time and GPU memory, and H3 stretches speech to fill the clip anyway; a frame can still be set longer by hand.
+export const MAX_FRAME_SECONDS = 11;
 const MIN_CLIP_SECONDS = 4;
 
 export type DialogueLine = {
@@ -58,8 +61,8 @@ export function missingLines(summary: string, prompt: string): string[] {
 }
 
 // A frame's length, raised so the lines in its summary fit (the clip limit still applies).
-export function fitDuration(duration: number, summary: string): number {
-  return Math.max(duration, Math.min(MAX_CLIP_SECONDS, clipSecondsForWords(quotedWords(summary))));
+export function fitDuration(duration: number, summary: string, max = MAX_CLIP_SECONDS): number {
+  return Math.min(max, Math.max(duration, Math.min(max, clipSecondsForWords(quotedWords(summary)))));
 }
 
 // The clip length spoken words need, silence included.

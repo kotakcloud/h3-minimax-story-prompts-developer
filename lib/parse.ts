@@ -10,10 +10,10 @@ export function extractJson(text: string): unknown {
   return JSON.parse(candidate.slice(start, end + 1));
 }
 
-export function clampDuration(value: unknown, fallback = 8): number {
+export function clampDuration(value: unknown, fallback = 8, max = 15): number {
   const n = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(n)) return fallback;
-  return Math.min(15, Math.max(4, Math.round(n)));
+  if (!Number.isFinite(n)) return Math.min(max, fallback);
+  return Math.min(max, Math.max(4, Math.round(n)));
 }
 
 // A model sometimes wraps one prompt in markdown (a code fence or a stray backtick). The prompt is the text inside.

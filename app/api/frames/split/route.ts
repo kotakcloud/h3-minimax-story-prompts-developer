@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { fitDuration, quotedLines } from "@/lib/dialogue";
+import { MAX_FRAME_SECONDS, fitDuration, quotedLines } from "@/lib/dialogue";
 import { parseModelChain } from "@/lib/models";
 import { chatJson } from "@/lib/openrouter";
 import { clampDuration } from "@/lib/parse";
@@ -16,7 +16,7 @@ function asParts(data: unknown): Part[] {
     return {
       title: typeof item.title === "string" && item.title.trim() ? item.title.trim() : `Part ${index + 1}`,
       summary,
-      duration: fitDuration(clampDuration(item.duration, 6), summary),
+      duration: fitDuration(clampDuration(item.duration, 6, MAX_FRAME_SECONDS), summary, MAX_FRAME_SECONDS),
     };
   });
 }

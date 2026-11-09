@@ -32,7 +32,7 @@ Open one story, or open several in new tabs. The home page lists all of them.
 2. **Progress: cast & location** extracts the characters and the main location (invented if the gist has none). Both are editable.
 3. **Progress: reference image prompt** writes a Z-Image Turbo prompt for one still that shows every character in the location.
 4. **Generate image** runs `comfy/z-image-turbo-t2i.json` in ComfyUI. Keep generating with new seeds and select the best one; it becomes the H3 reference image (`ComfyUI/output/h3-story/<id>/`). The Generate image box (prompt, negative, layout, aspect, megapixels, seed) starts closed, showing one line with its settings and the start of the prompt; click it to open. Write image prompt opens it to show what was written.
-5. **Progress: frames** breaks the story into editable clips (4–15s each), keeping the cast and location locked.
+5. **Progress: frames** breaks the story into editable clips (4–11 s each), keeping the cast and location locked. New frames (from the AI, from beats, Split or a storyboard grid) are planned at most 11 s (`MAX_FRAME_SECONDS` in `lib/dialogue.ts`): longer clips cost much more time and GPU memory, and H3 stretches speech to fill the clip anyway. A frame or prompt can still be set up to 15 s by hand.
 6. **Progress: H3 prompts** writes one paste-ready prompt per frame.
 7. **Export** downloads `{ duration, prompt }` JSON for the other device.
 8. **Export** (step) writes the video file, see [Video files](#video-files-export-and-import).
@@ -388,7 +388,7 @@ is what gets cut off in the video. Prompts without times (Story V2) turn amber w
 the ticked lines; ticks are not saved and clear on reload.
 
 Long lines get the time they need, at three points. Frames are lengthened to fit the quoted lines in their summary (up to
-15 s) when they are created and again when prompts are written, so an edited frame counts too. After writing, a long-take
+11 s for new frames, 15 s later) when they are created and again when prompts are written, so an edited frame counts too. After writing, a long-take
 prompt with a line that would run past the end of the clip is sent back to the AI once to re-time it. For prompts already
 written, **Fix timing** in Dialogue view makes a new prompt set: tight segments get longer and their lines are re-timed by
 the AI (Story V2 prompts have no times, so only the length changes). If a segment's words need more than 15 s it stays

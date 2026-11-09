@@ -1,9 +1,9 @@
-import { clipSecondsForWords, quotedWords } from "./dialogue";
+import { MAX_FRAME_SECONDS, clipSecondsForWords, quotedWords } from "./dialogue";
 import type { Frame, StoryAnalysis } from "./types";
 
-// H3 clips are 4–15 s.
+// H3 clips are 4–15 s; new frames are planned at most 11 s (MAX_FRAME_SECONDS).
 const MIN_SECONDS = 4;
-const MAX_SECONDS = 15;
+const MAX_SECONDS = MAX_FRAME_SECONDS;
 
 // Seconds a beat's spoken words need.
 function speechSeconds(content: string): number {
