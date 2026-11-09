@@ -396,6 +396,8 @@ export function Workshop({
   const [copiedId, setCopiedId] = useState("");
   // Prompt blocks whose internal note box is open (Prompts step).
   const [openNotes, setOpenNotes] = useState<string[]>([]);
+  // The prompt block whose own picture is uploading.
+  const [segmentImageBusy, setSegmentImageBusy] = useState("");
   const [updateOpen, setUpdateOpen] = useState(false);
   // Prompts edited by hand on the Prompts step, by segment id: not saved until confirmed in the diff.
   const [promptDrafts, setPromptDrafts] = useState<Record<string, string>>({});
@@ -1075,6 +1077,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
               prompt: segment.prompt,
               join: segment.join ?? frame?.join,
               panel: segment.panel ?? frame?.panel,
+              ...(current.segmentImages?.[segment.id] ? { image: current.segmentImages[segment.id] } : {}),
             };
           }),
           image: { filename: image.filename, subfolder: image.subfolder, type: image.type },
@@ -1707,6 +1710,43 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     patchStory({
       reviewedPrompts: Object.fromEntries(current.segments.slice(0, index + 1).map((item) => [item.id, item.prompt])),
     });
+  }
+
+  // A picture for one prompt block: uploaded like a reference image and saved with the story right away; the video
+  // starts that segment from it. null goes back to its panel or the reference image.
+  async function setSegmentImage(segment: PromptSegment, file: File | null, number: number) {
+    const current = storyRef.current;
+    if (!current) return;
+    const images = { ...(current.segmentImages || {}) };
+    if (!file) {
+      delete images[segment.id];
+      patchStory({ segmentImages: images });
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setError("Choose an image file (PNG, JPG, WebP…).");
+      return;
+    }
+    setSegmentImageBusy(segment.id);
+    setError("");
+    try {
+      const png = await toPng(file);
+      const form = new FormData();
+      form.append("storyId", current.id);
+      form.append("image", png.blob, "upload.png");
+      form.append("suffix", `_s${number}`);
+      const response = await request("/api/image/upload", { method: "POST", body: form });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Upload failed.");
+      const uploaded = data.image as { filename: string; subfolder: string; type: string };
+      patchStory({
+        segmentImages: { ...((storyRef.current || current).segmentImages || {}), [segment.id]: { ...uploaded, originalName: file.name } },
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setSegmentImageBusy("");
+    }
   }
 
   // Internal note on a prompt block: saved with the story as you type; an empty note is removed.
@@ -3523,7 +3563,16 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                   // The picture each segment's video gets: its own storyboard panel ("one panel per segment"), else the
                   // selected reference image (as runVideo and /api/video pick it).
                   const refImage = story.referenceImages.find((item) => item.id === story.selectedImageId);
-                  const segmentPicture = (segment: PromptSegment): { src: string; slide: number; label: string } | null => {
+                  const segmentPicture = (segment: PromptSegment): { src: string; slide: number; label: string; own?: boolean } | null => {
+                    const chosen = story.segmentImages?.[segment.id];
+                    if (chosen) {
+                      return {
+                        src: imageSrc(chosen as ReferenceImage),
+                        slide: 0,
+                        label: `Own picture${chosen.originalName ? ` (${chosen.originalName})` : ""}`,
+                        own: true,
+                      };
+                    }
                     if (!refImage) return null;
                     const panel = segment.panel ?? frameFor(story.frames, segment.id)?.panel ?? 0;
                     const own = refImage.grid && story.gridFeed === "panels" && panel >= 1 ? refImage.grid.panels[panel - 1] : undefined;
@@ -3571,19 +3620,63 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                         <div className="flex items-center gap-3">
                           {(() => {
                             const picture = segmentPicture(segment);
+                            const busyHere = segmentImageBusy === segment.id;
                             return (
-                              picture &&
-                              refImage && (
-                                <button
-                                  type="button"
-                                  onClick={() => setViewer({ slides: imageSlides(refImage), index: picture.slide })}
-                                  title={`${picture.label}: the picture this segment's video starts from (click to enlarge)`}
-                                  className="shrink-0 overflow-hidden rounded-md border border-line hover:border-accent"
-                                >
-                                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                                  <img src={picture.src} alt={picture.label} loading="lazy" className="h-14 w-auto max-w-28 object-cover" />
-                                </button>
-                              )
+                              <div className="flex shrink-0 items-center gap-1">
+                                {picture && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setViewer(
+                                        picture.own || !refImage
+                                          ? { slides: [{ src: picture.src, title: `${index + 1}. ${title} · ${picture.label}` }], index: 0 }
+                                          : { slides: imageSlides(refImage), index: picture.slide },
+                                      )
+                                    }
+                                    title={`${picture.label}: the picture this segment's video starts from (click to enlarge)`}
+                                    className={`overflow-hidden rounded-md border-2 ${picture.own ? "border-amber-400/80" : "border-line"} hover:border-accent`}
+                                  >
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={picture.src} alt={picture.label} loading="lazy" className="h-14 w-auto max-w-28 object-cover" />
+                                  </button>
+                                )}
+                                <div className="flex flex-col gap-1">
+                                  <label
+                                    title={
+                                      busyHere
+                                        ? "Uploading…"
+                                        : "Change the picture for this segment only: upload an image; the video starts this segment from it (Veda Turbo, Singularity Veda, Sage SLA or Story V2). Saved right away."
+                                    }
+                                    className={`inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-line text-muted hover:border-accent hover:text-foreground ${
+                                      busyHere ? "animate-pulse" : ""
+                                    }`}
+                                  >
+                                    {Icons.image}
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      className="hidden"
+                                      disabled={busyHere}
+                                      onChange={(event) => {
+                                        const file = event.target.files?.[0];
+                                        event.target.value = "";
+                                        if (file) void setSegmentImage(segment, file, index + 1);
+                                      }}
+                                    />
+                                  </label>
+                                  {picture?.own && (
+                                    <IconButton
+                                      label={`Remove this picture: the segment goes back to ${
+                                        refImage?.grid && story.gridFeed === "panels" ? "its storyboard panel" : "the reference image"
+                                      }`}
+                                      onClick={() => void setSegmentImage(segment, null, index + 1)}
+                                      className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-line text-muted hover:border-red-400 hover:text-red-300"
+                                    >
+                                      {Icons.back}
+                                    </IconButton>
+                                  )}
+                                </div>
+                              </div>
                             );
                           })()}
                           <p className="text-sm font-medium">

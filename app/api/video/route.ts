@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
       storyId?: string;
-      segments?: { duration?: number; prompt?: string; join?: string; panel?: number }[];
+      segments?: { duration?: number; prompt?: string; join?: string; panel?: number; image?: { filename?: string; subfolder?: string; type?: string } }[];
       image?: { filename?: string; subfolder?: string; type?: string };
       devMode?: boolean;
       ultra?: boolean;
@@ -41,7 +41,8 @@ export async function POST(request: Request) {
     const segments = (Array.isArray(body.segments) ? body.segments : [])
       .map((segment) => {
         const panel = Math.round(Number(segment.panel) || 0);
-        const own = grid?.feed === "panels" && panel >= 1 ? panels[panel - 1] : null;
+        // A picture chosen for this prompt on the Prompts step comes first, then its storyboard panel.
+        const own = safeImage(segment.image) ?? (grid?.feed === "panels" && panel >= 1 ? panels[panel - 1] : null);
         return {
           duration: Number(segment.duration),
           prompt: segment.prompt?.trim() || "",
@@ -78,6 +79,12 @@ export async function POST(request: Request) {
     }
     // Storyboard grids need "max" so each panel keeps its detail (render test, docs/RESEARCH_grid_reference_image.md).
     const refImageSize = grid ? ("max" as const) : undefined;
+    if (!grid && body.engine !== "story-v2" && !isFastEngine(body.engine) && segments.some((segment) => segment.image)) {
+      return NextResponse.json(
+        { error: "Pictures chosen for single prompts need a ref2va workflow (Veda Turbo, Singularity Veda, Sage SLA or Story V2), not the long take." },
+        { status: 400 },
+      );
+    }
     if (grid && body.engine !== "story-v2" && !isFastEngine(body.engine)) {
       return NextResponse.json(
         { error: "Storyboard grids need a ref2va workflow (Veda Turbo, Singularity Veda, Sage SLA or Story V2), not the long take." },

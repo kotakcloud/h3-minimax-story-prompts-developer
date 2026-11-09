@@ -305,6 +305,13 @@ Each prompt block shows a small thumbnail of the picture its video segment start
 the grid feed is "one panel per segment", otherwise the selected reference image (the whole grid). Click it to see it
 large in the viewer. No thumbnail shows until a reference image is selected.
 
+The picture button next to it changes the picture for that segment only: pick an image and it is uploaded (like a
+reference image, into the story's ComfyUI folder) and saved with the story right away, no Review & save needed. The
+thumbnail then has an amber border, and every video render starts that segment from it instead of its panel or the
+reference image (`segmentImages`: segment id → the uploaded image). The ↩ button under it removes it again. It works
+with Veda Turbo, Singularity Veda, Sage SLA and Story V2; the long take refuses a render that has one. The video keeps
+the reference image's aspect ratio, so use a picture of the same shape.
+
 ### Notes on prompt blocks
 
 Each prompt block has a note button (a page icon) for internal notes. It opens a note box above the prompt; the note

@@ -338,6 +338,9 @@ export type Story = {
   reviewedPrompts?: Record<string, string>;
   // Internal notes on prompt blocks (Prompts step): segment id → note. Only for you; never sent to a model or video.
   promptNotes?: Record<string, string>;
+  // A picture chosen for one prompt block (Prompts step): segment id → the uploaded image. The video then starts that
+  // segment from it instead of its storyboard panel or the reference image (ref2va workflows only).
+  segmentImages?: Record<string, { filename: string; subfolder: string; type: string; originalName?: string }>;
   // A free note, written in the story list.
   note: string;
   // Extra instructions sent with Break into frames ("do this, don't do that").
