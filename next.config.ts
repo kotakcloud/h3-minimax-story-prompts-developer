@@ -6,6 +6,10 @@ import type { NextConfig } from "next";
 // the server started; this PC's current addresses are added as well.
 function lanHosts() {
   const hosts = new Set(["localhost", "127.0.0.1", "192.168.*.*", "10.*.*.*", "172.*.*.*"]);
+  // This PC's name (http://desktop-xxxx:38217 or .local) keeps working when its address changes.
+  const name = os.hostname().toLowerCase();
+  hosts.add(name);
+  hosts.add(`${name}.local`);
   for (const addrs of Object.values(os.networkInterfaces())) {
     for (const addr of addrs ?? []) {
       if (addr.family === "IPv4" && !addr.internal) {

@@ -475,10 +475,13 @@ http://localhost:38217
 The app binds to `0.0.0.0:38217`, so another machine on the same Wi-Fi can open:
 
 ```text
-http://<this-computer-lan-ip>:38217
+http://<this-computer-name>:38217      e.g. http://desktop-9kl9gur:38217
+http://<this-computer-lan-ip>:38217    e.g. http://192.168.1.106:38217
 ```
 
-On Windows, find the PC's LAN address with `ipconfig`. Open that URL on the other machine. Do not start a second copy of the app there, or you will see an empty story list. If the other machine cannot connect, allow Node.js through Windows Defender Firewall on private networks.
+`start.ps1` prints both when it starts. Prefer the computer name: the router can give the PC a new address (it renews
+it about once a day), and the name follows it. If the name does not resolve on the other machine, use the address from
+`start.ps1` (or `ipconfig`), or reserve a fixed address for this PC in the router. Open that URL on the other machine. Do not start a second copy of the app there, or you will see an empty story list. If the other machine cannot connect, allow Node.js through Windows Defender Firewall on private networks.
 
 If the page opens but stays empty (no projects, no stories, buttons do nothing), its scripts were refused: the dev server only lets in addresses allowed in `next.config.ts`. Any private address (`192.168.*.*`, `10.*.*.*`, `172.*.*.*`) is allowed, so this should not happen on a home Wi-Fi; for any other address, add it there (the dev server restarts by itself).
 

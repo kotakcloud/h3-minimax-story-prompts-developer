@@ -66,5 +66,12 @@ if (-not (Test-Path "node_modules")) {
 }
 
 Write-Host "Starting H3 Story Prompt Workshop on port $Port."
+# Addresses for other devices on the same Wi-Fi. The name keeps working when the router gives this PC a new address.
+$lan = @(Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+  Where-Object { $_.IPAddress -notlike '127.*' -and $_.IPAddress -notlike '169.254.*' -and $_.PrefixOrigin -ne 'WellKnown' } |
+  Select-Object -ExpandProperty IPAddress)
+Write-Host "  This PC:        http://localhost:$Port"
+Write-Host "  Other devices:  http://$($env:COMPUTERNAME.ToLower()):$Port" -ForegroundColor Green
+foreach ($address in $lan) { Write-Host "                  http://${address}:$Port" -ForegroundColor Green }
 npm run dev
 Read-Host "Press Enter to close"
