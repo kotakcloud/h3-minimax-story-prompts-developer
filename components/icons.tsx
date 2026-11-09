@@ -104,6 +104,13 @@ export const Icons = {
       <path d="m11 15.5 1.5 1.5 8.5-9" />
     </Svg>
   ),
+  note: (
+    <Svg>
+      <path d="M6 4h9l4 4v12H6z" />
+      <path d="M15 4v4h4" />
+      <path d="M9 12h6M9 16h4" />
+    </Svg>
+  ),
   check: (
     <Svg>
       <path d="m5 12 5 5 9-10" />

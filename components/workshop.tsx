@@ -394,6 +394,8 @@ export function Workshop({
   const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState("");
   const [copiedId, setCopiedId] = useState("");
+  // Prompt blocks whose internal note box is open (Prompts step).
+  const [openNotes, setOpenNotes] = useState<string[]>([]);
   const [updateOpen, setUpdateOpen] = useState(false);
   // Prompts edited by hand on the Prompts step, by segment id: not saved until confirmed in the diff.
   const [promptDrafts, setPromptDrafts] = useState<Record<string, string>>({});
@@ -1703,6 +1705,14 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     patchStory({
       reviewedPrompts: Object.fromEntries(current.segments.slice(0, index + 1).map((item) => [item.id, item.prompt])),
     });
+  }
+
+  // Internal note on a prompt block: saved with the story as you type; an empty note is removed.
+  function setPromptNote(segmentId: string, text: string) {
+    const notes = { ...((storyRef.current || story)?.promptNotes || {}) };
+    if (text.trim()) notes[segmentId] = text;
+    else delete notes[segmentId];
+    patchStory({ promptNotes: notes });
   }
 
   function isReviewed(segment: PromptSegment) {
@@ -3511,6 +3521,8 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                   const isNew = isNewSegment(segment);
                   const reviewed = !isNew && isReviewed(segment);
                   const savedIndex = story.segments.findIndex((item) => item.id === segment.id);
+                  const note = story.promptNotes?.[segment.id] ?? "";
+                  const noteOpen = openNotes.includes(segment.id);
                   return (
                     <li
                       key={segment.id}
@@ -3546,6 +3558,21 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                             </IconButton>
                           )}
                           <IconButton
+                            label={note.trim() ? `Note: ${note.trim().slice(0, 200)}` : "Add an internal note (only for you; not sent anywhere)"}
+                            onClick={() =>
+                              setOpenNotes((ids) => (ids.includes(segment.id) ? ids.filter((id) => id !== segment.id) : [...ids, segment.id]))
+                            }
+                            className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${
+                              note.trim()
+                                ? "border-amber-400/70 bg-amber-400/20 text-amber-300 hover:bg-amber-400/10"
+                                : noteOpen
+                                  ? "border-accent text-foreground"
+                                  : "border-line text-muted hover:border-amber-400/70 hover:text-amber-300"
+                            }`}
+                          >
+                            {Icons.note}
+                          </IconButton>
+                          <IconButton
                             label={copiedId === segment.id ? "Copied" : "Copy prompt"}
                             onClick={() => copyPrompt({ ...segment, prompt: promptDrafts[segment.id] ?? segment.prompt })}
                           >
@@ -3562,6 +3589,40 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                           </IconButton>
                         </div>
                       </div>
+                      {noteOpen ? (
+                        <div className="mb-3 rounded-lg border border-amber-400/40 bg-amber-400/5 p-2">
+                          <div className="mb-1 flex items-center justify-between gap-2 text-xs text-amber-300">
+                            <span>Internal note · only for you, saved as you type, never sent to a model or video</span>
+                            <button
+                              type="button"
+                              onClick={() => setOpenNotes((ids) => ids.filter((id) => id !== segment.id))}
+                              className="text-muted underline underline-offset-2 hover:text-foreground"
+                            >
+                              Close
+                            </button>
+                          </div>
+                          <textarea
+                            value={note}
+                            onChange={(event) => setPromptNote(segment.id, event.target.value)}
+                            rows={2}
+                            autoFocus={!note}
+                            placeholder="Write a note…"
+                            aria-label={`Note for prompt ${index + 1}`}
+                            className="w-full resize-y rounded-md border border-line bg-transparent p-2 text-sm text-foreground outline-none focus:border-amber-400/70"
+                          />
+                        </div>
+                      ) : (
+                        note.trim() && (
+                          <button
+                            type="button"
+                            onClick={() => setOpenNotes((ids) => [...ids, segment.id])}
+                            title="Edit note"
+                            className="mb-3 block w-full whitespace-pre-wrap rounded-lg border border-amber-400/30 bg-amber-400/5 px-3 py-2 text-left text-amber-200"
+                          >
+                            <span className="text-sm">{note.trim()}</span>
+                          </button>
+                        )
+                      )}
                       {(() => {
                         const draft = promptDrafts[segment.id];
                         const edited = segmentEdited(segment);

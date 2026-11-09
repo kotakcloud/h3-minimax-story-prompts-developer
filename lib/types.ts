@@ -336,6 +336,8 @@ export type Story = {
   // Reviewed up to here (Prompts step): segment id → its prompt when marked. A segment shows as reviewed while its
   // saved prompt is still that text, so an edited one drops out on its own.
   reviewedPrompts?: Record<string, string>;
+  // Internal notes on prompt blocks (Prompts step): segment id → note. Only for you; never sent to a model or video.
+  promptNotes?: Record<string, string>;
   // A free note, written in the story list.
   note: string;
   // Extra instructions sent with Break into frames ("do this, don't do that").

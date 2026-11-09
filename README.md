@@ -299,6 +299,14 @@ prompts are green in the numbered rail at the left too. The marks are saved with
 prompt it had), so a prompt whose saved text changes later (an edit, an update, another prompt set) drops out on its
 own while the others stay reviewed.
 
+### Notes on prompt blocks
+
+Each prompt block has a note button (a page icon) for internal notes. It opens a note box above the prompt; the note
+saves with the story as you type and is never sent to a model, a video or an export. A block with a note shows its
+icon in amber, the note text under its title (click it to edit) and the note in the icon's tooltip. Clearing the text
+removes the note. Notes are saved per segment (`promptNotes`: segment id → note), so they stay through new prompt sets
+and updates; a copy of the story made without its prompts starts with no notes.
+
 ### Prompt sets
 
 Every write, update or saved edit makes a new prompt set; the earlier ones stay. Next to the Prompts model, **‹ ›** step

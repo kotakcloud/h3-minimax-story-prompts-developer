@@ -167,6 +167,14 @@ function asStory(value: unknown, fallbackId: string): Story {
             ),
           )
         : undefined,
+    promptNotes:
+      raw.promptNotes && typeof raw.promptNotes === "object"
+        ? Object.fromEntries(
+            Object.entries(raw.promptNotes as Record<string, unknown>).filter(
+              (entry): entry is [string, string] => typeof entry[1] === "string" && entry[1].trim() !== "",
+            ),
+          )
+        : undefined,
     note: typeof raw.note === "string" ? raw.note : "",
     code: typeof raw.code === "string" ? raw.code : "",
     stepModels: (() => {
@@ -339,7 +347,7 @@ export async function duplicateStory(
   }
   if (!keeps("frames")) Object.assign(copy, { frames: blank.frames, framesApproved: true });
   if (!keeps("prompts")) {
-    Object.assign(copy, { segments: blank.segments, promptRevisions: [], activeRevisionId: "", promptsReviewed: true, reviewedPrompts: undefined });
+    Object.assign(copy, { segments: blank.segments, promptRevisions: [], activeRevisionId: "", promptsReviewed: true, reviewedPrompts: undefined, promptNotes: undefined });
   }
   if (options.stepModels) copy.stepModels = options.stepModels;
   // The copy opens on the step after the last one it kept (where the work continues).
