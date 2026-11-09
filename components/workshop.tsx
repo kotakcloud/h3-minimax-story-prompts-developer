@@ -21,6 +21,7 @@ import { StepModelSelect } from "@/components/step-model-select";
 import { CameraPicker } from "@/components/camera-picker";
 import { DurationInput } from "@/components/duration-input";
 import { SegmentRangeInput } from "@/components/segment-range-input";
+import { newId, copyText } from "@/lib/browser-safe";
 import { duplicateSegmentId, frameFor, segmentTitle } from "@/lib/segment-ids";
 import { CharacterIdsEditor } from "@/components/character-ids-editor";
 import { renumberCharacters } from "@/lib/character-ids";
@@ -824,7 +825,7 @@ export function Workshop({
       }
       const current = storyRef.current || story;
       const image: ReferenceImage = {
-        id: crypto.randomUUID(),
+        id: newId(),
         filename: data.image.filename,
         subfolder: data.image.subfolder,
         type: data.image.type,
@@ -873,7 +874,7 @@ export function Workshop({
       if (!response.ok) throw new Error(data.error || "Image generation failed.");
       const current = storyRef.current || story;
       const image: ReferenceImage = {
-        id: crypto.randomUUID(),
+        id: newId(),
         filename: data.image.filename,
         subfolder: data.image.subfolder,
         type: data.image.type,
@@ -926,7 +927,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
       .map((id) => current.videos.find((run) => run.id === id))
       .filter((run): run is VideoRun => Boolean(run?.video));
     if (runs.length < 2) return;
-    const id = crypto.randomUUID();
+    const id = newId();
     const items = runs.map((run, index) => ({
       letter: "ABCD"[index],
       runId: run.id,
@@ -1103,7 +1104,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
             }
           : null;
       const run: VideoRun = {
-        id: crypto.randomUUID(),
+        id: newId(),
         promptId: data.promptId,
         project: data.project,
         devMode: settings.devMode,
@@ -1534,7 +1535,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
           ]
         : [];
     const revision: PromptRevision = {
-      id: crypto.randomUUID(),
+      id: newId(),
       createdAt: new Date().toISOString(),
       segments,
       ...(promptStyle ? { promptStyle } : {}),
@@ -1955,7 +1956,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
 
   async function copyPrompt(segment: PromptSegment) {
     try {
-      await navigator.clipboard.writeText(segment.prompt);
+      await copyText(segment.prompt);
       setCopiedId(segment.id);
       window.setTimeout(() => setCopiedId(""), 1500);
     } catch {

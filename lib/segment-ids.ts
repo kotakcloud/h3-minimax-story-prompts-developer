@@ -1,9 +1,11 @@
+import { newId } from "./browser-safe";
+
 // A duplicated prompt block gets its own id, made from the original's id, so it can still find the frame it was copied
 // from (for its title, panel and join) without adding a frame.
 const COPY_MARK = "~copy-";
 
 export function duplicateSegmentId(id: string) {
-  return `${baseSegmentId(id)}${COPY_MARK}${crypto.randomUUID().slice(0, 8)}`;
+  return `${baseSegmentId(id)}${COPY_MARK}${newId().slice(0, 8)}`;
 }
 
 export function baseSegmentId(id: string) {

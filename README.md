@@ -460,6 +460,8 @@ On Windows, find the PC's LAN address with `ipconfig`. Open that URL on the othe
 
 If the page opens but stays empty (no projects, no stories, buttons do nothing), its scripts were refused: the dev server only lets in addresses allowed in `next.config.ts`. Any private address (`192.168.*.*`, `10.*.*.*`, `172.*.*.*`) is allowed, so this should not happen on a home Wi-Fi; for any other address, add it there (the dev server restarts by itself).
 
+Over plain `http://` from another machine the browser holds back a few https-only features (random ids, the clipboard, the floating video window). The app falls back for each: saving, Duplicate and Copy prompt work the same, and Picture in picture uses the video's own picture-in-picture instead of the floating window.
+
 Default model: `deepseek/deepseek-v4-flash-0731` (`OPENROUTER_MODEL` in `.env.local`, may be a comma-separated fallback chain).
 
 ### Choosing the AI model
