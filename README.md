@@ -331,7 +331,8 @@ the segment that now follows it.
 
 When a reference image is selected, Review & save also offers **Re-run video for segments 4-5 after saving** (ticked by
 default): it covers the segment before the first changed one up to the last changed one (segment 5 of 10 changed →
-4-5). On **Confirm & save** the new prompt set is saved, those segments are sent to ComfyUI as a Veda Turbo DEV Ultra fast
+4-5). The segment numbers are an editable box: type another range to override (e.g. `3-6`, `4`, or `5-` for 5 to the
+end) and Confirm & save renders that range instead; **Reset** goes back to the worked-out one. On **Confirm & save** the new prompt set is saved, those segments are sent to ComfyUI as a Veda Turbo DEV Ultra fast
 video (for this run only; the Video step's settings stay as they are), and the Video step opens with the Generate
 video box closed, so the new take is in view. It never auto-plays,
 whatever the Auto-play ticks say. Untick it to only save.

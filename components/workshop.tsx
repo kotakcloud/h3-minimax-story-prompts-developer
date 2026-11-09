@@ -434,6 +434,8 @@ export function Workshop({
   }, []);
   // In Review & save: after saving, render the changed segments (from the one before) as a Veda Turbo DEV Ultra fast video.
   const [rerunAfterSave, setRerunAfterSave] = useState(true);
+  // The segments to re-run as typed in the Review & save dialog (null: the ones worked out from the edits).
+  const [rerunOverride, setRerunOverride] = useState<{ from: number; to: number } | null>(null);
   // A video that just finished with an auto-play tick: its player starts it (in picture in picture for "pip").
   const [autoStartRun, setAutoStartRun] = useState<{ id: string; mode: "play" | "pip" } | null>(null);
   // The Video step's Generate video box: open each time the page opens, except right after the Review & save re-run,
@@ -1775,7 +1777,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     const current = storyRef.current;
     const segments = editedSegments();
     if (!current || !segments) return;
-    const range = rerunAfterSave && current.selectedImageId ? rerunRange() : null;
+    const range = rerunAfterSave && current.selectedImageId ? (rerunOverride ?? rerunRange()) : null;
     setPromptSaving(true);
     setError("");
     try {
@@ -3453,6 +3455,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                         type="button"
                         onClick={() => {
                           setRerunAfterSave(true);
+                          setRerunOverride(null);
                           setPromptReviewOpen(true);
                         }}
                         className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-ink"
@@ -3474,17 +3477,39 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                   onClose={() => setPromptReviewOpen(false)}
                   onConfirm={() => void saveEditedPrompts()}
                   extra={(() => {
-                    const range = rerunRange();
-                    if (!range) return null;
-                    const label = range.from === range.to ? `segment ${range.from}` : `segments ${range.from}-${range.to}`;
+                    const suggested = rerunRange();
+                    if (!suggested) return null;
+                    const range = rerunOverride ?? suggested;
+                    const count = editedSegments()?.length || story.segments.length;
                     return story.selectedImageId ? (
-                      <label className="flex items-center gap-2 text-sm text-foreground">
-                        <input type="checkbox" checked={rerunAfterSave} onChange={(event) => setRerunAfterSave(event.target.checked)} />
-                        Re-run video for {label} after saving
-                        <span className="text-xs text-muted">
-                          Veda Turbo · DEV · Ultra fast, from the segment before the first change; opens the Video step
+                      <div className="flex flex-wrap items-center gap-2 text-sm text-foreground">
+                        <label className="flex items-center gap-2">
+                          <input type="checkbox" checked={rerunAfterSave} onChange={(event) => setRerunAfterSave(event.target.checked)} />
+                          Re-run video for segments
+                        </label>
+                        <SegmentRangeInput
+                          from={range.from}
+                          to={range.to}
+                          count={count}
+                          disabled={!rerunAfterSave}
+                          onCommit={(next) => setRerunOverride(next.from === suggested.from && next.to === suggested.to ? null : next)}
+                        />
+                        <span>after saving</span>
+                        {rerunOverride && (
+                          <button
+                            type="button"
+                            onClick={() => setRerunOverride(null)}
+                            title={`Back to the segments worked out from your edits (${suggested.from === suggested.to ? suggested.from : `${suggested.from}-${suggested.to}`})`}
+                            className="text-xs text-muted underline underline-offset-2 hover:text-foreground"
+                          >
+                            Reset
+                          </button>
+                        )}
+                        <span className="w-full text-xs text-muted">
+                          Veda Turbo · DEV · Ultra fast. Worked out from your edits (from the segment before the first change);
+                          type another range to override, e.g. 3-6, 4 or 5- (to the end). Opens the Video step.
                         </span>
-                      </label>
+                      </div>
                     ) : (
                       <p className="text-xs text-muted">No reference image selected, so no video re-run after saving.</p>
                     );
