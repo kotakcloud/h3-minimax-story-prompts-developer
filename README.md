@@ -155,8 +155,10 @@ now, because a run takes a single reference image.
   story workflows changes). The first take's last 22 frames (just under a second, picture and sound) are pinned at the
   bridge's start and the second take's first 22 frames at its end (*Add Guide for MiniMax H3*); H3 fills the *New
   seconds* between (1-8, default 3). The prompt box can stay empty: it is then written from the first story's last
-  frame and the second story's first frame, without their spoken lines, asking for one continuous shot. *Steps*: 8
-  (turbo) or 14. The canvas follows the first take's size. The joined video appears under Joined videos at once with
+  frame and the second story's first frame, without their spoken lines, asking for one continuous shot. Nothing else
+  to set: the bridge follows the first take. Its size, its seed, and its quality: an ULTRA FAST or DEV take gets 8
+  turbo steps, a FULL take 14. The takes' own step counts cannot be copied, because the bridge runs on the
+  first/last-frame model rather than the takes' reference model. The joined video appears under Joined videos at once with
   the bridge's state (queued, rendering, joining, Stop) and is made when the render ends: first take, the bridge without
   its pinned frames, second take (`/api/bridges`, `/api/bridges/status`, `/api/bridges/assemble`). The clips sent to
   ComfyUI land in its input folder (`h3bridge_<id>_from.mp4` / `_to.mp4`), renders in `output/h3-bridge/`.

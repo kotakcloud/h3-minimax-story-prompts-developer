@@ -410,7 +410,6 @@ export function Workshop({
   const [joinBridge, setJoinBridge] = useState(true);
   const [bridgePrompt, setBridgePrompt] = useState("");
   const [bridgeSeconds, setBridgeSeconds] = useState(3);
-  const [bridgeSteps, setBridgeSteps] = useState(8);
   const [updateOpen, setUpdateOpen] = useState(false);
   // Prompts edited by hand on the Prompts step, by segment id: not saved until confirmed in the diff.
   const [promptDrafts, setPromptDrafts] = useState<Record<string, string>>({});
@@ -1915,7 +1914,11 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
             to: { video: parts[1].video },
             prompt,
             seconds: bridgeSeconds,
-            steps: bridgeSteps,
+            // The first take's own settings where they carry over: its seed, and its quality (the bridge runs on the
+            // first/last-frame model, so steps cannot be copied: ULTRA FAST or DEV → 8 turbo steps, FULL → 14).
+            // The size follows the first take on the server.
+            steps: (thisFirst ? own : take.run).ultraFast || (thisFirst ? own : take.run).devMode ? 8 : 14,
+            seed: (thisFirst ? own : take.run).seed,
           }),
         });
         const data = await response.json();
@@ -5185,18 +5188,9 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                           className="w-16 rounded-md border border-line bg-background px-2 py-1"
                         />
                       </label>
-                      <label className="flex items-center gap-2">
-                        Steps
-                        <select
-                          value={bridgeSteps}
-                          onChange={(event) => setBridgeSteps(Number(event.target.value))}
-                          className="rounded-md border border-line bg-background px-2 py-1"
-                        >
-                          <option value={8}>8 (turbo)</option>
-                          <option value={14}>14 (finer)</option>
-                        </select>
-                      </label>
-                      <span className="text-muted">Size follows the first take.</span>
+                      <span className="text-muted">
+                        Size, seed and quality follow the first take (ULTRA FAST / DEV: 8 turbo steps, FULL: 14).
+                      </span>
                     </div>
                   </div>
                 )}
