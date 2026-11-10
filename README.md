@@ -538,6 +538,10 @@ it about once a day), and the name follows it. If the name does not resolve on t
 
 If the page opens but stays empty (no projects, no stories, buttons do nothing), its scripts were refused: the dev server only lets in addresses allowed in `next.config.ts`. Any private address (`192.168.*.*`, `10.*.*.*`, `172.*.*.*`) is allowed, so this should not happen on a home Wi-Fi; for any other address, add it there (the dev server restarts by itself).
 
+Away from home, a Cloudflare quick tunnel works too: `cloudflared tunnel --url http://localhost:38217` prints a
+`https://<random>.trycloudflare.com` address, and `*.trycloudflare.com` is already allowed in `next.config.ts`. Anyone
+with that address can open the app, so stop the tunnel when you are done.
+
 Over plain `http://` from another machine the browser holds back a few https-only features (random ids, the clipboard, the floating video window). The app falls back for each: saving, Duplicate and Copy prompt work the same, and Picture in picture uses the video's own picture-in-picture instead of the floating window.
 
 Default model: `deepseek/deepseek-v4-flash-0731` (`OPENROUTER_MODEL` in `.env.local`, may be a comma-separated fallback chain).

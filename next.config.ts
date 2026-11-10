@@ -5,7 +5,8 @@ import type { NextConfig } from "next";
 // Any private (Wi-Fi/LAN) address is allowed by pattern, so it keeps working when this PC gets a new address after
 // the server started; this PC's current addresses are added as well.
 function lanHosts() {
-  const hosts = new Set(["localhost", "127.0.0.1", "192.168.*.*", "10.*.*.*", "172.*.*.*"]);
+  // *.trycloudflare.com: a Cloudflare quick tunnel (cloudflared tunnel --url http://localhost:38217) for use away from home.
+  const hosts = new Set(["localhost", "127.0.0.1", "192.168.*.*", "10.*.*.*", "172.*.*.*", "*.trycloudflare.com"]);
   // This PC's name (http://desktop-xxxx:38217 or .local) keeps working when its address changes.
   const name = os.hostname().toLowerCase();
   hosts.add(name);
