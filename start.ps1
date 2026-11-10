@@ -1,3 +1,7 @@
+# -Prod: build once and run the production server (no hot reload; faster, and nothing for a tunnel to break).
+# Without it: the dev server, which reloads on code changes.
+param([switch]$Prod)
+
 $ErrorActionPreference = "Stop"
 Set-Location -Path $PSScriptRoot
 
@@ -73,5 +77,16 @@ $lan = @(Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
 Write-Host "  This PC:        http://localhost:$Port"
 Write-Host "  Other devices:  http://$($env:COMPUTERNAME.ToLower()):$Port" -ForegroundColor Green
 foreach ($address in $lan) { Write-Host "                  http://${address}:$Port" -ForegroundColor Green }
-npm run dev
+if ($Prod) {
+  Write-Host "Production mode: building first (takes a minute)."
+  npm run build
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host "Build failed; see the errors above." -ForegroundColor Red
+    Read-Host "Press Enter to close"
+    exit 1
+  }
+  npm start
+} else {
+  npm run dev
+}
 Read-Host "Press Enter to close"
