@@ -548,6 +548,11 @@ once (about a minute) and runs it without hot reload. It is much faster over the
 connection for the tunnel to break. Code changes need a restart (it builds again each start). Same port, same data;
 the tunnel command stays the same.
 
+Both in one go: `powershell -ExecutionPolicy Bypass -File start-tunnel.ps1` starts the app in production mode in its
+own window (stopping a running dev server first), waits until it answers, then starts the tunnel and prints the
+`https://<random>.trycloudflare.com` address. The address changes every time. Close the tunnel window to stop the
+tunnel, the server window to stop the app. It needs `cloudflared` (`winget install Cloudflare.cloudflared`).
+
 Over plain `http://` from another machine the browser holds back a few https-only features (random ids, the clipboard, the floating video window). The app falls back for each: saving, Duplicate and Copy prompt work the same, and Picture in picture uses the video's own picture-in-picture instead of the floating window.
 
 Default model: `deepseek/deepseek-v4-flash-0731` (`OPENROUTER_MODEL` in `.env.local`, may be a comma-separated fallback chain).
