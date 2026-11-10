@@ -142,6 +142,15 @@ now, because a run takes a single reference image.
   section with the video, the full info of each side (with its stars and note), a note box and a delete button that
   also removes the file. Files: `data/comparisons/<story id>/<id>.mp4`. With `COMFYUI_OUTPUT_DIR` in `.env.local` the
   videos are read straight from ComfyUI's output folder (seconds instead of a minute through ComfyUI's /view).
+- **Continue into** (Generate video box; Veda Turbo, Singularity Veda, Sage SLA and Story V2): pick another story of
+  the project and how many of its first segments to add. The render sends this story's segments (all, or the *Only
+  segments* range) and then those, in one take, so the workflow joins the two stories exactly as it joins any two
+  segments: same engine, quality, seed and LoRAs, and the first added segment continues the previous one. Each added
+  segment keeps the picture its own story gives it (its own picture, else its storyboard panel, else that story's
+  reference image). Typical use: *Only segments* = this story's last one or two, *Continue into* = the next story,
+  first 1-2 segments, to see and keep the join; or no range and all of the next story for one long take. The take is
+  labelled e.g. "segment 15 of 15 + #10038 segment 1" (`continuedInto` on the run). The choice stays in the Video
+  settings until set back to *no other story*.
 - **Join with another story's take** (the two-boxes button on a finished video): pick a story in the same project (it
   opens on the next story by code) and one of its finished takes (the one that runs to its last segment first, then
   the best rated, then the newest; the preview shows its end). *This story's take plays first* is ticked by default.

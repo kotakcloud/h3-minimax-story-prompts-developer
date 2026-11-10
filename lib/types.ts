@@ -127,6 +127,9 @@ export type VideoSettings = {
   // Test mode: render only segments onlyFrom..onlyFirst (1-based; onlyFirst 0 = all, onlyFrom 0 = from the first).
   onlyFirst: number;
   onlyFrom: number;
+  // Continue into another story: its first `segments` segments are rendered right after this story's, in the same
+  // take, so the workflow joins them as it joins any two segments (ref2va workflows).
+  continueInto?: { storyId: string; code: string; title: string; segments: number };
   // New videos play a sound when they are done (each run keeps its own tick, changeable while it runs).
   notifySound: boolean;
   // New videos start playing when they are done (on this story's page), or play in picture in picture.
@@ -169,6 +172,9 @@ export type VideoRun = {
   totalSegments?: number;
   // 1-based number of the first segment rendered, when the test range did not start at 1.
   firstSegment?: number;
+  // Rendered together with the first segments of another story (Continue into), after this story's segments;
+  // segmentCount and durations include them.
+  continuedInto?: { storyId: string; code: string; title: string; segments: number };
   // The owner's own rating (1-5 stars) and note.
   rating?: number;
   note?: string;
