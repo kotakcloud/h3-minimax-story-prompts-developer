@@ -142,6 +142,13 @@ now, because a run takes a single reference image.
   section with the video, the full info of each side (with its stars and note), a note box and a delete button that
   also removes the file. Files: `data/comparisons/<story id>/<id>.mp4`. With `COMFYUI_OUTPUT_DIR` in `.env.local` the
   videos are read straight from ComfyUI's output folder (seconds instead of a minute through ComfyUI's /view).
+- **Join with another story's take** (the two-boxes button on a finished video): pick a story in the same project (it
+  opens on the next story by code) and one of its finished takes (the one that runs to its last segment first, then
+  the best rated, then the newest; the preview shows its end). *This story's take plays first* is ticked by default.
+  ffmpeg plays the two one after the other as one video, at the first one's size (the second is fitted, with bars if
+  its shape differs) and 24 fps; a take without sound gets silence. Nothing is rendered again. It is listed under
+  **Joined videos** on this story's Video step with both parts, a download button, a note box and a delete button that
+  also removes the file. Files: `data/joins/<story id>/<id>.mp4` (deleted with the story).
 - **Picture in picture**: the button under a generation or comparison video plays it in a small floating window that stays
   on top while you scroll, switch browser tabs or use another app, and the page switches to the Prompts step so you can
   read the prompts while it plays (close the floating window to stop it). Chrome,
@@ -311,6 +318,14 @@ thumbnail then has an amber border, and every video render starts that segment f
 reference image (`segmentImages`: segment id → the uploaded image). The ↩ button under it removes it again. It works
 with Veda Turbo, Singularity Veda, Sage SLA and Story V2; the long take refuses a render that has one. The video keeps
 the reference image's aspect ratio, so use a picture of the same shape.
+
+The film button under it, **Start from another story's ending**, does the same with the very last frame of another
+story's finished take: pick the story (it opens on the previous one by code, e.g. #10037 for #10038) and the take,
+and that frame becomes the segment's picture (`h3-story/<story id>/upload_<time>_last.png`, named "last frame of
+#…"). Use it on segment 1 so the story picks up where the previous one stopped: same people, place and light. It is a
+new shot from that picture, not a continuation of the other render (motion and voice do not carry over), so give
+segment 1 a prompt that starts from that moment. Pick a take that runs to the previous story's last segment; one that
+covered only some segments ends wherever that range ended.
 
 ### Notes on prompt blocks
 

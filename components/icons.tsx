@@ -118,6 +118,19 @@ export const Icons = {
       <path d="m20 16-5-5-8 8" />
     </Svg>
   ),
+  film: (
+    <Svg>
+      <rect x="4" y="5" width="16" height="14" rx="2" />
+      <path d="M8 5v14M16 5v14M4 9h4M4 15h4M16 9h4M16 15h4" />
+    </Svg>
+  ),
+  join: (
+    <Svg>
+      <rect x="3" y="7" width="7" height="10" rx="1.5" />
+      <rect x="14" y="7" width="7" height="10" rx="1.5" />
+      <path d="M10 12h4" />
+    </Svg>
+  ),
   check: (
     <Svg>
       <path d="m5 12 5 5 9-10" />

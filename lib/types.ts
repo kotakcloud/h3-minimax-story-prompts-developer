@@ -197,6 +197,18 @@ export type Comparison = {
   note: string;
 };
 
+// Takes played one after another as one video (file in data/joins/<story id>/<id>.mp4), e.g. the end of one story and
+// the start of the next. The parts are a snapshot, so it stays readable after a take or story is deleted.
+export type JoinedVideo = {
+  id: string;
+  createdAt: string;
+  parts: { storyId: string; code: string; title: string; runId: string; label: string }[];
+  duration: number;
+  width: number;
+  height: number;
+  note: string;
+};
+
 export type Frame = {
   id: string;
   title: string;
@@ -364,6 +376,7 @@ export type Story = {
   videoSettings: VideoSettings;
   videos: VideoRun[];
   comparisons: Comparison[];
+  joins?: JoinedVideo[];
   promptStyle: PromptStyle;
   // Include the optional H3 prompting tips (comedy, continuity, emotion…) when writing prompts.
   h3Tips: boolean;

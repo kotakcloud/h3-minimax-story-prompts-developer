@@ -28,7 +28,7 @@ export type CompareTile = {
 
 type Probe = { width: number; height: number; duration: number; audio: boolean };
 
-async function probe(file: string): Promise<Probe> {
+export async function probe(file: string): Promise<Probe> {
   const { stdout } = await run(FFPROBE, [
     "-v", "error", "-show_entries", "stream=codec_type,width,height:format=duration", "-of", "json", file,
   ]);

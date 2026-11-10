@@ -233,6 +233,7 @@ function asStory(value: unknown, fallbackId: string): Story {
         : base.videoSettings,
     videos: Array.isArray(raw.videos) ? (raw.videos as Story["videos"]) : [],
     comparisons: Array.isArray(raw.comparisons) ? (raw.comparisons as Story["comparisons"]) : [],
+    joins: Array.isArray(raw.joins) ? (raw.joins as Story["joins"]) : undefined,
     promptStyle: isPromptStyle(raw.promptStyle) ? raw.promptStyle : base.promptStyle,
     h3Tips: raw.h3Tips !== false,
     aiModel: typeof raw.aiModel === "string" ? raw.aiModel : "",
@@ -352,6 +353,7 @@ export async function duplicateStory(
     titleEdited: options.title?.trim() ? true : source.titleEdited,
     videos: keeps("video") ? source.videos : [],
     comparisons: [],
+    joins: undefined,
     archived: false,
     createdAt: now,
     updatedAt: now,
@@ -468,6 +470,8 @@ export async function deleteStory(id: string): Promise<boolean> {
     await unlink(storyFile(id));
     // Its comparison videos (data/comparisons/<id>) belong to it alone; ComfyUI's files are left alone.
     await rm(path.join(process.cwd(), "data", "comparisons", id), { recursive: true, force: true });
+    // So are its joined videos (data/joins/<id>).
+    await rm(path.join(process.cwd(), "data", "joins", id), { recursive: true, force: true });
     await rm(path.join(process.cwd(), "data", "story-costs", `${id}.json`), { force: true });
     return true;
   } catch {

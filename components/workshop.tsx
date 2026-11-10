@@ -13,6 +13,7 @@ import { LoraDialog } from "@/components/lora-dialog";
 import { ModelPicker } from "@/components/model-picker";
 import { PromptDiffConfirm, PromptDiffLink } from "@/components/prompt-diff";
 import { closePictureInPicture, VideoPlayer } from "@/components/video-player";
+import { TakePicker, type PickedTake } from "@/components/take-picker";
 import { framesFromAnalysis } from "@/lib/beats";
 import { applyLineDurations, applyLineTexts, timingComment, timingFixes, type LineDuration, type LineText } from "@/lib/dialogue";
 import { playDoneSound } from "@/lib/done-sound";
@@ -36,6 +37,7 @@ import { SectionRail } from "@/components/section-rail";
 import { TabStatus } from "@/lib/tab-status";
 import { buildExportPayload, buildMarkdownExport, downloadJson, downloadMarkdown } from "@/lib/export";
 import type {
+  JoinedVideo,
   Comparison,
   Character,
   Frame,
@@ -398,6 +400,12 @@ export function Workshop({
   const [openNotes, setOpenNotes] = useState<string[]>([]);
   // The prompt block whose own picture is uploading.
   const [segmentImageBusy, setSegmentImageBusy] = useState("");
+  // Picking another story's take: for a prompt block's picture (its last frame), or to join with one of this story's takes.
+  const [takePicker, setTakePicker] = useState<
+    { mode: "last-frame"; segmentId: string } | { mode: "join"; runId: string } | null
+  >(null);
+  const [takeBusy, setTakeBusy] = useState(false);
+  const [joinThisFirst, setJoinThisFirst] = useState(true);
   const [updateOpen, setUpdateOpen] = useState(false);
   // Prompts edited by hand on the Prompts step, by segment id: not saved until confirmed in the diff.
   const [promptDrafts, setPromptDrafts] = useState<Record<string, string>>({});
@@ -1747,6 +1755,92 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     } finally {
       setSegmentImageBusy("");
     }
+  }
+
+  // The last frame of another story's take becomes this prompt block's picture, so the segment starts where that
+  // story ended (as with an uploaded picture: saved right away, Remove goes back).
+  async function applyLastFrame(segmentId: string, take: PickedTake) {
+    const current = storyRef.current;
+    if (!current) return;
+    setTakeBusy(true);
+    setError("");
+    try {
+      const response = await request("/api/video/last-frame", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storyId: current.id, video: take.run.video }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not take the last frame.");
+      const image = data.image as { filename: string; subfolder: string; type: string };
+      const latest = storyRef.current || current;
+      patchStory({
+        segmentImages: {
+          ...(latest.segmentImages || {}),
+          [segmentId]: { ...image, originalName: `last frame of #${take.story.code} ${take.story.title}` },
+        },
+      });
+      setTakePicker(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not take the last frame.");
+    } finally {
+      setTakeBusy(false);
+    }
+  }
+
+  // One of this story's takes and another story's take played one after the other as one video (kept in this story).
+  async function joinTakes(runId: string, take: PickedTake, thisFirst: boolean) {
+    const current = storyRef.current;
+    const own = current?.videos.find((run) => run.id === runId);
+    if (!current || !own?.video) return;
+    const label = (run: VideoRun) =>
+      `${engineInfo(run.engine).short} · ${run.ultraFast ? "ULTRA FAST" : run.devMode ? "DEV" : "FULL"} · ${new Date(run.createdAt).toLocaleString()}`;
+    const mine = { storyId: current.id, code: current.code, title: current.title, runId: own.id, label: label(own), video: own.video };
+    const theirs = { storyId: take.story.id, code: take.story.code, title: take.story.title, runId: take.run.id, label: label(take.run), video: take.run.video };
+    const parts = thisFirst ? [mine, theirs] : [theirs, mine];
+    const id = newId();
+    setTakeBusy(true);
+    setError("");
+    try {
+      const response = await request("/api/joins", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storyId: current.id, id, videos: parts.map((part) => part.video) }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not join the videos.");
+      const joined: JoinedVideo = {
+        id,
+        createdAt: new Date().toISOString(),
+        parts: parts.map((part) => ({ storyId: part.storyId, code: part.code, title: part.title, runId: part.runId, label: part.label })),
+        duration: data.duration,
+        width: data.width,
+        height: data.height,
+        note: "",
+      };
+      const latest = storyRef.current || current;
+      skipSave.current = true;
+      setStory(await persist({ ...latest, joins: [joined, ...(latest.joins || [])] }));
+      setTakePicker(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not join the videos.");
+    } finally {
+      setTakeBusy(false);
+    }
+  }
+
+  async function deleteJoin(joined: JoinedVideo) {
+    const current = storyRef.current;
+    if (!current) return;
+    if (!window.confirm("Delete this joined video and its file? The takes it was made from stay.")) return;
+    const response = await request(`/api/joins?${new URLSearchParams({ storyId: current.id, id: joined.id })}`, { method: "DELETE" });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      setError(data.error || "Could not delete the joined video.");
+      return;
+    }
+    const latest = storyRef.current || current;
+    patchStory({ joins: (latest.joins || []).filter((item) => item.id !== joined.id) });
   }
 
   // Internal note on a prompt block: saved with the story as you type; an empty note is removed.
@@ -3665,6 +3759,13 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                                       }}
                                     />
                                   </label>
+                                  <IconButton
+                                    label="Start from another story's ending: its last video frame becomes this segment's picture (pick the story and take)"
+                                    onClick={() => setTakePicker({ mode: "last-frame", segmentId: segment.id })}
+                                    className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-line text-muted hover:border-accent hover:text-foreground"
+                                  >
+                                    {Icons.film}
+                                  </IconButton>
                                   {picture?.own && (
                                     <IconButton
                                       label={`Remove this picture: the segment goes back to ${
@@ -4545,6 +4646,18 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                                         {run.status === "queued" ? "Remove" : "Stop"}
                                       </button>
                                     )}
+                                    {run.status === "done" && run.video && (
+                                      <IconButton
+                                        label="Join with another story's take: one video of the two played one after the other"
+                                        onClick={() => {
+                                          setJoinThisFirst(true);
+                                          setTakePicker({ mode: "join", runId: run.id });
+                                        }}
+                                        className="ml-2 inline-flex h-6 w-6 items-center justify-center rounded-full text-muted hover:text-foreground"
+                                      >
+                                        {Icons.join}
+                                      </IconButton>
+                                    )}
                                     {!active && (
                                       <IconButton
                                         label="Delete generation"
@@ -4685,6 +4798,65 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                       )}
                     </div>
                   </div>
+                  {(story.joins || []).length > 0 && (
+                    <div className="mb-6">
+                      <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-muted">Joined videos</h2>
+                      <ol className="space-y-4">
+                        {(story.joins || []).map((joined) => (
+                          <li key={joined.id} className="rounded-2xl border border-line bg-card p-4">
+                            <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+                              <span className="font-medium text-foreground">
+                                {joined.parts.map((part) => `#${part.code}`).join(" → ")}
+                              </span>
+                              <span>
+                                {new Date(joined.createdAt).toLocaleString()} · {Math.round(joined.duration)} s · {joined.width}×{joined.height}
+                                <a
+                                  href={`/api/joins/file?${new URLSearchParams({ storyId: story.id, id: joined.id })}`}
+                                  download={`${joined.parts.map((part) => part.code).join("-")}-joined.mp4`}
+                                  title="Download the joined video"
+                                  className="ml-2 inline-flex h-6 w-6 items-center justify-center rounded-full text-muted hover:text-foreground"
+                                >
+                                  {Icons.download}
+                                </a>
+                                <IconButton
+                                  label="Delete joined video"
+                                  onClick={() => void deleteJoin(joined)}
+                                  className="ml-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-muted hover:text-red-300"
+                                >
+                                  {Icons.trash}
+                                </IconButton>
+                              </span>
+                            </div>
+                            <VideoPlayer
+                              src={`/api/joins/file?${new URLSearchParams({ storyId: story.id, id: joined.id })}`}
+                              preload="metadata"
+                              className="w-full rounded-xl border border-line bg-black"
+                            />
+                            <ol className="mt-3 space-y-1 text-xs">
+                              {joined.parts.map((part, index) => (
+                                <li key={`${part.runId}-${index}`} className="text-foreground/90">
+                                  <span className="font-medium text-accent">{index + 1}.</span> #{part.code} {part.title}{" "}
+                                  <span className="text-muted">· {part.label}</span>
+                                </li>
+                              ))}
+                            </ol>
+                            <input
+                              defaultValue={joined.note}
+                              onBlur={(event) => {
+                                const current = storyRef.current;
+                                if (!current || event.target.value === joined.note) return;
+                                patchStory({
+                                  joins: (current.joins || []).map((item) => (item.id === joined.id ? { ...item, note: event.target.value } : item)),
+                                });
+                              }}
+                              placeholder="note"
+                              className="mt-3 w-full rounded-md border border-line bg-background px-2 py-1 text-xs text-foreground"
+                            />
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
                   {(story.comparisons || []).length > 0 && (
                     <div className="mb-6">
                       <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-muted">Comparisons</h2>
@@ -4752,6 +4924,36 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
           </section>
         )}
       </main>
+      {takePicker && story && (
+        <TakePicker
+          currentStoryId={story.id}
+          projectId={story.projectId}
+          prefer={Number(story.code) + (takePicker.mode === "join" ? 1 : -1)}
+          title={takePicker.mode === "join" ? "Join with another story's take" : "Start from another story's ending"}
+          hint={
+            takePicker.mode === "join"
+              ? "Makes one video: this take and the picked one, one after the other (the second is fitted to the first one's size). It is kept under Joined videos here; nothing is rendered again."
+              : "The picked take's very last frame becomes this segment's picture, so the segment starts where that story ended. Saved right away; ↩ under the picture goes back."
+          }
+          confirmLabel={takePicker.mode === "join" ? "Join" : "Use its last frame"}
+          busy={takeBusy}
+          includeCurrent={takePicker.mode === "join"}
+          extra={
+            takePicker.mode === "join" ? (
+              <label className="mb-1 flex items-center gap-2 text-xs text-foreground">
+                <input type="checkbox" checked={joinThisFirst} onChange={(event) => setJoinThisFirst(event.target.checked)} />
+                This story&apos;s take plays first (untick to put the picked one first)
+              </label>
+            ) : null
+          }
+          onPick={(take) =>
+            void (takePicker.mode === "join"
+              ? joinTakes(takePicker.runId, take, joinThisFirst)
+              : applyLastFrame(takePicker.segmentId, take))
+          }
+          onClose={() => !takeBusy && setTakePicker(null)}
+        />
+      )}
       {viewer && (
         <Lightbox
           slides={viewer.slides}
