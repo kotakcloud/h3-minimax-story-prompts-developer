@@ -26,6 +26,7 @@ export async function POST(request: Request) {
       steps?: unknown;
       seed?: unknown;
       endPin?: unknown;
+      quality?: unknown;
     };
     const id = /^[a-zA-Z0-9_-]+$/.test(body.id || "") ? String(body.id) : "";
     const from = safeFile(body.from);
@@ -36,13 +37,14 @@ export async function POST(request: Request) {
     if (!toVideo && !toImage) return NextResponse.json({ error: "Pick the take or picture the bridge leads into." }, { status: 400 });
     if (!prompt) return NextResponse.json({ error: "Describe what happens in the bridge." }, { status: 400 });
     const seconds = Math.min(8, Math.max(1, Number(body.seconds) || 3));
-    const steps = Math.min(20, Math.max(4, Math.round(Number(body.steps) || 8)));
+    const quality = body.quality === "full" ? "full" : "turbo";
+    const steps = Math.min(30, Math.max(4, Math.round(Number(body.steps) || (quality === "full" ? 15 : 8))));
     const seed = Math.max(0, Math.floor(Number(body.seed) || Math.random() * 2 ** 48));
     // Default "clip": in tests a frame-only end made H3 cut and then hold still on that frame; a clip end at least
     // cuts straight into the moving take.
     const endPin = body.endPin === "frame" ? "frame" : "clip";
-    const plan = await queueBridge({ id, from, to: toVideo ? { video: toVideo } : { image: toImage! }, prompt, seconds, steps, seed, endPin });
-    return NextResponse.json({ ...plan, seed, steps, seconds, endPin });
+    const plan = await queueBridge({ id, from, to: toVideo ? { video: toVideo } : { image: toImage! }, prompt, seconds, steps, seed, endPin, quality });
+    return NextResponse.json({ ...plan, seed, steps, seconds, endPin, quality });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not start the bridge.";
     return NextResponse.json({ error: message.slice(0, 600) }, { status: 500 });

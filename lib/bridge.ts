@@ -83,6 +83,9 @@ export async function queueBridge(options: {
   // How the end is held: the second take's first second as a clip (picture and sound), or only its first frame
   // (H3 then has room to move the camera into it instead of cutting).
   endPin?: "clip" | "frame";
+  // "turbo": fl2v turbo LoRA, euler (fast). "full": the plain fl2va model with res_multistep, as in the owner's
+  // first/last-frame loop workflow (slower, more steps).
+  quality?: "turbo" | "full";
 }): Promise<BridgePlan> {
   const work = await mkdtemp(path.join(os.tmpdir(), "h3-bridge-"));
   try {
@@ -129,7 +132,10 @@ export async function queueBridge(options: {
     const workflow: Record<string, ApiNode> = {
       "1": { class_type: "UNETLoader", inputs: { unet_name: MODEL, weight_dtype: "default" } },
       "2": { class_type: "MiniMaxH3TurboLoRA", inputs: { model: ["1", 0], lora_name: TURBO_LORA, strength: 0.85, low_vram: false } },
-      "3": { class_type: "MiniMaxH3SigmaShift", inputs: { model: ["2", 0], shift_video: 12, shift_audio: 3 } },
+      "3": {
+        class_type: "MiniMaxH3SigmaShift",
+        inputs: { model: [options.quality === "full" ? "1" : "2", 0], shift_video: 12, shift_audio: 3 },
+      },
       "4": { class_type: "PathchSageAttentionKJ", inputs: { model: ["3", 0], sage_attention: "auto", allow_compile: false } },
       "5": { class_type: "CLIPLoader", inputs: { clip_name: CLIP, type: "minimax", device: "default" } },
       "6": { class_type: "VAELoader", inputs: { vae_name: VIDEO_VAE } },
@@ -154,7 +160,7 @@ export async function queueBridge(options: {
         inputs: { positive: ["10", 0], vae: ["6", 0], audio_vae: ["7", 0], latent: ["10", 1], image: ["9", 0], audio: ["9", 1], frame_idx: 0 },
       },
       "13": { class_type: "RandomNoise", inputs: { noise_seed: Math.max(0, Math.floor(options.seed)) } },
-      "14": { class_type: "KSamplerSelect", inputs: { sampler_name: "euler" } },
+      "14": { class_type: "KSamplerSelect", inputs: { sampler_name: options.quality === "full" ? "res_multistep" : "euler" } },
       "15": { class_type: "BasicScheduler", inputs: { model: ["4", 0], scheduler: "simple", steps: options.steps, denoise: 1 } },
       "16": { class_type: "BasicGuider", inputs: { model: ["4", 0], conditioning: [tailName ? "12" : "11", 0] } },
       "17": {
@@ -195,6 +201,7 @@ export async function queueBridge(options: {
     } else {
       workflow["21"] = { class_type: "LoadImage", inputs: { image: endImage } };
     }
+    if (options.quality === "full") delete workflow["2"];
     const promptId = await queueApiWorkflow(workflow);
     // Ending on the second take's first frame: that frame is cut off too, as the take itself starts with it.
     return { promptId, width, height, frames, pinnedHead: PIN_FRAMES, pinnedTail: tailName ? PIN_FRAMES : "video" in options.to ? 1 : 0 };
