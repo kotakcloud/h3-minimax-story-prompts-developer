@@ -142,6 +142,10 @@ now, because a run takes a single reference image.
   section with the video, the full info of each side (with its stars and note), a note box and a delete button that
   also removes the file. Files: `data/comparisons/<story id>/<id>.mp4`. With `COMFYUI_OUTPUT_DIR` in `.env.local` the
   videos are read straight from ComfyUI's output folder (seconds instead of a minute through ComfyUI's /view).
+- **Start from** (next to it, same workflows): the other way round. Pick an earlier story and how many of its *last*
+  segments to put first: they are rendered, then this story's segments (all or the *Only segments* range), in one take
+  that is kept on this story, labelled e.g. "#10037 segments 14–15 + first 3 of 21" (`startedFrom` on the run). This
+  story's first rendered segment continues the take. Start from and Continue into can be used together.
 - **Continue into** (Generate video box; Veda Turbo, Singularity Veda, Sage SLA and Story V2): pick another story of
   the project and how many of its first segments to add. The render sends this story's segments (all, or the *Only
   segments* range) and then those, in one take, so the workflow joins the two stories exactly as it joins any two

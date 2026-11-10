@@ -130,6 +130,8 @@ export type VideoSettings = {
   // Continue into another story: its first `segments` segments are rendered right after this story's, in the same
   // take, so the workflow joins them as it joins any two segments (ref2va workflows).
   continueInto?: { storyId: string; code: string; title: string; segments: number };
+  // Start from another story: its last `segments` segments are rendered first, then this story's, in the same take.
+  startFrom?: { storyId: string; code: string; title: string; segments: number };
   // New videos play a sound when they are done (each run keeps its own tick, changeable while it runs).
   notifySound: boolean;
   // New videos start playing when they are done (on this story's page), or play in picture in picture.
@@ -175,6 +177,9 @@ export type VideoRun = {
   // Rendered together with the first segments of another story (Continue into), after this story's segments;
   // segmentCount and durations include them.
   continuedInto?: { storyId: string; code: string; title: string; segments: number };
+  // Rendered after the last segments of another story (Start from), before this story's segments; segmentCount and
+  // durations include them.
+  startedFrom?: { storyId: string; code: string; title: string; segments: number; firstSegment: number };
   // The owner's own rating (1-5 stars) and note.
   rating?: number;
   note?: string;

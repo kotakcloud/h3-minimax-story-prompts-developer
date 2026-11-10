@@ -365,13 +365,18 @@ function isFastOrV2(engine: VideoEngine | undefined) {
 
 function rangeLabel(run: VideoRun) {
   const extra = run.continuedInto;
-  const own = run.segmentCount - (extra?.segments || 0);
+  const before = run.startedFrom;
+  const own = run.segmentCount - (extra?.segments || 0) - (before?.segments || 0);
   const into = extra ? ` + #${extra.code} ${extra.segments === 1 ? "segment 1" : `segments 1–${extra.segments}`}` : "";
+  const lastBefore = before ? before.firstSegment + before.segments - 1 : 0;
+  const from = before
+    ? `#${before.code} ${before.segments === 1 ? `segment ${before.firstSegment}` : `segments ${before.firstSegment}–${lastBefore}`} + `
+    : "";
   const first = run.firstSegment || 1;
-  if (!run.totalSegments || (first === 1 && run.totalSegments <= own)) return into ? `all${into}` : "";
-  if (first === 1) return `first ${own} of ${run.totalSegments}${into}`;
+  if (!run.totalSegments || (first === 1 && run.totalSegments <= own)) return from || into ? `${from}all${into}` : "";
+  if (first === 1) return `${from}first ${own} of ${run.totalSegments}${into}`;
   const last = first + own - 1;
-  return `${first === last ? `segment ${first}` : `segments ${first}–${last}`} of ${run.totalSegments}${into}`;
+  return `${from}${first === last ? `segment ${first}` : `segments ${first}–${last}`} of ${run.totalSegments}${into}`;
 }
 
 export function Workshop({
@@ -1108,24 +1113,35 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
       // Continue into another story: its first segments follow in the same take, each with the picture that story
       // gives it (its own picture, else its storyboard panel, else its reference image). The first one continues
       // the previous segment, so the workflow joins the two stories like any two segments.
-      const into = settings.continueInto && isFastOrV2(settings.engine) ? settings.continueInto : null;
-      let intoSegments: { duration: number; prompt: string; join?: "cut" | "continuous"; image: { filename: string; subfolder: string; type: string } }[] = [];
-      let intoStory: Story | null = null;
-      if (into) {
-        const intoResponse = await request(`/api/stories/${into.storyId}`);
-        const intoData = await intoResponse.json();
-        if (!intoResponse.ok || !intoData.story) throw new Error(`Could not load #${into.code} to continue into.`);
-        intoStory = intoData.story as Story;
-        const other = intoStory;
+      // Another story's segments in the same take: its first ones after this story's (Continue into) or its last
+      // ones before them (Start from). Each gets the picture its own story gives it (its own picture, else its
+      // storyboard panel, else that story's reference image), and the segment after the seam continues the one
+      // before it, so the workflow joins the two stories like any two segments.
+      type OtherSegment = {
+        duration: number;
+        prompt: string;
+        join?: "cut" | "continuous";
+        image: { filename: string; subfolder: string; type: string };
+      };
+      async function otherSegments(
+        ref: { storyId: string; code: string },
+        pick: (segments: PromptSegment[]) => PromptSegment[],
+        firstJoin: "continuous" | "own",
+      ): Promise<{ story: Story; entries: OtherSegment[]; firstIndex: number }> {
+        const otherResponse = await request(`/api/stories/${ref.storyId}`);
+        const otherData = await otherResponse.json();
+        if (!otherResponse.ok || !otherData.story) throw new Error(`Could not load #${ref.code}.`);
+        const other = otherData.story as Story;
         const otherImage = other.referenceImages.find((item) => item.id === other.selectedImageId);
         if (!otherImage) throw new Error(`#${other.code} has no reference image selected, so its segments have no picture.`);
-        intoSegments = other.segments.slice(0, Math.max(1, into.segments)).map((segment, index) => {
+        const picked = pick(other.segments);
+        const entries = picked.map((segment, index) => {
           const frame = frameFor(other.frames, segment.id);
           const panel = segment.panel ?? frame?.panel ?? 0;
           const own = other.segmentImages?.[segment.id];
           const panelImage = otherImage.grid && other.gridFeed === "panels" && panel >= 1 ? otherImage.grid.panels[panel - 1] : undefined;
           const picture = own || panelImage || otherImage;
-          const join = index === 0 ? "continuous" : (segment.join ?? frame?.join);
+          const join = index === 0 && firstJoin === "continuous" ? "continuous" : (segment.join ?? frame?.join);
           return {
             duration: segment.duration,
             prompt: segment.prompt,
@@ -1133,7 +1149,16 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
             image: { filename: picture.filename, subfolder: picture.subfolder, type: picture.type },
           };
         });
+        const firstIndex = picked.length ? other.segments.indexOf(picked[0]) + 1 : 1;
+        return { story: other, entries, firstIndex };
       }
+      const into = settings.continueInto && isFastOrV2(settings.engine) ? settings.continueInto : null;
+      const before = settings.startFrom && isFastOrV2(settings.engine) ? settings.startFrom : null;
+      const intoPart = into ? await otherSegments(into, (list) => list.slice(0, Math.max(1, into.segments)), "continuous") : null;
+      const beforePart = before ? await otherSegments(before, (list) => list.slice(-Math.max(1, before.segments)), "own") : null;
+      const intoSegments = intoPart?.entries || [];
+      const beforeSegments = beforePart?.entries || [];
+      const intoStory = intoPart?.story || null;
       const loras = (settings.loras || [])
         .filter((lora) => lora.enabled)
         .map((lora) => ({ name: lora.name, strength: lora.strength }));
@@ -1143,12 +1168,14 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
         body: JSON.stringify({
           storyId: current.id,
           segments: [
-            ...renderSegments.map((segment) => {
+            ...beforeSegments,
+            ...renderSegments.map((segment, index) => {
               const frame = frameFor(current.frames, segment.id);
               return {
                 duration: segment.duration,
                 prompt: segment.prompt,
-                join: segment.join ?? frame?.join,
+                // After another story's last segments, this story's first one continues the take.
+                join: index === 0 && beforeSegments.length ? "continuous" : (segment.join ?? frame?.join),
                 panel: segment.panel ?? frame?.panel,
                 ...(current.segmentImages?.[segment.id] ? { image: current.segmentImages[segment.id] } : {}),
               };
@@ -1202,7 +1229,18 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
               steps: settings.devMode ? settings.v2DevSteps : settings.v2Steps,
             }
           : fast || longTake),
-        segmentCount: renderSegments.length + intoSegments.length,
+        segmentCount: beforeSegments.length + renderSegments.length + intoSegments.length,
+        ...(beforePart
+          ? {
+              startedFrom: {
+                storyId: beforePart.story.id,
+                code: beforePart.story.code,
+                title: beforePart.story.title,
+                segments: beforeSegments.length,
+                firstSegment: beforePart.firstIndex,
+              },
+            }
+          : {}),
         totalSegments: current.segments.length,
         ...(into && intoStory
           ? { continuedInto: { storyId: intoStory.id, code: intoStory.code, title: intoStory.title, segments: intoSegments.length } }
@@ -1211,7 +1249,11 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
         ...(loras.length ? { loras } : {}),
         revisionId: current.activeRevisionId,
         promptStyle: activePromptStyle(current),
-        durations: [...renderSegments.map((segment) => segment.duration), ...intoSegments.map((segment) => segment.duration)],
+        durations: [
+          ...beforeSegments.map((segment) => segment.duration),
+          ...renderSegments.map((segment) => segment.duration),
+          ...intoSegments.map((segment) => segment.duration),
+        ],
         aspectRatio: image.grid?.panelAspectRatio ?? image.aspectRatio,
         imageId: image.id,
         ...(image.grid ? { gridFeed: current.gridFeed } : {}),
@@ -4544,6 +4586,62 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                             className="w-44 rounded-md border border-line bg-background px-2 py-1 text-foreground"
                           />
                         </label>
+                        {isFastOrV2(settings.engine) && (
+                          <label
+                            className="flex flex-col gap-1"
+                            title="Start this take with the last segments of another story (usually the previous one): they are rendered first, then this story's segments, in the same take, so the workflow joins them like any two segments (same engine, quality, seed and LoRAs). Each keeps the picture its own story gives it."
+                          >
+                            Start from
+                            <span className="flex items-center gap-1">
+                              <select
+                                value={settings.startFrom?.storyId || ""}
+                                onChange={(event) => {
+                                  const picked = (projectStories || []).find((item) => item.id === event.target.value);
+                                  updateVideoSettings({
+                                    startFrom: picked
+                                      ? { storyId: picked.id, code: picked.code, title: picked.title, segments: settings.startFrom?.segments || 1 }
+                                      : undefined,
+                                  });
+                                }}
+                                className="max-w-48 rounded-md border border-line bg-background px-2 py-1 text-foreground"
+                              >
+                                <option value="">no other story</option>
+                                {settings.startFrom && !(projectStories || []).some((item) => item.id === settings.startFrom?.storyId) && (
+                                  <option value={settings.startFrom.storyId}>
+                                    #{settings.startFrom.code} {settings.startFrom.title}
+                                  </option>
+                                )}
+                                {(projectStories || []).map((item) => (
+                                  <option key={item.id} value={item.id}>
+                                    #{item.code} {item.title}
+                                  </option>
+                                ))}
+                              </select>
+                              {settings.startFrom && (
+                                <>
+                                  <span className="text-muted">last</span>
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    max={20}
+                                    value={settings.startFrom.segments}
+                                    onChange={(event) =>
+                                      settings.startFrom &&
+                                      updateVideoSettings({
+                                        startFrom: {
+                                          ...settings.startFrom,
+                                          segments: Math.min(20, Math.max(1, Math.floor(Number(event.target.value) || 1))),
+                                        },
+                                      })
+                                    }
+                                    className="w-14 rounded-md border border-line bg-background px-2 py-1 text-foreground"
+                                  />
+                                  <span className="text-muted">segments</span>
+                                </>
+                              )}
+                            </span>
+                          </label>
+                        )}
                         {isFastOrV2(settings.engine) && (
                           <label
                             className="flex flex-col gap-1"
