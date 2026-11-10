@@ -165,9 +165,10 @@ now, because a run takes a single reference image.
   pinned end rather than move the camera there; ending on the second take's first frame only (`endPin: "frame"`)
   made it cut and then hold still, so the clip end is the default. The plain fl2va model with res_multistep at 15 steps
   (`quality: "full"` in `/api/bridges`, not in the window) cut at the same place and took 56 s instead of 40 s. So the
-  second seam is smooth only when the second take opens close to where the first one ended: start the next story's
-  segment 1 from the first story's last frame (*Start from another story's ending* on its Prompts step), render it,
-  then bridge.
+  second seam is smooth only when the second take opens close to where the first one ended. **Recipe for two smooth
+  seams** (tested the same day, both seams without a cut): on the next story's Prompts step, start segment 1 from the
+  first story's last frame (*Start from another story's ending*, picking the same take), render it, then join that
+  take with the first one with *Smooth bridge* ticked.
 - **Picture in picture**: the button under a generation or comparison video plays it in a small floating window that stays
   on top while you scroll, switch browser tabs or use another app, and the page switches to the Prompts step so you can
   read the prompts while it plays (close the floating window to stop it). Chrome,

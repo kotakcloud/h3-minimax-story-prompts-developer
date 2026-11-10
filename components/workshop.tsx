@@ -5159,7 +5159,9 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                   <span>
                     Smooth bridge, generated in ComfyUI: H3 (first/last-frame model) renders a short clip that starts on the
                     first take&apos;s last second and ends on the second take&apos;s first second, picture and sound, so both
-                    seams flow. Untick to just play the two back to back.
+                    seams flow. Smoothest when the second story&apos;s segment 1 was started from the first take&apos;s last
+                    frame (film button on its Prompts step); otherwise H3 tends to cut into the second take. Untick to just
+                    play the two back to back.
                   </span>
                 </label>
                 {joinBridge && (
