@@ -150,7 +150,10 @@ now, because a run takes a single reference image.
   reference image). Typical use: *Only segments* = this story's last one or two, *Continue into* = the next story,
   first 1-2 segments, to see and keep the join; or no range and all of the next story for one long take. The take is
   labelled e.g. "segment 15 of 15 + #10038 segment 1" (`continuedInto` on the run). The choice stays in the Video
-  settings until set back to *no other story*.
+  settings until set back to *no other story*. Tested (10 Nov 2026, #10037 segment 15 + #10038 segment 1, Ultra fast,
+  about a minute): one take, the people, looks and voices carry over, but where the next story opens somewhere else
+  (#10038: morning courtyard after #10037's evening garden) the picture cuts to it, because each segment follows its
+  own reference picture. It flows without a cut only when the next story opens in the same place and light.
 - **Join with another story's take** (the two-boxes button on a finished video): pick a story in the same project (it
   opens on the next story by code) and one of its finished takes (the one that runs to its last segment first, then
   the best rated, then the newest; the preview shows its end). *This story's take plays first* is ticked by default.
