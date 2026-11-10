@@ -406,6 +406,11 @@ export function Workshop({
   >(null);
   const [takeBusy, setTakeBusy] = useState(false);
   const [joinThisFirst, setJoinThisFirst] = useState(true);
+  // Join window: a generated bridge (ComfyUI) or the two takes back to back, and the bridge's settings.
+  const [joinBridge, setJoinBridge] = useState(true);
+  const [bridgePrompt, setBridgePrompt] = useState("");
+  const [bridgeSeconds, setBridgeSeconds] = useState(3);
+  const [bridgeSteps, setBridgeSteps] = useState(8);
   const [updateOpen, setUpdateOpen] = useState(false);
   // Prompts edited by hand on the Prompts step, by segment id: not saved until confirmed in the diff.
   const [promptDrafts, setPromptDrafts] = useState<Record<string, string>>({});
@@ -1173,6 +1178,81 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     patchStory({ videoSettings: { ...story.videoSettings, ...next } });
   }
 
+  // Bridges rendering in ComfyUI: poll them, and once one is done, make the joined file (first take, the bridge
+  // without its pinned ends, second take).
+  const activeBridgeKey = (story?.joins || [])
+    .filter((joined) => joined.bridge && ["queued", "running"].includes(joined.bridge.status))
+    .map((joined) => joined.id)
+    .join(",");
+  useEffect(() => {
+    if (!activeBridgeKey) return;
+    let stopped = false;
+    async function check(id: string) {
+      const joined = storyRef.current?.joins?.find((item) => item.id === id);
+      const bridge = joined?.bridge;
+      if (!joined || !bridge || stopped) return;
+      try {
+        const response = await fetch(`/api/bridges/status?${new URLSearchParams({ promptId: bridge.promptId })}`);
+        const data = await response.json();
+        if (stopped || !response.ok) return;
+        if (data.status === "queued" || data.status === "running" || data.status === "unknown") {
+          if (data.status !== bridge.status && data.status !== "unknown") {
+            patchJoin(id, (item) => ({ ...item, bridge: { ...item.bridge!, status: data.status } }));
+          }
+          return;
+        }
+        if (data.status !== "done") {
+          patchJoin(id, (item) => ({
+            ...item,
+            bridge: { ...item.bridge!, status: data.status, error: data.error || "", finishedAt: new Date().toISOString() },
+          }));
+          return;
+        }
+        patchJoin(id, (item) => ({ ...item, bridge: { ...item.bridge!, status: "assembling", video: data.video } }));
+        const current = storyRef.current;
+        if (!current) return;
+        const made = await request("/api/bridges/assemble", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            storyId: current.id,
+            id,
+            from: bridge.from,
+            bridge: data.video,
+            to: bridge.to,
+            pinnedHead: bridge.pinnedHead,
+            pinnedTail: bridge.pinnedTail,
+          }),
+        });
+        const result = await made.json();
+        patchJoin(id, (item) =>
+          made.ok
+            ? {
+                ...item,
+                duration: result.duration,
+                width: result.width,
+                height: result.height,
+                bridge: { ...item.bridge!, status: "done", video: data.video, finishedAt: new Date().toISOString() },
+              }
+            : { ...item, bridge: { ...item.bridge!, status: "error", video: data.video, error: result.error || "Could not join the bridge." } },
+        );
+      } catch {
+        // ComfyUI or the app was briefly unreachable; the next check tries again.
+      }
+    }
+    const tick = () => {
+      for (const id of activeBridgeKey.split(",")) void check(id);
+    };
+    tick();
+    const timer = window.setInterval(tick, 8000);
+    return () => {
+      stopped = true;
+      window.clearInterval(timer);
+    };
+    // Restarts only when the set of rendering bridges changes; check reads the latest story.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBridgeKey]);
+
   // Several videos can be queued at once (ComfyUI runs them one after another): poll every active run.
   const activeRuns = (story?.videos || []).filter((run) => run.status === "queued" || run.status === "running");
   const activeRunKey = activeRuns.map((run) => run.id).join(",");
@@ -1801,6 +1881,81 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     const id = newId();
     setTakeBusy(true);
     setError("");
+    if (joinBridge) {
+      try {
+        // The two stories' frames around the seam: what the first one ends on and the second one starts with.
+        const firstStory = thisFirst ? current : take.story;
+        const secondStory = thisFirst ? take.story : current;
+        // Without its spoken lines ("…", “…” or '…' after a space or colon), so the bridge does not say them again.
+        const quiet = (text: string) =>
+          text
+            .replace(/["“][^"”]*["”]/g, "")
+            .replace(/(^|[\s:,(])['‘][^'’]+['’]/g, "$1")
+            .replace(/On-screen dialogue:/gi, "")
+            .replace(/\s+([,.;!?])/g, "$1")
+            .replace(/\s+/g, " ")
+            .trim();
+        const prompt =
+          bridgePrompt.trim() ||
+          [
+            "One single continuous shot with no cuts and no scene change: same people, same place, same light.",
+            quiet(firstStory.frames[firstStory.frames.length - 1]?.summary || ""),
+            "The camera keeps rolling and moves slowly and smoothly toward the next framing while everyone shifts naturally into place.",
+            `It flows into: ${quiet(secondStory.frames[0]?.summary || "the next moment")}`,
+            "No new spoken lines: only natural ambient sound that carries on from before.",
+          ]
+            .filter(Boolean)
+            .join(" ");
+        const response = await request("/api/bridges", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id,
+            from: parts[0].video,
+            to: { video: parts[1].video },
+            prompt,
+            seconds: bridgeSeconds,
+            steps: bridgeSteps,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Could not start the bridge.");
+        const joined: JoinedVideo = {
+          id,
+          createdAt: new Date().toISOString(),
+          parts: parts.map((part) => ({ storyId: part.storyId, code: part.code, title: part.title, runId: part.runId, label: part.label })),
+          bridge: {
+            promptId: data.promptId,
+            status: "queued",
+            prompt,
+            seconds: data.seconds,
+            steps: data.steps,
+            seed: data.seed,
+            width: data.width,
+            height: data.height,
+            pinnedHead: data.pinnedHead,
+            pinnedTail: data.pinnedTail,
+            from: parts[0].video,
+            to: parts[1].video,
+            video: null,
+            startedAt: new Date().toISOString(),
+          },
+          duration: 0,
+          width: data.width,
+          height: data.height,
+          note: "",
+        };
+        const latest = storyRef.current || current;
+        skipSave.current = true;
+        setStory(await persist({ ...latest, joins: [joined, ...(latest.joins || [])] }));
+        setTakePicker(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Could not start the bridge.");
+      } finally {
+        setTakeBusy(false);
+      }
+      return;
+    }
     try {
       const response = await request("/api/joins", {
         method: "POST",
@@ -1829,10 +1984,27 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     }
   }
 
+  function patchJoin(id: string, next: (joined: JoinedVideo) => JoinedVideo) {
+    setStory((current) =>
+      current ? { ...current, joins: (current.joins || []).map((item) => (item.id === id ? next(item) : item)) } : current,
+    );
+  }
+
+  async function stopBridge(joined: JoinedVideo) {
+    if (!joined.bridge) return;
+    await request("/api/video/cancel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ promptId: joined.bridge.promptId }),
+    }).catch(() => undefined);
+  }
+
   async function deleteJoin(joined: JoinedVideo) {
     const current = storyRef.current;
     if (!current) return;
-    if (!window.confirm("Delete this joined video and its file? The takes it was made from stay.")) return;
+    const rendering = joined.bridge && (joined.bridge.status === "queued" || joined.bridge.status === "running");
+    if (!window.confirm(`Delete this joined video and its file?${rendering ? " Its bridge render is stopped." : ""} The takes it was made from stay.`)) return;
+    if (rendering) await stopBridge(joined);
     const response = await request(`/api/joins?${new URLSearchParams({ storyId: current.id, id: joined.id })}`, { method: "DELETE" });
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
@@ -4806,7 +4978,36 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                           <li key={joined.id} className="rounded-2xl border border-line bg-card p-4">
                             <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
                               <span className="font-medium text-foreground">
-                                {joined.parts.map((part) => `#${part.code}`).join(" → ")}
+                                {joined.parts.map((part) => `#${part.code}`).join(joined.bridge ? " → bridge → " : " → ")}
+                                {joined.bridge && (
+                                  <span
+                                    className={`ml-2 font-normal ${
+                                      joined.bridge.status === "done"
+                                        ? "text-emerald-300"
+                                        : joined.bridge.status === "error"
+                                          ? "text-red-300"
+                                          : joined.bridge.status === "cancelled"
+                                            ? "text-muted"
+                                            : "text-amber-300"
+                                    }`}
+                                  >
+                                    {joined.bridge.status === "queued" && "Bridge queued in ComfyUI"}
+                                    {joined.bridge.status === "running" && "Rendering the bridge…"}
+                                    {joined.bridge.status === "assembling" && "Joining…"}
+                                    {joined.bridge.status === "done" && "Smooth bridge"}
+                                    {joined.bridge.status === "error" && `Failed: ${joined.bridge.error || "unknown error"}`}
+                                    {joined.bridge.status === "cancelled" && "Stopped"}
+                                    {(joined.bridge.status === "queued" || joined.bridge.status === "running") && (
+                                      <button
+                                        type="button"
+                                        onClick={() => void stopBridge(joined)}
+                                        className="ml-2 rounded-full border border-red-400/50 px-2.5 py-0.5 text-red-300 hover:bg-red-400/10"
+                                      >
+                                        Stop
+                                      </button>
+                                    )}
+                                  </span>
+                                )}
                               </span>
                               <span>
                                 {new Date(joined.createdAt).toLocaleString()} · {Math.round(joined.duration)} s · {joined.width}×{joined.height}
@@ -4827,11 +5028,19 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                                 </IconButton>
                               </span>
                             </div>
-                            <VideoPlayer
-                              src={`/api/joins/file?${new URLSearchParams({ storyId: story.id, id: joined.id })}`}
-                              preload="metadata"
-                              className="w-full rounded-xl border border-line bg-black"
-                            />
+                            {(!joined.bridge || joined.bridge.status === "done") && (
+                              <VideoPlayer
+                                src={`/api/joins/file?${new URLSearchParams({ storyId: story.id, id: joined.id })}`}
+                                preload="metadata"
+                                className="w-full rounded-xl border border-line bg-black"
+                              />
+                            )}
+                            {joined.bridge && (
+                              <p className="mt-2 text-xs text-muted">
+                                Bridge: {joined.bridge.seconds} s new, {joined.bridge.steps} steps, seed {joined.bridge.seed},{" "}
+                                {joined.bridge.width}×{joined.bridge.height} · {joined.bridge.prompt}
+                              </p>
+                            )}
                             <ol className="mt-3 space-y-1 text-xs">
                               {joined.parts.map((part, index) => (
                                 <li key={`${part.runId}-${index}`} className="text-foreground/90">
@@ -4935,15 +5144,61 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
               ? "Makes one video: this take and the picked one, one after the other (the second is fitted to the first one's size). It is kept under Joined videos here; nothing is rendered again."
               : "The picked take's very last frame becomes this segment's picture, so the segment starts where that story ended. Saved right away; ↩ under the picture goes back."
           }
-          confirmLabel={takePicker.mode === "join" ? "Join" : "Use its last frame"}
+          confirmLabel={takePicker.mode === "join" ? (joinBridge ? "Render bridge and join" : "Join") : "Use its last frame"}
           busy={takeBusy}
           includeCurrent={takePicker.mode === "join"}
           extra={
             takePicker.mode === "join" ? (
-              <label className="mb-1 flex items-center gap-2 text-xs text-foreground">
-                <input type="checkbox" checked={joinThisFirst} onChange={(event) => setJoinThisFirst(event.target.checked)} />
-                This story&apos;s take plays first (untick to put the picked one first)
-              </label>
+              <div className="mb-1 space-y-2 text-xs text-foreground">
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" checked={joinThisFirst} onChange={(event) => setJoinThisFirst(event.target.checked)} />
+                  This story&apos;s take plays first (untick to put the picked one first)
+                </label>
+                <label className="flex items-start gap-2">
+                  <input type="checkbox" checked={joinBridge} onChange={(event) => setJoinBridge(event.target.checked)} className="mt-0.5" />
+                  <span>
+                    Smooth bridge, generated in ComfyUI: H3 (first/last-frame model) renders a short clip that starts on the
+                    first take&apos;s last second and ends on the second take&apos;s first second, picture and sound, so both
+                    seams flow. Untick to just play the two back to back.
+                  </span>
+                </label>
+                {joinBridge && (
+                  <div className="space-y-2 rounded-lg border border-line p-2">
+                    <textarea
+                      value={bridgePrompt}
+                      onChange={(event) => setBridgePrompt(event.target.value)}
+                      rows={3}
+                      placeholder="What happens in the bridge. Leave empty: written from the first story's last frame and the second story's first frame, without spoken lines."
+                      className="w-full rounded-md border border-line bg-background p-2 text-xs text-foreground"
+                    />
+                    <div className="flex flex-wrap items-center gap-4">
+                      <label className="flex items-center gap-2">
+                        New seconds
+                        <input
+                          type="number"
+                          min={1}
+                          max={8}
+                          value={bridgeSeconds}
+                          onChange={(event) => setBridgeSeconds(Math.min(8, Math.max(1, Number(event.target.value) || 3)))}
+                          className="w-16 rounded-md border border-line bg-background px-2 py-1"
+                        />
+                      </label>
+                      <label className="flex items-center gap-2">
+                        Steps
+                        <select
+                          value={bridgeSteps}
+                          onChange={(event) => setBridgeSteps(Number(event.target.value))}
+                          className="rounded-md border border-line bg-background px-2 py-1"
+                        >
+                          <option value={8}>8 (turbo)</option>
+                          <option value={14}>14 (finer)</option>
+                        </select>
+                      </label>
+                      <span className="text-muted">Size follows the first take.</span>
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : null
           }
           onPick={(take) =>

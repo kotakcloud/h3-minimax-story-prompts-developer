@@ -53,11 +53,13 @@ export async function lastFrame(video: ComfyImage): Promise<Buffer> {
 }
 
 // Plays the takes one after another as one video, at the first take's size (others are scaled to fit, with bars if
-// their shape differs) and 24 fps. A take without sound gets silence, so the sound stays in step.
+// their shape differs) and 24 fps. A take without sound gets silence, so the sound stays in step. `trims` keeps only
+// frames [start, end) of a part (at 24 fps), e.g. a bridge without its pinned head and tail.
 export async function joinVideos(
   storyId: string,
   id: string,
   videos: ComfyImage[],
+  trims: ({ start: number; end: number } | null)[] = [],
 ): Promise<{ duration: number; width: number; height: number }> {
   if (videos.length < 2 || videos.length > 4) throw new Error("Join 2 to 4 videos.");
   const work = await mkdtemp(path.join(os.tmpdir(), "h3-join-"));
@@ -72,15 +74,19 @@ export async function joinVideos(
     const withAudio = probes.some((item) => item.audio);
     const parts: string[] = [];
     probes.forEach((item, index) => {
+      const trim = trims[index];
+      const cut = trim ? `trim=start_frame=${trim.start}:end_frame=${trim.end},setpts=PTS-STARTPTS,` : "";
+      const audioCut = trim ? `atrim=start=${(trim.start / 24).toFixed(4)}:end=${(trim.end / 24).toFixed(4)},asetpts=PTS-STARTPTS,` : "";
+      const duration = trim ? (trim.end - trim.start) / 24 : item.duration;
       parts.push(
-        `[${index}:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,` +
-          `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=24,format=yuv420p[v${index}]`,
+        `[${index}:v]fps=24,${cut}scale=${width}:${height}:force_original_aspect_ratio=decrease,` +
+          `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,format=yuv420p[v${index}]`,
       );
       if (withAudio) {
         parts.push(
           item.audio
-            ? `[${index}:a]aresample=48000,aformat=channel_layouts=stereo,apad,atrim=duration=${item.duration.toFixed(3)}[a${index}]`
-            : `anullsrc=r=48000:cl=stereo,atrim=duration=${item.duration.toFixed(3)}[a${index}]`,
+            ? `[${index}:a]${audioCut}aresample=48000,aformat=channel_layouts=stereo,apad,atrim=duration=${duration.toFixed(3)}[a${index}]`
+            : `anullsrc=r=48000:cl=stereo,atrim=duration=${duration.toFixed(3)}[a${index}]`,
         );
       }
     });

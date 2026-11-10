@@ -203,6 +203,26 @@ export type JoinedVideo = {
   id: string;
   createdAt: string;
   parts: { storyId: string; code: string; title: string; runId: string; label: string }[];
+  // A generated bridge between the two takes (ComfyUI, first/last-frame H3): the joined file is made once it is
+  // rendered (duration stays 0 until then).
+  bridge?: {
+    promptId: string;
+    status: "queued" | "running" | "assembling" | "done" | "error" | "cancelled";
+    prompt: string;
+    seconds: number;
+    steps: number;
+    seed: number;
+    width: number;
+    height: number;
+    pinnedHead: number;
+    pinnedTail: number;
+    from: { filename: string; subfolder: string; type: string };
+    to: { filename: string; subfolder: string; type: string };
+    video?: { filename: string; subfolder: string; type: string } | null;
+    error?: string;
+    startedAt: string;
+    finishedAt?: string;
+  };
   duration: number;
   width: number;
   height: number;

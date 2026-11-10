@@ -149,6 +149,21 @@ now, because a run takes a single reference image.
   its shape differs) and 24 fps; a take without sound gets silence. Nothing is rendered again. It is listed under
   **Joined videos** on this story's Video step with both parts, a download button, a note box and a delete button that
   also removes the file. Files: `data/joins/<story id>/<id>.mp4` (deleted with the story).
+- **Smooth bridge** (ticked by default in the join window): instead of a hard cut, ComfyUI renders a short H3 clip
+  between the two takes with the first/last-frame model (`minimax_h3_fl2va_pruned_w4a8_mixed` + the fl2v turbo 8-step
+  LoRA at 0.85, sigma shift 12/3, euler, built in `lib/bridge.ts` from ComfyUI's core MiniMax H3 nodes; nothing in the
+  story workflows changes). The first take's last 22 frames (just under a second, picture and sound) are pinned at the
+  bridge's start and the second take's first 22 frames at its end (*Add Guide for MiniMax H3*); H3 fills the *New
+  seconds* between (1-8, default 3). The prompt box can stay empty: it is then written from the first story's last
+  frame and the second story's first frame, without their spoken lines, asking for one continuous shot. *Steps*: 8
+  (turbo) or 14. The canvas follows the first take's size. The joined video appears under Joined videos at once with
+  the bridge's state (queued, rendering, joining, Stop) and is made when the render ends: first take, the bridge without
+  its pinned frames, second take (`/api/bridges`, `/api/bridges/status`, `/api/bridges/assemble`). The clips sent to
+  ComfyUI land in its input folder (`h3bridge_<id>_from.mp4` / `_to.mp4`), renders in `output/h3-bridge/`.
+  Tested (10 Nov 2026, 448×256, 8 steps, about 40 s per bridge): the seam into the bridge is seamless, motion and
+  sound carry on. When the second take opens on a quite different framing, H3 still tends to cut just before the
+  pinned end rather than move the camera there; ending on the second take's first frame only (`endPin: "frame"`)
+  made it cut and then hold still, so the clip end is the default.
 - **Picture in picture**: the button under a generation or comparison video plays it in a small floating window that stays
   on top while you scroll, switch browser tabs or use another app, and the page switches to the Prompts step so you can
   read the prompts while it plays (close the floating window to stop it). Chrome,

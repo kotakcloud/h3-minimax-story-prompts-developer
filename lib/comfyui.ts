@@ -672,3 +672,58 @@ export function comfyViewUrl(image: ComfyImage): string {
   });
   return `${COMFYUI_URL}/view?${query}`;
 }
+
+// ---------------------------------------------------------------------------
+// Small building blocks for other workflows (the story bridge, lib/bridge.ts)
+// ---------------------------------------------------------------------------
+
+export type { ApiNode };
+
+export function queueApiWorkflow(workflow: Record<string, ApiNode>): Promise<string> {
+  return queueWorkflow(workflow);
+}
+
+// A file in ComfyUI's input folder (top level), for LoadImage / LoadVideo.
+export async function uploadInputFile(file: Blob, filename: string): Promise<string> {
+  const form = new FormData();
+  form.append("image", file, filename);
+  form.append("type", "input");
+  form.append("overwrite", "true");
+  const uploaded = (await comfyJson(`${COMFYUI_URL}/upload/image`, { method: "POST", body: form })) as { name?: string };
+  if (!uploaded.name) throw new Error("ComfyUI did not accept the file.");
+  return uploaded.name;
+}
+
+// Where a job stands: waiting (with its place in the queue), running, done (with every file it saved), failed or
+// stopped.
+export async function promptState(promptId: string): Promise<{
+  status: "queued" | "running" | "done" | "error" | "cancelled" | "unknown";
+  queuePosition: number;
+  files: ComfyImage[];
+  error: string;
+}> {
+  const entry = await historyEntry(promptId);
+  if (entry?.status?.status_str === "error") {
+    return wasInterrupted(entry)
+      ? { status: "cancelled", queuePosition: 0, files: [], error: "" }
+      : { status: "error", queuePosition: 0, files: [], error: executionError(entry) };
+  }
+  if (entry?.status?.completed) {
+    const files = Object.values((entry.outputs || {}) as Record<string, Record<string, unknown>>).flatMap((output) =>
+      Object.values(output).flatMap((value) =>
+        Array.isArray(value)
+          ? value.filter(
+              (item): item is ComfyImage =>
+                Boolean(item) && typeof item === "object" && typeof (item as ComfyImage).filename === "string",
+            )
+          : [],
+      ),
+    );
+    return { status: "done", queuePosition: 0, files, error: "" };
+  }
+  const queue = await comfyQueue();
+  if (queue.running.includes(promptId)) return { status: "running", queuePosition: 0, files: [], error: "" };
+  const position = queue.pending.indexOf(promptId);
+  if (position >= 0) return { status: "queued", queuePosition: position + 1, files: [], error: "" };
+  return { status: "unknown", queuePosition: 0, files: [], error: "" };
+}
