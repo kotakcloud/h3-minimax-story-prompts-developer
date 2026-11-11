@@ -1,7 +1,7 @@
 import { mkdir, readdir, readFile, rename, rm, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import type { StepModels, Story, StoryStep, StorySummary, StoryType } from "./types";
+import type { JoinedVideo, PromptRevision, StepModels, Story, StoryStep, StorySummary, StoryType, VideoRun } from "./types";
 import { RECOMMENDED_MODEL } from "./models";
 import {
   DEFAULT_IMAGE_SETTINGS,
@@ -428,9 +428,41 @@ export async function updateStory(id: string, patch: Partial<Story>): Promise<St
   delete rest.projectId;
   // Only setNote writes the note, so a page left open on the story cannot overwrite it.
   delete rest.note;
+  // A page sends only the fields it changed, and the updatedAt of the copy it changed them on. Prompt sets, takes and
+  // joins added after that copy (by another tab or machine) are kept, so a page left open cannot drop them.
+  const base = (rest as { baseUpdatedAt?: unknown }).baseUpdatedAt;
+  delete (rest as { baseUpdatedAt?: unknown }).baseUpdatedAt;
+  const merged = rest as Record<string, unknown>;
+  for (const [key, value] of Object.entries(merged)) {
+    // A field the page cleared; analysis and imported use null as a value of their own.
+    if (value === null && key !== "analysis" && key !== "imported") {
+      merged[key] = undefined;
+    }
+  }
+  if (typeof base === "string") {
+    const newer = <T extends { id: string; createdAt: string }>(incoming: unknown, existing: T[] | undefined) => {
+      if (!Array.isArray(incoming) || !existing) return [] as T[];
+      const ids = new Set((incoming as T[]).map((item) => item?.id));
+      return existing.filter((item) => !ids.has(item.id) && item.createdAt > base);
+    };
+    if ("promptRevisions" in merged) {
+      merged.promptRevisions = [...((merged.promptRevisions as PromptRevision[]) || []), ...newer(merged.promptRevisions, current.promptRevisions)];
+    }
+    // Takes and joins are listed newest first.
+    if ("videos" in merged) {
+      merged.videos = [...newer(merged.videos, current.videos), ...((merged.videos as VideoRun[]) || [])];
+    }
+    if ("joins" in merged) {
+      const extra = newer(merged.joins, current.joins);
+      if (extra.length) merged.joins = [...extra, ...((merged.joins as JoinedVideo[]) || [])];
+    }
+  }
+  const next = { ...current, ...merged } as Story;
+  for (const key of Object.keys(next) as (keyof Story)[]) {
+    if (next[key] === undefined) delete next[key];
+  }
   return writeStory({
-    ...current,
-    ...rest,
+    ...next,
     id: current.id,
     createdAt: current.createdAt,
   });

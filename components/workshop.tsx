@@ -553,34 +553,58 @@ export function Workshop({
   const [compareAudio, setCompareAudio] = useState(0);
   const [videoSort, setVideoSort] = useState<"newest" | "rating">("newest");
   const persistTail = useRef(Promise.resolve());
+  // The story as the server last sent it to this page; saves send only what differs from it.
+  const baseRef = useRef<Story | null>(null);
 
   useEffect(() => {
     storyRef.current = story;
   }, [story]);
 
+  // Saves send only what this page changed since the story last came from the server (baseRef), so a page left open
+  // (another tab, another machine, the phone) cannot put back prompts, takes or settings it never touched. The server
+  // also keeps prompt sets, takes and joins added elsewhere since then (baseUpdatedAt).
   function persist(next: Story) {
     storyRef.current = next;
     const task = persistTail.current.then(async () => {
       const payload = storyRef.current;
       if (!payload) throw new Error("Story is not loaded.");
+      const base = baseRef.current;
+      const changes: Record<string, unknown> = {};
+      for (const key of Object.keys(payload) as (keyof Story)[]) {
+        if (!base || JSON.stringify(payload[key]) !== JSON.stringify(base[key])) changes[key] = payload[key];
+      }
+      if (base) {
+        // A field this page cleared (now undefined) is sent as null, so the server drops it too.
+        for (const key of Object.keys(base) as (keyof Story)[]) {
+          if (!(key in payload) || payload[key] === undefined) {
+            if (base[key] !== undefined) changes[key] = null;
+          }
+        }
+        changes.baseUpdatedAt = base.updatedAt;
+      }
       const response = await request(`/api/stories/${payload.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(changes),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Save failed.");
       const saved = data.story as Story;
-      if (
-        storyRef.current &&
-        storyRef.current.promptRevisions.length > saved.promptRevisions.length
-      ) {
-        return storyRef.current;
-      }
-      if (storyRef.current === payload || storyRef.current === next) {
+      baseRef.current = saved;
+      // The server's copy (with other pages' changes), plus anything changed here while this save was on its way.
+      const latest = storyRef.current;
+      if (!latest || latest === payload) {
         storyRef.current = saved;
+        return saved;
       }
-      return storyRef.current || saved;
+      const rebased: Story = { ...saved };
+      for (const key of Object.keys(latest) as (keyof Story)[]) {
+        if (JSON.stringify(latest[key]) !== JSON.stringify(payload[key])) {
+          (rebased as Record<string, unknown>)[key] = latest[key];
+        }
+      }
+      storyRef.current = rebased;
+      return rebased;
     });
     persistTail.current = task.then(
       () => undefined,
@@ -614,6 +638,7 @@ export function Workshop({
         return;
       }
       const loaded = storyData.story as Story;
+      baseRef.current = loaded;
       skipSave.current = loaded.step === step;
       setStory({ ...loaded, step });
       setPromptDrafts({});
