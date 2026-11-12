@@ -104,6 +104,13 @@ export function parseDialogue(prompt: string): DialogueLine[] {
   return lines;
 }
 
+// The spoken lines of a prompt as plain text, one "Name: words" per line (for the copy-dialogue button).
+export function dialogueText(prompt: string, name: (id: string) => string): string {
+  return parseDialogue(prompt)
+    .map((line) => `${line.speakers.map(name).join(" & ") || "Speaker"}: ${line.text.replace(/\s+/g, " ").trim()}`)
+    .join("\n");
+}
+
 // Timed prompts: lines that, spoken at a natural pace from their start, run past the prompt's last timestamp. H3 cuts
 // these off (a slot shorter than the estimate alone is fine: H3 speaks on past it).
 export function cutOffLines(prompt: string): (DialogueLine & { clipEnd: number })[] {

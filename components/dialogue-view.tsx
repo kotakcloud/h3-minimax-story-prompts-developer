@@ -30,6 +30,7 @@ export function DialogueView({
   fixing,
   onUpdateDurations,
   onCopy,
+  onCopyDialogue,
   copiedId,
 }: {
   segments: PromptSegment[];
@@ -41,6 +42,7 @@ export function DialogueView({
   fixing: boolean;
   onUpdateDurations: (edits: LineDuration[], texts: LineText[]) => void;
   onCopy: (segment: PromptSegment) => void;
+  onCopyDialogue: (segment: PromptSegment) => void;
   copiedId: string;
 }) {
   const [hideUnselected, setHideUnselected] = useState(false);
@@ -161,6 +163,13 @@ export function DialogueView({
                   </button>
                   <IconButton label={copiedId === segment.id ? "Copied" : "Copy prompt"} onClick={() => onCopy(segment)}>
                     {copiedId === segment.id ? Icons.check : Icons.copy}
+                  </IconButton>
+                  <IconButton
+                    label={lines.length > 0 ? (copiedId === `${segment.id}:dialogue` ? "Copied" : "Copy dialogue only (the spoken lines)") : "No dialogue to copy"}
+                    disabled={lines.length === 0}
+                    onClick={() => onCopyDialogue(segment)}
+                  >
+                    {copiedId === `${segment.id}:dialogue` ? Icons.check : Icons.speech}
                   </IconButton>
                 </div>
               </div>

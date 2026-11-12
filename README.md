@@ -439,8 +439,10 @@ give the line; a line and its segment turn amber when the line, spoken from its 
 is what gets cut off in the video. Prompts without times (Story V2) turn amber when the words need longer than the segment
 (speech plus about 2.5 s of silence). Each line has a checkbox for internal debugging, and **Hide unselected** narrows the view to
 the ticked lines; ticks are not saved and clear on reload. Each segment also has **Full prompt**, which shows that segment's
-whole saved prompt in place of its lines (read only; **Dialogue** switches back; edit it with Dialogue view off), and a copy
-button that copies its whole prompt, like the one in the prompt view.
+whole saved prompt in place of its lines (read only; **Dialogue** switches back; edit it with Dialogue view off), a copy
+button that copies its whole prompt, like the one in the prompt view, and a speech-bubble button that copies only its spoken
+lines, one `Name: words` per line. The speech-bubble button is on each prompt outside Dialogue view too (there it copies the
+lines of the edited, unsaved text); it is greyed out when the segment has no dialogue.
 
 Long lines get the time they need, at three points. Frames are lengthened to fit the quoted lines in their summary (up to
 11 s for new frames, 15 s later) when they are created and again when prompts are written, so an edited frame counts too. After writing, a long-take

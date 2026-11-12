@@ -19,6 +19,12 @@ function Svg({ children, className }: { children: ReactNode; className?: string 
 }
 
 export const Icons = {
+  speech: (
+    <Svg>
+      <path d="M4 5h16v11H9l-5 4z" />
+      <path d="M8 9h8M8 12h5" />
+    </Svg>
+  ),
   plus: (
     <Svg>
       <path d="M12 5v14M5 12h14" />

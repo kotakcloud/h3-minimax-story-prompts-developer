@@ -15,7 +15,7 @@ import { PromptDiffConfirm, PromptDiffLink } from "@/components/prompt-diff";
 import { closePictureInPicture, VideoPlayer } from "@/components/video-player";
 import { TakePicker, type PickedTake } from "@/components/take-picker";
 import { framesFromAnalysis } from "@/lib/beats";
-import { applyLineDurations, applyLineTexts, timingComment, timingFixes, type LineDuration, type LineText } from "@/lib/dialogue";
+import { applyLineDurations, applyLineTexts, dialogueText, parseDialogue, timingComment, timingFixes, type LineDuration, type LineText } from "@/lib/dialogue";
 import { playDoneSound } from "@/lib/done-sound";
 import { modelLabel, stepModel, storyModelsLabel } from "@/lib/models";
 import { StepModelSelect } from "@/components/step-model-select";
@@ -2418,6 +2418,18 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     }
   }
 
+  // Only the spoken lines ("Name: words"), not the whole prompt. copiedId gets a ":dialogue" suffix to tell the buttons apart.
+  async function copyDialogue(segment: PromptSegment) {
+    const name = (id: string) => story?.characters.find((character) => character.id === id)?.name || id;
+    try {
+      await copyText(dialogueText(segment.prompt, name));
+      setCopiedId(`${segment.id}:dialogue`);
+      window.setTimeout(() => setCopiedId(""), 1500);
+    } catch {
+      setError("Clipboard is blocked here. Select the lines in Dialogue view instead.");
+    }
+  }
+
   function exportSlug() {
     return (story?.title || "story-prompts").toLowerCase().replace(/[^a-z0-9]+/g, "-") || "story-prompts";
   }
@@ -3861,6 +3873,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                   onUpdateDurations={(edits, texts) => void updateLineDurations(edits, texts)}
                   fixing={busy === "update"}
                   onCopy={(segment) => void copyPrompt(segment)}
+                  onCopyDialogue={(segment) => void copyDialogue(segment)}
                   copiedId={copiedId}
                   onToggle={(key) =>
                     setSelectedDialogue((keys) => (keys.includes(key) ? keys.filter((item) => item !== key) : [...keys, key]))
@@ -4136,6 +4149,19 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                           >
                             {copiedId === segment.id ? Icons.check : Icons.copy}
                           </IconButton>
+                          {(() => {
+                            const prompt = promptDrafts[segment.id] ?? segment.prompt;
+                            const has = parseDialogue(prompt).length > 0;
+                            return (
+                              <IconButton
+                                label={has ? (copiedId === `${segment.id}:dialogue` ? "Copied" : "Copy dialogue only (the spoken lines)") : "No dialogue to copy"}
+                                disabled={!has}
+                                onClick={() => void copyDialogue({ ...segment, prompt })}
+                              >
+                                {copiedId === `${segment.id}:dialogue` ? Icons.check : Icons.speech}
+                              </IconButton>
+                            );
+                          })()}
                           <IconButton label="Duplicate: a copy right below, to change (saved with Review & save)" onClick={() => duplicateSegment(segment)}>
                             {Icons.duplicate}
                           </IconButton>
