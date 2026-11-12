@@ -410,6 +410,10 @@ export function Workshop({
   const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState("");
   const [copiedId, setCopiedId] = useState("");
+  // Dialogue view: segments switched to their full prompt card (kept in memory only).
+  const [fullPromptIds, setFullPromptIds] = useState<string[]>([]);
+  const toggleFullPrompt = (id: string) =>
+    setFullPromptIds((ids) => (ids.includes(id) ? ids.filter((item) => item !== id) : [...ids, id]));
   // Prompt blocks whose internal note box is open (Prompts step).
   const [openNotes, setOpenNotes] = useState<string[]>([]);
   // The prompt block whose own picture is uploading.
@@ -2418,6 +2422,334 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     }
   }
 
+  // The full prompt cards (picture, note, review, editable prompt, duration) by segment id: the whole list outside
+  // Dialogue view, and single segments switched to Full prompt inside it.
+  function promptCards(story: Story): Map<string, ReactNode> {
+                  // Numbered as they will be once saved: deleted blocks get no number.
+                  let number = 0;
+                  // The picture each segment's video gets: its own storyboard panel ("one panel per segment"), else the
+                  // selected reference image (as runVideo and /api/video pick it).
+                  const refImage = story.referenceImages.find((item) => item.id === story.selectedImageId);
+                  const segmentPicture = (segment: PromptSegment): { src: string; slide: number; label: string; own?: boolean } | null => {
+                    const chosen = story.segmentImages?.[segment.id];
+                    if (chosen) {
+                      return {
+                        src: imageSrc(chosen as ReferenceImage),
+                        slide: 0,
+                        label: `Own picture${chosen.originalName ? ` (${chosen.originalName})` : ""}`,
+                        own: true,
+                      };
+                    }
+                    if (!refImage) return null;
+                    const panel = segment.panel ?? frameFor(story.frames, segment.id)?.panel ?? 0;
+                    const own = refImage.grid && story.gridFeed === "panels" && panel >= 1 ? refImage.grid.panels[panel - 1] : undefined;
+                    return own
+                      ? { src: imageSrc({ ...refImage, ...own }), slide: panel, label: `Panel ${panel}` }
+                      : { src: imageSrc(refImage), slide: 0, label: refImage.grid ? "Whole storyboard" : "Reference image" };
+                  };
+                  const list = segmentsDraft ?? story.segments;
+                  const items = list.map((segment) => {
+                  const title = segmentTitle(story.frames, segment.id);
+                  if (deletedDrafts.includes(segment.id)) {
+                    return (
+                      <li
+                        key={segment.id}
+                        id={`prompt-${segment.id}`}
+                        className="flex flex-wrap items-center gap-3 rounded-2xl border border-dashed border-red-400/50 bg-card px-4 py-2 text-sm"
+                      >
+                        <span className="text-muted line-through">{title}</span>
+                        <span className="text-xs text-red-300">Deleted, not saved</span>
+                        <button
+                          type="button"
+                          onClick={() => setDeletedDrafts((ids) => ids.filter((id) => id !== segment.id))}
+                          className="text-xs text-muted underline underline-offset-2 hover:text-foreground"
+                        >
+                          Undo
+                        </button>
+                      </li>
+                    );
+                  }
+                  number += 1;
+                  const index = number - 1;
+                  const isNew = isNewSegment(segment);
+                  const reviewed = !isNew && isReviewed(segment);
+                  const savedIndex = story.segments.findIndex((item) => item.id === segment.id);
+                  const note = story.promptNotes?.[segment.id] ?? "";
+                  const noteOpen = openNotes.includes(segment.id);
+                  return (
+                    <li
+                      key={segment.id}
+                      id={`prompt-${segment.id}`}
+                      className={`scroll-mt-24 rounded-2xl border p-4 ${
+                        isNew ? "border-accent/60 bg-card" : reviewed ? "border-emerald-500/40 bg-emerald-950/30" : "border-line bg-card"
+                      }`}
+                    >
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-3">
+                          {(() => {
+                            const picture = segmentPicture(segment);
+                            const busyHere = segmentImageBusy === segment.id;
+                            return (
+                              <div className="flex shrink-0 items-center gap-1">
+                                {picture && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setViewer(
+                                        picture.own || !refImage
+                                          ? { slides: [{ src: picture.src, title: `${index + 1}. ${title} · ${picture.label}` }], index: 0 }
+                                          : { slides: imageSlides(refImage), index: picture.slide },
+                                      )
+                                    }
+                                    title={`${picture.label}: the picture this segment's video starts from (click to enlarge)`}
+                                    className={`overflow-hidden rounded-md border-2 ${picture.own ? "border-amber-400/80" : "border-line"} hover:border-accent`}
+                                  >
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={picture.src} alt={picture.label} loading="lazy" className="h-14 w-auto max-w-28 object-cover" />
+                                  </button>
+                                )}
+                                <div className="flex flex-col gap-1">
+                                  <label
+                                    title={
+                                      busyHere
+                                        ? "Uploading…"
+                                        : "Change the picture for this segment only: upload an image; the video starts this segment from it (Veda Turbo, Singularity Veda, Sage SLA or Story V2). Saved right away."
+                                    }
+                                    className={`inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-line text-muted hover:border-accent hover:text-foreground ${
+                                      busyHere ? "animate-pulse" : ""
+                                    }`}
+                                  >
+                                    {Icons.image}
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      className="hidden"
+                                      disabled={busyHere}
+                                      onChange={(event) => {
+                                        const file = event.target.files?.[0];
+                                        event.target.value = "";
+                                        if (file) void setSegmentImage(segment, file, index + 1);
+                                      }}
+                                    />
+                                  </label>
+                                  <IconButton
+                                    label="Start from another story's ending: its last video frame becomes this segment's picture (pick the story and take)"
+                                    onClick={() => setTakePicker({ mode: "last-frame", segmentId: segment.id })}
+                                    className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-line text-muted hover:border-accent hover:text-foreground"
+                                  >
+                                    {Icons.film}
+                                  </IconButton>
+                                  {picture?.own && (
+                                    <IconButton
+                                      label={`Remove this picture: the segment goes back to ${
+                                        refImage?.grid && story.gridFeed === "panels" ? "its storyboard panel" : "the reference image"
+                                      }`}
+                                      onClick={() => void setSegmentImage(segment, null, index + 1)}
+                                      className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-line text-muted hover:border-red-400 hover:text-red-300"
+                                    >
+                                      {Icons.back}
+                                    </IconButton>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })()}
+                          <p className="text-sm font-medium">
+                            {index + 1}. {title}
+                            {isNew && <span className="ml-2 text-xs font-normal text-accent">New, not saved</span>}
+                            {reviewed && <span className="ml-2 text-xs font-normal text-emerald-400">✓ Reviewed</span>}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {dialogueView && (
+                            <button
+                              type="button"
+                              onClick={() => toggleFullPrompt(segment.id)}
+                              title="Back to the spoken lines of this segment"
+                              className="mr-1 rounded-full border border-accent bg-accent/20 px-3 py-1 text-xs text-foreground"
+                            >
+                              Dialogue
+                            </button>
+                          )}
+                          {!isNew && (
+                            <IconButton
+                              label={
+                                reviewed
+                                  ? "Unmark from here: this prompt and the ones after it are no longer reviewed"
+                                  : "Reviewed up to here: marks this prompt and every one above it as reviewed (an edited prompt drops out on its own)"
+                              }
+                              onClick={() => reviewThrough(reviewed ? story.segments[savedIndex - 1] ?? null : segment)}
+                              className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${
+                                reviewed
+                                  ? "border-emerald-500/60 bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/10"
+                                  : "border-line text-muted hover:border-emerald-500/60 hover:text-emerald-300"
+                              }`}
+                            >
+                              {Icons.reviewed}
+                            </IconButton>
+                          )}
+                          <IconButton
+                            label={note.trim() ? `Note: ${note.trim().slice(0, 200)}` : "Add an internal note (only for you; not sent anywhere)"}
+                            onClick={() =>
+                              setOpenNotes((ids) => (ids.includes(segment.id) ? ids.filter((id) => id !== segment.id) : [...ids, segment.id]))
+                            }
+                            className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${
+                              note.trim()
+                                ? "border-amber-400/70 bg-amber-400/20 text-amber-300 hover:bg-amber-400/10"
+                                : noteOpen
+                                  ? "border-accent text-foreground"
+                                  : "border-line text-muted hover:border-amber-400/70 hover:text-amber-300"
+                            }`}
+                          >
+                            {Icons.note}
+                          </IconButton>
+                          <IconButton
+                            label={copiedId === segment.id ? "Copied" : "Copy prompt"}
+                            onClick={() => copyPrompt({ ...segment, prompt: promptDrafts[segment.id] ?? segment.prompt })}
+                          >
+                            {copiedId === segment.id ? Icons.check : Icons.copy}
+                          </IconButton>
+                          {(() => {
+                            const prompt = promptDrafts[segment.id] ?? segment.prompt;
+                            const has = parseDialogue(prompt).length > 0;
+                            return (
+                              <IconButton
+                                label={has ? (copiedId === `${segment.id}:dialogue` ? "Copied" : "Copy dialogue only (the spoken lines)") : "No dialogue to copy"}
+                                disabled={!has}
+                                onClick={() => void copyDialogue({ ...segment, prompt })}
+                              >
+                                {copiedId === `${segment.id}:dialogue` ? Icons.check : Icons.speech}
+                              </IconButton>
+                            );
+                          })()}
+                          <IconButton label="Duplicate: a copy right below, to change (saved with Review & save)" onClick={() => duplicateSegment(segment)}>
+                            {Icons.duplicate}
+                          </IconButton>
+                          <IconButton
+                            label={isNew ? "Delete this copy" : "Delete this segment (saved with Review & save; Undo brings it back)"}
+                            onClick={() => deleteSegment(segment)}
+                          >
+                            {Icons.trash}
+                          </IconButton>
+                        </div>
+                      </div>
+                      {noteOpen ? (
+                        <div className="mb-3 rounded-lg border border-amber-400/40 bg-amber-400/5 p-2">
+                          <div className="mb-1 flex items-center justify-between gap-2 text-xs text-amber-300">
+                            <span>Internal note · only for you, saved as you type, never sent to a model or video</span>
+                            <button
+                              type="button"
+                              onClick={() => setOpenNotes((ids) => ids.filter((id) => id !== segment.id))}
+                              className="text-muted underline underline-offset-2 hover:text-foreground"
+                            >
+                              Close
+                            </button>
+                          </div>
+                          <textarea
+                            value={note}
+                            onChange={(event) => setPromptNote(segment.id, event.target.value)}
+                            rows={2}
+                            autoFocus={!note}
+                            placeholder="Write a note…"
+                            aria-label={`Note for prompt ${index + 1}`}
+                            className="w-full resize-y rounded-md border border-line bg-transparent p-2 text-sm text-foreground outline-none focus:border-amber-400/70"
+                          />
+                        </div>
+                      ) : (
+                        note.trim() && (
+                          <button
+                            type="button"
+                            onClick={() => setOpenNotes((ids) => [...ids, segment.id])}
+                            title="Edit note"
+                            className="mb-3 block w-full whitespace-pre-wrap rounded-lg border border-amber-400/30 bg-amber-400/5 px-3 py-2 text-left text-amber-200"
+                          >
+                            <span className="text-sm">{note.trim()}</span>
+                          </button>
+                        )
+                      )}
+                      {(() => {
+                        const draft = promptDrafts[segment.id];
+                        const edited = segmentEdited(segment);
+                        const value = draft ?? segment.prompt;
+                        return (
+                          <>
+                            <textarea
+                              value={value}
+                              onChange={(event) => setPromptDrafts((drafts) => ({ ...drafts, [segment.id]: event.target.value }))}
+                              rows={3}
+                              spellCheck={false}
+                              aria-label={`Prompt ${index + 1}`}
+                              // As tall as its text (wrapped lines too), so it never scrolls on its own.
+                              ref={(element) => {
+                                if (!element) return;
+                                element.style.height = "auto";
+                                element.style.height = `${element.scrollHeight + 2}px`;
+                              }}
+                              onInput={(event) => {
+                                const element = event.currentTarget;
+                                element.style.height = "auto";
+                                element.style.height = `${element.scrollHeight + 2}px`;
+                              }}
+                              className={`prompt-text w-full resize-none overflow-hidden rounded-lg border bg-transparent p-2 outline-none ${
+                                edited ? "border-accent text-foreground" : "border-transparent text-muted hover:border-line focus:border-line"
+                              }`}
+                            />
+                            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                            <label className="flex items-center gap-2 text-xs text-muted">
+                              Duration
+                              <DurationInput
+                                value={durationDrafts[segment.id] ?? segment.duration}
+                                min={4}
+                                max={15}
+                                onCommit={(duration) =>
+                                  setDurationDrafts((drafts) => {
+                                    const next = { ...drafts };
+                                    if (duration === segment.duration) delete next[segment.id];
+                                    else next[segment.id] = duration;
+                                    return next;
+                                  })
+                                }
+                                className={`py-0.5 text-xs ${
+                                  durationDrafts[segment.id] !== undefined && durationDrafts[segment.id] !== segment.duration ? "border-accent" : ""
+                                }`}
+                              />
+                              s
+                            </label>
+                            {edited && (
+                              <p className="flex items-center gap-3 text-xs text-accent">
+                                Edited, not saved
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                  {
+                                    setPromptDrafts((drafts) => {
+                                      const next = { ...drafts };
+                                      delete next[segment.id];
+                                      return next;
+                                    });
+                                    setDurationDrafts((drafts) => {
+                                      const next = { ...drafts };
+                                      delete next[segment.id];
+                                      return next;
+                                    });
+                                  }
+                                  }
+                                  className="text-muted underline underline-offset-2 hover:text-foreground"
+                                >
+                                  Undo
+                                </button>
+                              </p>
+                            )}
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </li>
+                  );
+                  });
+                  return new Map(list.map((segment, i) => [segment.id, items[i]]));
+  }
+
   // Only the spoken lines ("Name: words"), not the whole prompt. copiedId gets a ":dialogue" suffix to tell the buttons apart.
   async function copyDialogue(segment: PromptSegment) {
     const name = (id: string) => story?.characters.find((character) => character.id === id)?.name || id;
@@ -3863,24 +4195,6 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                 <kbd className="rounded border border-line px-1 text-[10px] text-muted">Ctrl+Shift+Q</kbd>
                 <span className="text-xs text-muted">only the spoken lines, to review</span>
               </label>
-              {dialogueView ? (
-                <DialogueView
-                  segments={story.segments}
-                  frames={story.frames}
-                  characters={story.characters}
-                  selected={selectedDialogue}
-                  onFixTiming={() => void fixDialogueTiming()}
-                  onUpdateDurations={(edits, texts) => void updateLineDurations(edits, texts)}
-                  fixing={busy === "update"}
-                  onCopy={(segment) => void copyPrompt(segment)}
-                  onCopyDialogue={(segment) => void copyDialogue(segment)}
-                  copiedId={copiedId}
-                  onToggle={(key) =>
-                    setSelectedDialogue((keys) => (keys.includes(key) ? keys.filter((item) => item !== key) : [...keys, key]))
-                  }
-                />
-              ) : (
-              <>
               {(() => {
                 const list = segmentsDraft ?? story.segments;
                 const count = list.filter((segment) => segmentEdited(segment) && !deletedDrafts.includes(segment.id) && !isNewSegment(segment)).length;
@@ -3974,323 +4288,31 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                   })()}
                 />
               )}
-              <ol className="space-y-5">
-                {(() => {
-                  // Numbered as they will be once saved: deleted blocks get no number.
-                  let number = 0;
-                  // The picture each segment's video gets: its own storyboard panel ("one panel per segment"), else the
-                  // selected reference image (as runVideo and /api/video pick it).
-                  const refImage = story.referenceImages.find((item) => item.id === story.selectedImageId);
-                  const segmentPicture = (segment: PromptSegment): { src: string; slide: number; label: string; own?: boolean } | null => {
-                    const chosen = story.segmentImages?.[segment.id];
-                    if (chosen) {
-                      return {
-                        src: imageSrc(chosen as ReferenceImage),
-                        slide: 0,
-                        label: `Own picture${chosen.originalName ? ` (${chosen.originalName})` : ""}`,
-                        own: true,
-                      };
+              {(() => {
+                const cards = promptCards(story);
+                return dialogueView ? (
+                  <DialogueView
+                    segments={story.segments}
+                    frames={story.frames}
+                    characters={story.characters}
+                    selected={selectedDialogue}
+                    onFixTiming={() => void fixDialogueTiming()}
+                    onUpdateDurations={(edits, texts) => void updateLineDurations(edits, texts)}
+                    fixing={busy === "update"}
+                    onCopy={(segment) => void copyPrompt(segment)}
+                    onCopyDialogue={(segment) => void copyDialogue(segment)}
+                    copiedId={copiedId}
+                    onToggle={(key) =>
+                      setSelectedDialogue((keys) => (keys.includes(key) ? keys.filter((item) => item !== key) : [...keys, key]))
                     }
-                    if (!refImage) return null;
-                    const panel = segment.panel ?? frameFor(story.frames, segment.id)?.panel ?? 0;
-                    const own = refImage.grid && story.gridFeed === "panels" && panel >= 1 ? refImage.grid.panels[panel - 1] : undefined;
-                    return own
-                      ? { src: imageSrc({ ...refImage, ...own }), slide: panel, label: `Panel ${panel}` }
-                      : { src: imageSrc(refImage), slide: 0, label: refImage.grid ? "Whole storyboard" : "Reference image" };
-                  };
-                  return (segmentsDraft ?? story.segments).map((segment) => {
-                  const title = segmentTitle(story.frames, segment.id);
-                  if (deletedDrafts.includes(segment.id)) {
-                    return (
-                      <li
-                        key={segment.id}
-                        id={`prompt-${segment.id}`}
-                        className="flex flex-wrap items-center gap-3 rounded-2xl border border-dashed border-red-400/50 bg-card px-4 py-2 text-sm"
-                      >
-                        <span className="text-muted line-through">{title}</span>
-                        <span className="text-xs text-red-300">Deleted, not saved</span>
-                        <button
-                          type="button"
-                          onClick={() => setDeletedDrafts((ids) => ids.filter((id) => id !== segment.id))}
-                          className="text-xs text-muted underline underline-offset-2 hover:text-foreground"
-                        >
-                          Undo
-                        </button>
-                      </li>
-                    );
-                  }
-                  number += 1;
-                  const index = number - 1;
-                  const isNew = isNewSegment(segment);
-                  const reviewed = !isNew && isReviewed(segment);
-                  const savedIndex = story.segments.findIndex((item) => item.id === segment.id);
-                  const note = story.promptNotes?.[segment.id] ?? "";
-                  const noteOpen = openNotes.includes(segment.id);
-                  return (
-                    <li
-                      key={segment.id}
-                      id={`prompt-${segment.id}`}
-                      className={`scroll-mt-24 rounded-2xl border p-4 ${
-                        isNew ? "border-accent/60 bg-card" : reviewed ? "border-emerald-500/40 bg-emerald-950/30" : "border-line bg-card"
-                      }`}
-                    >
-                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex items-center gap-3">
-                          {(() => {
-                            const picture = segmentPicture(segment);
-                            const busyHere = segmentImageBusy === segment.id;
-                            return (
-                              <div className="flex shrink-0 items-center gap-1">
-                                {picture && (
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setViewer(
-                                        picture.own || !refImage
-                                          ? { slides: [{ src: picture.src, title: `${index + 1}. ${title} · ${picture.label}` }], index: 0 }
-                                          : { slides: imageSlides(refImage), index: picture.slide },
-                                      )
-                                    }
-                                    title={`${picture.label}: the picture this segment's video starts from (click to enlarge)`}
-                                    className={`overflow-hidden rounded-md border-2 ${picture.own ? "border-amber-400/80" : "border-line"} hover:border-accent`}
-                                  >
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={picture.src} alt={picture.label} loading="lazy" className="h-14 w-auto max-w-28 object-cover" />
-                                  </button>
-                                )}
-                                <div className="flex flex-col gap-1">
-                                  <label
-                                    title={
-                                      busyHere
-                                        ? "Uploading…"
-                                        : "Change the picture for this segment only: upload an image; the video starts this segment from it (Veda Turbo, Singularity Veda, Sage SLA or Story V2). Saved right away."
-                                    }
-                                    className={`inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-line text-muted hover:border-accent hover:text-foreground ${
-                                      busyHere ? "animate-pulse" : ""
-                                    }`}
-                                  >
-                                    {Icons.image}
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      className="hidden"
-                                      disabled={busyHere}
-                                      onChange={(event) => {
-                                        const file = event.target.files?.[0];
-                                        event.target.value = "";
-                                        if (file) void setSegmentImage(segment, file, index + 1);
-                                      }}
-                                    />
-                                  </label>
-                                  <IconButton
-                                    label="Start from another story's ending: its last video frame becomes this segment's picture (pick the story and take)"
-                                    onClick={() => setTakePicker({ mode: "last-frame", segmentId: segment.id })}
-                                    className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-line text-muted hover:border-accent hover:text-foreground"
-                                  >
-                                    {Icons.film}
-                                  </IconButton>
-                                  {picture?.own && (
-                                    <IconButton
-                                      label={`Remove this picture: the segment goes back to ${
-                                        refImage?.grid && story.gridFeed === "panels" ? "its storyboard panel" : "the reference image"
-                                      }`}
-                                      onClick={() => void setSegmentImage(segment, null, index + 1)}
-                                      className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-line text-muted hover:border-red-400 hover:text-red-300"
-                                    >
-                                      {Icons.back}
-                                    </IconButton>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })()}
-                          <p className="text-sm font-medium">
-                            {index + 1}. {title}
-                            {isNew && <span className="ml-2 text-xs font-normal text-accent">New, not saved</span>}
-                            {reviewed && <span className="ml-2 text-xs font-normal text-emerald-400">✓ Reviewed</span>}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {!isNew && (
-                            <IconButton
-                              label={
-                                reviewed
-                                  ? "Unmark from here: this prompt and the ones after it are no longer reviewed"
-                                  : "Reviewed up to here: marks this prompt and every one above it as reviewed (an edited prompt drops out on its own)"
-                              }
-                              onClick={() => reviewThrough(reviewed ? story.segments[savedIndex - 1] ?? null : segment)}
-                              className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${
-                                reviewed
-                                  ? "border-emerald-500/60 bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/10"
-                                  : "border-line text-muted hover:border-emerald-500/60 hover:text-emerald-300"
-                              }`}
-                            >
-                              {Icons.reviewed}
-                            </IconButton>
-                          )}
-                          <IconButton
-                            label={note.trim() ? `Note: ${note.trim().slice(0, 200)}` : "Add an internal note (only for you; not sent anywhere)"}
-                            onClick={() =>
-                              setOpenNotes((ids) => (ids.includes(segment.id) ? ids.filter((id) => id !== segment.id) : [...ids, segment.id]))
-                            }
-                            className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${
-                              note.trim()
-                                ? "border-amber-400/70 bg-amber-400/20 text-amber-300 hover:bg-amber-400/10"
-                                : noteOpen
-                                  ? "border-accent text-foreground"
-                                  : "border-line text-muted hover:border-amber-400/70 hover:text-amber-300"
-                            }`}
-                          >
-                            {Icons.note}
-                          </IconButton>
-                          <IconButton
-                            label={copiedId === segment.id ? "Copied" : "Copy prompt"}
-                            onClick={() => copyPrompt({ ...segment, prompt: promptDrafts[segment.id] ?? segment.prompt })}
-                          >
-                            {copiedId === segment.id ? Icons.check : Icons.copy}
-                          </IconButton>
-                          {(() => {
-                            const prompt = promptDrafts[segment.id] ?? segment.prompt;
-                            const has = parseDialogue(prompt).length > 0;
-                            return (
-                              <IconButton
-                                label={has ? (copiedId === `${segment.id}:dialogue` ? "Copied" : "Copy dialogue only (the spoken lines)") : "No dialogue to copy"}
-                                disabled={!has}
-                                onClick={() => void copyDialogue({ ...segment, prompt })}
-                              >
-                                {copiedId === `${segment.id}:dialogue` ? Icons.check : Icons.speech}
-                              </IconButton>
-                            );
-                          })()}
-                          <IconButton label="Duplicate: a copy right below, to change (saved with Review & save)" onClick={() => duplicateSegment(segment)}>
-                            {Icons.duplicate}
-                          </IconButton>
-                          <IconButton
-                            label={isNew ? "Delete this copy" : "Delete this segment (saved with Review & save; Undo brings it back)"}
-                            onClick={() => deleteSegment(segment)}
-                          >
-                            {Icons.trash}
-                          </IconButton>
-                        </div>
-                      </div>
-                      {noteOpen ? (
-                        <div className="mb-3 rounded-lg border border-amber-400/40 bg-amber-400/5 p-2">
-                          <div className="mb-1 flex items-center justify-between gap-2 text-xs text-amber-300">
-                            <span>Internal note · only for you, saved as you type, never sent to a model or video</span>
-                            <button
-                              type="button"
-                              onClick={() => setOpenNotes((ids) => ids.filter((id) => id !== segment.id))}
-                              className="text-muted underline underline-offset-2 hover:text-foreground"
-                            >
-                              Close
-                            </button>
-                          </div>
-                          <textarea
-                            value={note}
-                            onChange={(event) => setPromptNote(segment.id, event.target.value)}
-                            rows={2}
-                            autoFocus={!note}
-                            placeholder="Write a note…"
-                            aria-label={`Note for prompt ${index + 1}`}
-                            className="w-full resize-y rounded-md border border-line bg-transparent p-2 text-sm text-foreground outline-none focus:border-amber-400/70"
-                          />
-                        </div>
-                      ) : (
-                        note.trim() && (
-                          <button
-                            type="button"
-                            onClick={() => setOpenNotes((ids) => [...ids, segment.id])}
-                            title="Edit note"
-                            className="mb-3 block w-full whitespace-pre-wrap rounded-lg border border-amber-400/30 bg-amber-400/5 px-3 py-2 text-left text-amber-200"
-                          >
-                            <span className="text-sm">{note.trim()}</span>
-                          </button>
-                        )
-                      )}
-                      {(() => {
-                        const draft = promptDrafts[segment.id];
-                        const edited = segmentEdited(segment);
-                        const value = draft ?? segment.prompt;
-                        return (
-                          <>
-                            <textarea
-                              value={value}
-                              onChange={(event) => setPromptDrafts((drafts) => ({ ...drafts, [segment.id]: event.target.value }))}
-                              rows={3}
-                              spellCheck={false}
-                              aria-label={`Prompt ${index + 1}`}
-                              // As tall as its text (wrapped lines too), so it never scrolls on its own.
-                              ref={(element) => {
-                                if (!element) return;
-                                element.style.height = "auto";
-                                element.style.height = `${element.scrollHeight + 2}px`;
-                              }}
-                              onInput={(event) => {
-                                const element = event.currentTarget;
-                                element.style.height = "auto";
-                                element.style.height = `${element.scrollHeight + 2}px`;
-                              }}
-                              className={`prompt-text w-full resize-none overflow-hidden rounded-lg border bg-transparent p-2 outline-none ${
-                                edited ? "border-accent text-foreground" : "border-transparent text-muted hover:border-line focus:border-line"
-                              }`}
-                            />
-                            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
-                            <label className="flex items-center gap-2 text-xs text-muted">
-                              Duration
-                              <DurationInput
-                                value={durationDrafts[segment.id] ?? segment.duration}
-                                min={4}
-                                max={15}
-                                onCommit={(duration) =>
-                                  setDurationDrafts((drafts) => {
-                                    const next = { ...drafts };
-                                    if (duration === segment.duration) delete next[segment.id];
-                                    else next[segment.id] = duration;
-                                    return next;
-                                  })
-                                }
-                                className={`py-0.5 text-xs ${
-                                  durationDrafts[segment.id] !== undefined && durationDrafts[segment.id] !== segment.duration ? "border-accent" : ""
-                                }`}
-                              />
-                              s
-                            </label>
-                            {edited && (
-                              <p className="flex items-center gap-3 text-xs text-accent">
-                                Edited, not saved
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                  {
-                                    setPromptDrafts((drafts) => {
-                                      const next = { ...drafts };
-                                      delete next[segment.id];
-                                      return next;
-                                    });
-                                    setDurationDrafts((drafts) => {
-                                      const next = { ...drafts };
-                                      delete next[segment.id];
-                                      return next;
-                                    });
-                                  }
-                                  }
-                                  className="text-muted underline underline-offset-2 hover:text-foreground"
-                                >
-                                  Undo
-                                </button>
-                              </p>
-                            )}
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </li>
-                  );
-                  });
-                })()}
-              </ol>
-              </>
-              )}
+                    fullPrompt={fullPromptIds}
+                    onFullPrompt={toggleFullPrompt}
+                    renderPrompt={(id) => cards.get(id)}
+                  />
+                ) : (
+                  <ol className="space-y-5">{[...cards.values()]}</ol>
+                );
+              })()}
               </>
             )}
           </section>

@@ -438,8 +438,10 @@ who says what, or *No dialogue*. Nothing is sent to the AI: the lines are read f
 give the line; a line and its segment turn amber when the line, spoken from its start, runs past the end of the clip, which
 is what gets cut off in the video. Prompts without times (Story V2) turn amber when the words need longer than the segment
 (speech plus about 2.5 s of silence). Each line has a checkbox for internal debugging, and **Hide unselected** narrows the view to
-the ticked lines; ticks are not saved and clear on reload. Each segment also has **Full prompt**, which shows that segment's
-whole saved prompt in place of its lines (read only; **Dialogue** switches back; edit it with Dialogue view off), a copy
+the ticked lines; ticks are not saved and clear on reload. Each segment also has **Full prompt**, which swaps that one
+segment to its full prompt card, exactly as with Dialogue view off (picture, note, reviewed mark, editable prompt, duration,
+copy, duplicate, delete); **Dialogue** on that card switches it back. Edits made there show in the *edited, not saved* bar
+and are saved with **Review & save**, as usual. Which segments are switched is not saved. Each segment also has a copy
 button that copies its whole prompt, like the one in the prompt view, and a speech-bubble button that copies only its spoken
 lines, one `Name: words` per line. The speech-bubble button is on each prompt outside Dialogue view too (there it copies the
 lines of the edited, unsaved text); it is greyed out when the segment has no dialogue.

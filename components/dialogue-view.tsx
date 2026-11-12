@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   MAX_CLIP_SECONDS,
   clipSecondsNeeded,
@@ -32,6 +32,9 @@ export function DialogueView({
   onCopy,
   onCopyDialogue,
   copiedId,
+  fullPrompt,
+  onFullPrompt,
+  renderPrompt,
 }: {
   segments: PromptSegment[];
   frames: Frame[];
@@ -44,10 +47,12 @@ export function DialogueView({
   onCopy: (segment: PromptSegment) => void;
   onCopyDialogue: (segment: PromptSegment) => void;
   copiedId: string;
+  // Segments switched to their full prompt card, and that card (the same one as outside Dialogue view).
+  fullPrompt: string[];
+  onFullPrompt: (id: string) => void;
+  renderPrompt: (id: string) => ReactNode;
 }) {
   const [hideUnselected, setHideUnselected] = useState(false);
-  // Segments switched to their whole prompt (kept in memory only).
-  const [fullPrompt, setFullPrompt] = useState<string[]>([]);
   // Typed line lengths, by the same key as `selected`.
   const [durations, setDurations] = useState<Record<string, string>>({});
   // Typed line words (lines being edited), by the same key.
@@ -136,7 +141,14 @@ export function DialogueView({
             .map((line, lineIndex) => ({ line, lineIndex }))
             .filter(({ line, lineIndex }) => !onlySelected || selected.includes(`${segment.id}:${lineIndex}:${line.text}`));
           if (onlySelected && visible.length === 0) return null;
-          const showPrompt = fullPrompt.includes(segment.id);
+          if (fullPrompt.includes(segment.id)) {
+            // The full card keeps this id, so the section rail still scrolls to it.
+            return (
+              <li key={segment.id} id={`dialogue-${segment.id}`} className="scroll-mt-24 list-none">
+                <ol>{renderPrompt(segment.id)}</ol>
+              </li>
+            );
+          }
           return (
             <li key={segment.id} id={`dialogue-${segment.id}`} className="scroll-mt-24 rounded-2xl border border-line bg-card p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -151,15 +163,11 @@ export function DialogueView({
                   </p>
                   <button
                     type="button"
-                    onClick={() =>
-                      setFullPrompt((ids) => (ids.includes(segment.id) ? ids.filter((id) => id !== segment.id) : [...ids, segment.id]))
-                    }
-                    title={showPrompt ? "Back to the spoken lines of this segment" : "Show this segment's whole prompt (read only; edit it with Dialogue view off)"}
-                    className={`rounded-full border px-3 py-1 text-xs ${
-                      showPrompt ? "border-accent bg-accent/20 text-foreground" : "border-line text-muted hover:text-foreground"
-                    }`}
+                    onClick={() => onFullPrompt(segment.id)}
+                    title="Show this segment's full prompt card, as outside Dialogue view (editable; Dialogue switches back)"
+                    className="rounded-full border border-line px-3 py-1 text-xs text-muted hover:text-foreground"
                   >
-                    {showPrompt ? "Dialogue" : "Full prompt"}
+                    Full prompt
                   </button>
                   <IconButton label={copiedId === segment.id ? "Copied" : "Copy prompt"} onClick={() => onCopy(segment)}>
                     {copiedId === segment.id ? Icons.check : Icons.copy}
@@ -173,9 +181,6 @@ export function DialogueView({
                   </IconButton>
                 </div>
               </div>
-              {showPrompt ? (
-                <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-foreground">{segment.prompt}</p>
-              ) : (
               <>
               {speakerProblems(segment.prompt, voiceOnly).length > 0 && (
                 <p className="mt-1 text-xs text-amber-300">
@@ -263,7 +268,6 @@ export function DialogueView({
                 </ul>
               )}
               </>
-              )}
             </li>
           );
         })}
