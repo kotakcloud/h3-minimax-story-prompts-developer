@@ -12,6 +12,7 @@ import {
 } from "@/lib/dialogue";
 import type { Character, Frame, PromptSegment } from "@/lib/types";
 import { segmentTitle } from "@/lib/segment-ids";
+import { IconButton, Icons } from "@/components/icons";
 
 function clock(value: number) {
   return `${Math.floor(value / 60)}:${(value % 60).toFixed(1).padStart(4, "0")}`;
@@ -28,6 +29,8 @@ export function DialogueView({
   onFixTiming,
   fixing,
   onUpdateDurations,
+  onCopy,
+  copiedId,
 }: {
   segments: PromptSegment[];
   frames: Frame[];
@@ -37,8 +40,12 @@ export function DialogueView({
   onFixTiming: () => void;
   fixing: boolean;
   onUpdateDurations: (edits: LineDuration[], texts: LineText[]) => void;
+  onCopy: (segment: PromptSegment) => void;
+  copiedId: string;
 }) {
   const [hideUnselected, setHideUnselected] = useState(false);
+  // Segments switched to their whole prompt (kept in memory only).
+  const [fullPrompt, setFullPrompt] = useState<string[]>([]);
   // Typed line lengths, by the same key as `selected`.
   const [durations, setDurations] = useState<Record<string, string>>({});
   // Typed line words (lines being edited), by the same key.
@@ -127,18 +134,40 @@ export function DialogueView({
             .map((line, lineIndex) => ({ line, lineIndex }))
             .filter(({ line, lineIndex }) => !onlySelected || selected.includes(`${segment.id}:${lineIndex}:${line.text}`));
           if (onlySelected && visible.length === 0) return null;
+          const showPrompt = fullPrompt.includes(segment.id);
           return (
             <li key={segment.id} id={`dialogue-${segment.id}`} className="scroll-mt-24 rounded-2xl border border-line bg-card p-4">
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-sm font-medium">
                   {index + 1}. {segmentTitle(frames, segment.id)}
                 </p>
-                <p className={`text-xs ${tight ? "text-amber-300" : "text-muted"}`}>
-                  {segment.duration}s
-                  {tight && ` · tight: these words need about ${needed}s`}
-                  {tight && needed > MAX_CLIP_SECONDS && `, more than one segment can hold: split this frame on the Frames step`}
-                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className={`text-xs ${tight ? "text-amber-300" : "text-muted"}`}>
+                    {segment.duration}s
+                    {tight && ` · tight: these words need about ${needed}s`}
+                    {tight && needed > MAX_CLIP_SECONDS && `, more than one segment can hold: split this frame on the Frames step`}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFullPrompt((ids) => (ids.includes(segment.id) ? ids.filter((id) => id !== segment.id) : [...ids, segment.id]))
+                    }
+                    title={showPrompt ? "Back to the spoken lines of this segment" : "Show this segment's whole prompt (read only; edit it with Dialogue view off)"}
+                    className={`rounded-full border px-3 py-1 text-xs ${
+                      showPrompt ? "border-accent bg-accent/20 text-foreground" : "border-line text-muted hover:text-foreground"
+                    }`}
+                  >
+                    {showPrompt ? "Dialogue" : "Full prompt"}
+                  </button>
+                  <IconButton label={copiedId === segment.id ? "Copied" : "Copy prompt"} onClick={() => onCopy(segment)}>
+                    {copiedId === segment.id ? Icons.check : Icons.copy}
+                  </IconButton>
+                </div>
               </div>
+              {showPrompt ? (
+                <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-foreground">{segment.prompt}</p>
+              ) : (
+              <>
               {speakerProblems(segment.prompt, voiceOnly).length > 0 && (
                 <p className="mt-1 text-xs text-amber-300">
                   Wrong-speaker risk: {speakerProblems(segment.prompt, voiceOnly).join(", ")}. Regenerate the prompts to fix it.
@@ -223,6 +252,8 @@ export function DialogueView({
                     );
                   })}
                 </ul>
+              )}
+              </>
               )}
             </li>
           );

@@ -3860,6 +3860,8 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                   onFixTiming={() => void fixDialogueTiming()}
                   onUpdateDurations={(edits, texts) => void updateLineDurations(edits, texts)}
                   fixing={busy === "update"}
+                  onCopy={(segment) => void copyPrompt(segment)}
+                  copiedId={copiedId}
                   onToggle={(key) =>
                     setSelectedDialogue((keys) => (keys.includes(key) ? keys.filter((item) => item !== key) : [...keys, key]))
                   }
