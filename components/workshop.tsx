@@ -4189,7 +4189,9 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                   </div>
                 </div>
               )}
-              <label id="dialogue-view" title="Shortcut: Ctrl+Shift+Q" className="mb-3 flex w-fit scroll-mt-24 items-center gap-2 text-sm text-foreground">
+              {/* Stays at the top while scrolling, with the unsaved-edits bar under it. */}
+              <div className="sticky top-[calc(var(--nav-h)+var(--story-head-h,8.5rem))] z-20 -mx-2 mb-3 bg-background/95 px-2 py-2 backdrop-blur">
+              <label id="dialogue-view" title="Shortcut: Ctrl+Shift+Q" className="flex w-fit items-center gap-2 text-sm text-foreground">
                 <input type="checkbox" checked={dialogueView} onChange={(event) => setDialogueView(event.target.checked)} />
                 Dialogue view
                 <kbd className="rounded border border-line px-1 text-[10px] text-muted">Ctrl+Shift+Q</kbd>
@@ -4206,7 +4208,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                   deleted ? `${deleted} deleted` : "",
                 ].filter(Boolean);
                 return parts.length > 0 ? (
-                  <div className="sticky top-[calc(var(--nav-h)+var(--story-head-h,8.5rem)+0.5rem)] z-20 mb-3 shadow-lg flex flex-wrap items-center justify-between gap-2 rounded-xl border border-accent/60 bg-card px-4 py-2 text-sm">
+                  <div className="mt-2 shadow-lg flex flex-wrap items-center justify-between gap-2 rounded-xl border border-accent/60 bg-card px-4 py-2 text-sm">
                     <span>{parts.join(" · ")}, not saved</span>
                     <span className="flex items-center gap-2">
                       <button
@@ -4238,6 +4240,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                   </div>
                 ) : null;
               })()}
+              </div>
               {promptReviewOpen && editedSegments() && (
                 <PromptDiffConfirm
                   older={story.segments}

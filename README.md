@@ -432,7 +432,8 @@ kept in this browser until cleared. Nothing is sent anywhere.
 
 ### Dialogue view
 
-On the Prompts tab, tick **Dialogue view** (or press **Ctrl+Shift+Q**, also while typing in a box) to see only the spoken lines of the current prompt set, segment by segment:
+On the Prompts tab, tick **Dialogue view** (or press **Ctrl+Shift+Q**, also while typing in a box; the checkbox stays at the top
+while you scroll, with the unsaved-edits bar under it) to see only the spoken lines of the current prompt set, segment by segment:
 who says what, or *No dialogue*. Nothing is sent to the AI: the lines are read from the `<d>` tags in the prompts
 (`lib/dialogue.ts`). Times are estimates at 2.2 words per second. Long-take prompts also show the start and end times they
 give the line; a line and its segment turn amber when the line, spoken from its start, runs past the end of the clip, which
