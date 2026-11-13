@@ -10,6 +10,8 @@
   --accent-ink: #1a1406;
   /* Height of the fixed top bar; content and pinned blocks start below it. */
   --nav-h: 56px;
+  /* The ComfyUI Logs window's right dock clears the sticky note icon (40 px, 20 px from the corner). */
+  --clv-right-margin: 68px;
 }
 
 @theme inline {

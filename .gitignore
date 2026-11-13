@@ -54,3 +54,6 @@ openrouter api.md
 next-env.d.ts
 /data/custom-models.json*
 /data/spend-reset.json
+
+# ComfyUI Logs window settings
+/.data/

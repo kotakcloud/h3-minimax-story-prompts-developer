@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { Icons } from "@/components/icons";
@@ -144,8 +145,22 @@ export function DebugLogFooter() {
     return () => window.clearInterval(timer);
   }, [waiting]);
 
+  // The bar's height, open or closed, as --clv-bottom: the ComfyUI Logs window sits right above it.
+  const footer = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const element = footer.current;
+    if (!element) return;
+    const root = document.documentElement;
+    const observer = new ResizeObserver(() => root.style.setProperty("--clv-bottom", `${element.offsetHeight}px`));
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--clv-bottom");
+    };
+  }, []);
+
   return (
-    <footer className="fixed inset-x-0 bottom-0 z-[70] border-t border-line bg-card/95 backdrop-blur">
+    <footer ref={footer} className="fixed inset-x-0 bottom-0 z-[70] border-t border-line bg-card/95 backdrop-blur">
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}

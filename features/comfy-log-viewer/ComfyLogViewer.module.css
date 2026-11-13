@@ -1,0 +1,171 @@
+/* Self-contained: its own dark colours and no page variables, so it looks the same in any project. */
+.root {
+  --clv-margin: 12px;
+  --clv-width: 560px;
+  --clv-line: 18px;
+  --clv-bg: #0e1013;
+  --clv-bar: #1a1d22;
+  --clv-border: #30353d;
+  --clv-text: #d7dce3;
+  --clv-muted: #8b94a1;
+  --clv-accent: #4fc38a;
+  --clv-error: #ff7b72;
+  --clv-warning: #e3b341;
+  --clv-chrome: 112px; /* title bar + controls + status */
+
+  position: fixed;
+  z-index: 75; /* H3 Workshop: above dialogs (50) and the Debug logs bar (70), under the sticky note (80-81) and the picture viewer (90) */
+  bottom: var(--clv-bottom, 0px); /* a page can set --clv-bottom to sit above a bar fixed at the bottom */
+  display: flex;
+  flex-direction: column;
+  width: min(var(--clv-width), calc(100vw - 2 * var(--clv-margin)));
+  height: calc(var(--clv-lines) * var(--clv-line) + 16px + var(--clv-chrome));
+  margin: 0; /* a project's global element styles must not reach the window */
+  padding: 0;
+  overflow: hidden;
+  color: var(--clv-text);
+  background: var(--clv-bg);
+  border: 1px solid var(--clv-border);
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  font: 12px/1.4 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  transition: left 180ms ease, bottom 180ms ease, width 180ms ease, height 180ms ease, transform 180ms ease;
+}
+
+/* left + translate, so moving between docks animates */
+.dock-left { left: var(--clv-margin); transform: translateX(0); }
+.dock-center { left: 50%; transform: translateX(-50%); }
+.dock-right { left: 100%; transform: translateX(calc(-100% - var(--clv-right-margin, var(--clv-margin)))); } /* a page can set --clv-right-margin to clear something in that corner */
+
+.normal { }
+.minimized { width: min(260px, calc(100vw - 2 * var(--clv-margin))); height: 34px; }
+.maximized {
+  left: var(--clv-margin);
+  bottom: calc(var(--clv-bottom, 0px) + var(--clv-margin));
+  width: calc(100vw - 2 * var(--clv-margin));
+  height: calc(100dvh - var(--clv-bottom, 0px) - 2 * var(--clv-margin));
+  transform: translateX(0);
+  border-bottom: 1px solid var(--clv-border);
+  border-radius: 8px;
+}
+
+.titleBar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 33px;
+  padding: 0 4px 0 10px;
+  background: var(--clv-bar);
+  border-bottom: 1px solid var(--clv-border);
+  user-select: none;
+}
+.minimized .titleBar { cursor: pointer; }
+.title { min-width: 0; overflow: hidden; color: #fff; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.liveDot { flex: none; width: 7px; height: 7px; background: var(--clv-accent); border-radius: 50%; }
+.paused { background: var(--clv-muted); }
+.windowButtons { display: flex; align-items: center; gap: 2px; margin-left: auto; }
+.dockButtons { display: flex; gap: 2px; margin-right: 6px; }
+
+.windowButton {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  padding: 0;
+  color: var(--clv-muted);
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.windowButton:hover:not(:disabled) { color: #fff; background: rgba(255, 255, 255, 0.1); }
+.windowButton[aria-pressed="true"] { color: var(--clv-accent); }
+.windowButton:disabled { opacity: 0.35; cursor: default; }
+
+.controls {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  min-height: 38px;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--clv-border);
+}
+.control { display: inline-flex; align-items: center; gap: 5px; margin: 0; color: var(--clv-muted); font: inherit; white-space: nowrap; }
+.control input { width: auto; margin: 0; accent-color: var(--clv-accent); }
+.control select {
+  width: auto;
+  padding: 1px 3px;
+  color: var(--clv-text);
+  background: var(--clv-bar);
+  border: 1px solid var(--clv-border);
+  border-radius: 4px;
+  font: inherit;
+}
+.control select:disabled { opacity: 0.45; }
+
+.refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  color: var(--clv-text);
+  background: var(--clv-bar);
+  border: 1px solid var(--clv-border);
+  border-radius: 4px;
+  font: inherit;
+  cursor: pointer;
+}
+.refresh:hover:not(:disabled) { border-color: var(--clv-muted); }
+.refresh:disabled { opacity: 0.6; cursor: default; }
+.refreshIcon { display: inline-grid; }
+.spinning { animation: clv-spin 800ms linear infinite; }
+
+.body {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 8px 10px;
+  overflow: auto;
+  background: var(--clv-bg);
+  border: 0;
+  font: inherit;
+  line-height: var(--clv-line);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.body:focus-visible { outline: 1px solid var(--clv-accent); outline-offset: -1px; }
+.placeholder { color: var(--clv-muted); }
+
+.status {
+  flex: none;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 22px;
+  padding: 3px 10px;
+  color: var(--clv-muted);
+  background: var(--clv-bar);
+  border-top: 1px solid var(--clv-border);
+  font-size: 11px;
+}
+.error { color: var(--clv-error); overflow-wrap: anywhere; }
+.warning { flex: none; color: var(--clv-warning); }
+
+@keyframes clv-spin { to { transform: rotate(360deg); } }
+
+/* Narrow screens: full width at the bottom, so docking has no meaning and its buttons go */
+@media (max-width: 640px) {
+  .root { --clv-margin: 0px; --clv-chrome: 138px; left: 0; width: 100vw; transform: none; border-right: 0; border-left: 0; border-radius: 0; }
+  .minimized { width: 100vw; }
+  .maximized { height: calc(100dvh - var(--clv-bottom, 0px)); border: 0; }
+  .dockButtons { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root { transition: none; }
+  .spinning { animation-duration: 2.4s; }
+}

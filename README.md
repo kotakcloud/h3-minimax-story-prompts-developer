@@ -212,6 +212,34 @@ shows each video in progress, from any story: `#10012 Title 2/5 · 7m` while it 
 video. Click one to open that story's Video step; the story you are on is outlined. It is checked live against ComfyUI
 every 5 s while something runs (20 s when idle), so it is right even when the story's own page is closed.
 
+### ComfyUI Logs (bottom of every page)
+
+A small dark window just above the Debug logs bar shows the last lines of ComfyUI's own log, the same text as its console.
+In its title bar:
+- the three dock buttons move it bottom-left, center or right (on a phone it is always full width);
+- **–** minimizes it to the title bar (click the bar to bring it back);
+- **□** maximizes it.
+
+Below that:
+- **Refresh** reads the log again.
+- **Auto-reload** (off at first) reads it every 5, 10 or 30 s. A green dot in the title shows it is on. It pauses while the window is minimized.
+- **Lines** shows 5 or 10.
+
+Colour codes and redrawn progress bars are cleaned up, as a terminal would show them.
+
+- **Which file:** it reads `<ComfyUI>/user/comfyui.log`, the folder next to `COMFYUI_OUTPUT_DIR` from `.env.local`.
+  `COMFYUI_LOG_PATH` (the file itself) or `COMFYUI_PATH` (the ComfyUI folder) override that. If the file is missing,
+  the window says so in red.
+- **Settings:** dock, size, auto-reload, interval and lines are kept on the server in `.data/comfy-log-viewer.json`,
+  so every device sees the same. Delete that file to go back to the defaults.
+- **Read-only:** the browser can't choose which file is read. Through a public tunnel, anyone with the address can read
+  the ComfyUI log too.
+
+The code is `features/comfy-log-viewer/`, ported from the Story Scene Prompter app (its `PORTING_PROMPT.md` and
+`README.md` there describe it in full). In this app it sits above dialogs, under the sticky note and the picture
+viewer (z-index 75). Its right dock clears the sticky-note icon (`--clv-right-margin` in `app/globals.css`), and the
+Debug logs bar sets `--clv-bottom` to its own height, so the window always sits just above it.
+
 ### Duplicating a story
 
 The copy button on a story in the list asks **Copy up to**: Gist (the gist and its analysis), Cast (+ characters and
