@@ -315,7 +315,7 @@ export async function queueLongTake(options: {
 // ---------------------------------------------------------------------------
 // H3 Story V2 (comfy/h3-story-v2-ref2va.json, ComfyUI API format), ported from the Themed
 // Transformation Video Pipeline (core/h3_v2.py). Every segment is a `ref` task on the same image;
-// dual-pass render (x1.25 latent upscale refine). See docs/HANDOFF_h3_story_v2_for_workshop_app.md.
+// dual-pass render (x1.25 latent upscale refine). See docs/handoffs/h3-story-v2-for-workshop-app.md.
 // ---------------------------------------------------------------------------
 
 // MP, steps and the project folder are links through DEV switches: set the primitives, never
