@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Fragment, useCallback, type ReactNode, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { Fragment, useCallback, type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useLoggedFetch } from "@/components/debug-log";
 import { IconButton, IconLink, Icons } from "@/components/icons";
 import { DialogueView } from "@/components/dialogue-view";
@@ -525,6 +525,40 @@ export function Workshop({
   }));
   const [dialogueLanguage, setDialogueLanguage] = useState("Gujarati");
   const [dialogueView, setDialogueView] = useState(false);
+  // Switching Dialogue view changes every card's height, so the segment being read would jump out of view. Before the
+  // switch, the first segment card showing below the pinned bar is remembered; after it, that segment's card in the
+  // other view is scrolled back to the same place (or just under the pinned bar, if its top was hidden behind it).
+  // Switching straight back (no scrolling in between) reuses the same segment, so a round trip lands where it started.
+  const viewAnchor = useRef<{ id: string; top: number; floor: number } | null>(null);
+  const lastAnchor = useRef<{ id: string; top: number; floor: number; scrollY: number } | null>(null);
+  const switchDialogueView = useCallback((next: (on: boolean) => boolean) => {
+    const last = lastAnchor.current;
+    if (last && Math.abs(window.scrollY - last.scrollY) < 2) {
+      viewAnchor.current = { id: last.id, top: last.top, floor: last.floor };
+      setDialogueView(next);
+      return;
+    }
+    const pinned = document.getElementById("dialogue-view")?.parentElement?.getBoundingClientRect().bottom ?? 0;
+    // A card cut off at the top counts only while it still fills at least half of what is visible; otherwise the reader
+    // is on the next one.
+    const half = (window.innerHeight - pinned) / 2;
+    const card = [...document.querySelectorAll<HTMLElement>('li[id^="prompt-"], li[id^="dialogue-"]')].find((element) => {
+      const { top, bottom } = element.getBoundingClientRect();
+      return top >= pinned || bottom - pinned >= half;
+    });
+    viewAnchor.current = card
+      ? { id: card.id.replace(/^(prompt|dialogue)-/, ""), top: card.getBoundingClientRect().top, floor: pinned + 8 }
+      : null;
+    setDialogueView(next);
+  }, []);
+  useLayoutEffect(() => {
+    const anchor = viewAnchor.current;
+    viewAnchor.current = null;
+    if (!anchor) return;
+    const card = document.getElementById(`${dialogueView ? "dialogue" : "prompt"}-${anchor.id}`);
+    if (card) window.scrollBy(0, card.getBoundingClientRect().top - Math.max(anchor.top, anchor.floor));
+    lastAnchor.current = card ? { ...anchor, scrollY: window.scrollY } : null;
+  }, [dialogueView]);
   // On the Prompts step, Ctrl+Shift+Q turns Dialogue view on or off. A combination nobody types
   // by accident, so it also works while a prompt box has the focus (not with a dialog open). By key position, so any
   // keyboard layout works.
@@ -534,11 +568,11 @@ export function Workshop({
       if (event.code !== "KeyQ" || !(event.ctrlKey || event.metaKey) || !event.shiftKey || event.altKey || event.repeat) return;
       if (document.querySelector("dialog[open], [role='dialog']")) return;
       event.preventDefault();
-      setDialogueView((on) => !on);
+      switchDialogueView((on) => !on);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [step]);
+  }, [step, switchDialogueView]);
   const [selectedDialogue, setSelectedDialogue] = useState<string[]>([]);
   const [cutOnNextPanel, setCutOnNextPanel] = useState(() => typeof window === "undefined" || readCutOnNextPanel());
   // The frame whose Split choices are open.
@@ -4192,7 +4226,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
               {/* Stays at the top while scrolling, with the unsaved-edits bar under it. */}
               <div className="sticky top-[calc(var(--nav-h)+var(--story-head-h,8.5rem))] z-20 -mx-2 mb-3 bg-background/95 px-2 py-2 backdrop-blur">
               <label id="dialogue-view" title="Shortcut: Ctrl+Shift+Q" className="flex w-fit items-center gap-2 text-sm text-foreground">
-                <input type="checkbox" checked={dialogueView} onChange={(event) => setDialogueView(event.target.checked)} />
+                <input type="checkbox" checked={dialogueView} onChange={(event) => { const on = event.target.checked; switchDialogueView(() => on); }} />
                 Dialogue view
                 <kbd className="rounded border border-line px-1 text-[10px] text-muted">Ctrl+Shift+Q</kbd>
                 <span className="text-xs text-muted">only the spoken lines, to review</span>
