@@ -175,6 +175,22 @@ function asStory(value: unknown, fallbackId: string): Story {
             ),
           )
         : undefined,
+    promptNoteHistory:
+      raw.promptNoteHistory && typeof raw.promptNoteHistory === "object"
+        ? Object.fromEntries(
+            Object.entries(raw.promptNoteHistory as Record<string, unknown>)
+              .map(([id, list]): [string, { text: string; at: string }[]] => [
+                id,
+                Array.isArray(list)
+                  ? list.filter(
+                      (entry): entry is { text: string; at: string } =>
+                        !!entry && typeof entry.text === "string" && entry.text.trim() !== "" && typeof entry.at === "string",
+                    ).map(({ text, at }) => ({ text, at }))
+                  : [],
+              ])
+              .filter(([, list]) => list.length > 0),
+          )
+        : undefined,
     segmentImages:
       raw.segmentImages && typeof raw.segmentImages === "object"
         ? Object.fromEntries(
@@ -370,7 +386,7 @@ export async function duplicateStory(
   }
   if (!keeps("frames")) Object.assign(copy, { frames: blank.frames, framesApproved: true });
   if (!keeps("prompts")) {
-    Object.assign(copy, { segments: blank.segments, promptRevisions: [], activeRevisionId: "", promptsReviewed: true, reviewedPrompts: undefined, promptNotes: undefined, segmentImages: undefined });
+    Object.assign(copy, { segments: blank.segments, promptRevisions: [], activeRevisionId: "", promptsReviewed: true, reviewedPrompts: undefined, promptNotes: undefined, promptNoteHistory: undefined, segmentImages: undefined });
   }
   if (options.stepModels) copy.stepModels = options.stepModels;
   // The copy opens on the step after the last one it kept (where the work continues).

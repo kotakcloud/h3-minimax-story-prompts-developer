@@ -367,6 +367,9 @@ export const DEFAULT_PROJECT_ID = "unknown";
 // A step's own AI model instead of the story's (blank or missing = the story's model).
 export type StepModels = { frames?: string; prompts?: string };
 
+// A note moved out of a prompt block's current note, kept as its history.
+export type PromptNoteEntry = { text: string; at: string };
+
 export type Story = {
   id: string;
   // A short unique number for people (10001, 10002…), given once and never changed; the id stays the real key.
@@ -381,6 +384,9 @@ export type Story = {
   reviewedPrompts?: Record<string, string>;
   // Internal notes on prompt blocks (Prompts step): segment id → note. Only for you; never sent to a model or video.
   promptNotes?: Record<string, string>;
+  // Past notes on prompt blocks: segment id → notes moved out of the current note (issue found, issue fixed, …),
+  // newest first, each with when it was filed.
+  promptNoteHistory?: Record<string, PromptNoteEntry[]>;
   // A picture chosen for one prompt block (Prompts step): segment id → the uploaded image. The video then starts that
   // segment from it instead of its storyboard panel or the reference image (ref2va workflows only).
   segmentImages?: Record<string, { filename: string; subfolder: string; type: string; originalName?: string }>;

@@ -398,8 +398,18 @@ covered only some segments ends wherever that range ended.
 Each prompt block has a note button (a page icon) for internal notes. It opens a note box above the prompt; the note
 saves with the story as you type and is never sent to a model, a video or an export. A block with a note shows its
 icon in amber, the note text under its title (click it to edit) and the note in the icon's tooltip. Clearing the text
-removes the note. Notes are saved per segment (`promptNotes`: segment id → note), so they stay through new prompt sets
-and updates; a copy of the story made without its prompts starts with no notes.
+removes the note.
+
+The box keeps a history, for internal findings (issue found, issue fixed, what to try next):
+
+- **Current note:** the note you are working on.
+- **Move to past notes:** files the current note under **Past notes** with the date and time, and clears it for the next one.
+- **Past notes:** newest first, each with a delete button. Deleting asks first and can't be undone.
+- **When the box is closed:** the block shows the current note, plus how many past notes there are and the first line of the latest one.
+- **Only past notes:** if a block has past notes but no current note, its icon is a fainter amber.
+
+Notes are saved per segment (`promptNotes`: segment id → current note; `promptNoteHistory`: segment id → past notes), so
+they stay through new prompt sets and updates. A copy of the story made without its prompts starts with no notes.
 
 ### Prompt sets
 

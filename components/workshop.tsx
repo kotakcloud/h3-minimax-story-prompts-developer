@@ -2197,6 +2197,28 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
     patchStory({ promptNotes: notes });
   }
 
+  // Files the current note under past notes (newest first, with the time) and clears it for the next finding.
+  function archivePromptNote(segmentId: string) {
+    const current = storyRef.current || story;
+    const text = current?.promptNotes?.[segmentId]?.trim();
+    if (!current || !text) return;
+    const notes = { ...(current.promptNotes || {}) };
+    delete notes[segmentId];
+    const history = { ...(current.promptNoteHistory || {}) };
+    history[segmentId] = [{ text, at: new Date().toISOString() }, ...(history[segmentId] || [])];
+    patchStory({ promptNotes: notes, promptNoteHistory: history });
+  }
+
+  function deletePastNote(segmentId: string, at: string) {
+    const current = storyRef.current || story;
+    if (!current || !window.confirm("Delete this past note? It cannot be brought back.")) return;
+    const history = { ...(current.promptNoteHistory || {}) };
+    const list = (history[segmentId] || []).filter((entry) => entry.at !== at);
+    if (list.length) history[segmentId] = list;
+    else delete history[segmentId];
+    patchStory({ promptNoteHistory: history });
+  }
+
   function isReviewed(segment: PromptSegment) {
     const reviewed = (storyRef.current || story)?.reviewedPrompts?.[segment.id];
     return reviewed !== undefined && reviewed === segment.prompt;
@@ -2509,6 +2531,7 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                   const reviewed = !isNew && isReviewed(segment);
                   const savedIndex = story.segments.findIndex((item) => item.id === segment.id);
                   const note = story.promptNotes?.[segment.id] ?? "";
+                  const pastNotes = story.promptNoteHistory?.[segment.id] ?? [];
                   const noteOpen = openNotes.includes(segment.id);
                   return (
                     <li
@@ -2623,14 +2646,19 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                             </IconButton>
                           )}
                           <IconButton
-                            label={note.trim() ? `Note: ${note.trim().slice(0, 200)}` : "Add an internal note (only for you; not sent anywhere)"}
+                            label={
+                              (note.trim() ? `Note: ${note.trim().slice(0, 200)}` : "Add an internal note (only for you; not sent anywhere)") +
+                              (pastNotes.length ? `\n${pastNotes.length} past ${pastNotes.length === 1 ? "note" : "notes"}` : "")
+                            }
                             onClick={() =>
                               setOpenNotes((ids) => (ids.includes(segment.id) ? ids.filter((id) => id !== segment.id) : [...ids, segment.id]))
                             }
                             className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${
                               note.trim()
                                 ? "border-amber-400/70 bg-amber-400/20 text-amber-300 hover:bg-amber-400/10"
-                                : noteOpen
+                                : pastNotes.length
+                                  ? "border-amber-400/40 text-amber-300/70 hover:border-amber-400/70 hover:text-amber-300"
+                                  : noteOpen
                                   ? "border-accent text-foreground"
                                   : "border-line text-muted hover:border-amber-400/70 hover:text-amber-300"
                             }`}
@@ -2679,25 +2707,69 @@ The file stays in ComfyUI output: ${run.video.subfolder}\${run.video.filename}` 
                               Close
                             </button>
                           </div>
+                          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-amber-300/80">Current note</p>
                           <textarea
                             value={note}
                             onChange={(event) => setPromptNote(segment.id, event.target.value)}
                             rows={2}
                             autoFocus={!note}
-                            placeholder="Write a note…"
+                            placeholder="Write a note… (issue found, issue fixed, what to try next)"
                             aria-label={`Note for prompt ${index + 1}`}
                             className="w-full resize-y rounded-md border border-line bg-transparent p-2 text-sm text-foreground outline-none focus:border-amber-400/70"
                           />
+                          <div className="mt-1 flex justify-end">
+                            <button
+                              type="button"
+                              disabled={!note.trim()}
+                              onClick={() => archivePromptNote(segment.id)}
+                              title="File this note under Past notes with the date and time, and clear it for the next one"
+                              className="rounded-full border border-amber-400/50 px-3 py-1 text-xs text-amber-200 hover:bg-amber-400/10"
+                            >
+                              Move to past notes
+                            </button>
+                          </div>
+                          {pastNotes.length > 0 && (
+                            <div className="mt-2 border-t border-amber-400/20 pt-2">
+                              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-amber-300/80">
+                                Past notes ({pastNotes.length})
+                              </p>
+                              <ol className="space-y-1.5">
+                                {pastNotes.map((entry) => (
+                                  <li key={entry.at} className="flex items-start gap-2 rounded-md bg-black/20 px-2 py-1.5">
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-[11px] text-muted">{new Date(entry.at).toLocaleString()}</p>
+                                      <p className="whitespace-pre-wrap break-words text-sm text-amber-100/90">{entry.text}</p>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => deletePastNote(segment.id, entry.at)}
+                                      title="Delete this past note"
+                                      aria-label="Delete this past note"
+                                      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted hover:text-red-300"
+                                    >
+                                      {Icons.trash}
+                                    </button>
+                                  </li>
+                                ))}
+                              </ol>
+                            </div>
+                          )}
                         </div>
                       ) : (
-                        note.trim() && (
+                        (note.trim() || pastNotes.length > 0) && (
                           <button
                             type="button"
                             onClick={() => setOpenNotes((ids) => [...ids, segment.id])}
-                            title="Edit note"
+                            title={note.trim() ? "Edit note" : "Open the notes"}
                             className="mb-3 block w-full whitespace-pre-wrap rounded-lg border border-amber-400/30 bg-amber-400/5 px-3 py-2 text-left text-amber-200"
                           >
-                            <span className="text-sm">{note.trim()}</span>
+                            {note.trim() && <span className="text-sm">{note.trim()}</span>}
+                            {pastNotes.length > 0 && (
+                              <span className={`block text-xs text-amber-300/70 ${note.trim() ? "mt-1" : ""}`}>
+                                {pastNotes.length} past {pastNotes.length === 1 ? "note" : "notes"}, latest{" "}
+                                {new Date(pastNotes[0].at).toLocaleDateString()}: {pastNotes[0].text.split("\n")[0].slice(0, 120)}
+                              </span>
+                            )}
                           </button>
                         )
                       )}
